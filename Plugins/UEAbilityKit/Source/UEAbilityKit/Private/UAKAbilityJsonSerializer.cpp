@@ -3,6 +3,7 @@
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTrack.h"
+#include "UAKChanneling.h"
 #include "UAKTypes.h"
 
 #include "Dom/JsonObject.h"
@@ -148,6 +149,27 @@ bool UAKAbilityJsonSerializer::ExportToJson(const UAKAbilityAsset* Asset, FStrin
 	}
 	Root->SetArrayField(TEXT("markers"), MarkersArray);
 
+	// Channeling（引导 / 吟唱）
+	Root->SetBoolField(TEXT("channeled"), Asset->bChanneled);
+	Root->SetNumberField(TEXT("channelingStartTime"), Asset->ChannelingStartTime);
+	Root->SetNumberField(TEXT("channelingEndTime"), Asset->ChannelingEndTime);
+	Root->SetStringField(TEXT("channelFailureAction"),
+		StaticEnum<EAKChannelFailureAction>()->GetNameStringByValue(static_cast<int64>(Asset->ChannelFailureAction)));
+	Root->SetBoolField(TEXT("evaluateChannelingOnAuthorityOnly"), Asset->bEvaluateChannelingOnAuthorityOnly);
+
+	TArray<TSharedPtr<FJsonValue>> ConditionsArray;
+	for (const UAKChannelingCondition* Condition : Asset->ChannelingConditions)
+	{
+		if (!Condition)
+		{
+			continue;
+		}
+		TSharedRef<FJsonObject> ConditionJson = MakeShared<FJsonObject>();
+		Condition->ExportJson(ConditionJson);
+		ConditionsArray.Add(MakeShared<FJsonValueObject>(ConditionJson));
+	}
+	Root->SetArrayField(TEXT("channelingConditions"), ConditionsArray);
+
 	// Tracks（注意：Preview* 是 WITH_EDITORONLY_DATA，不导出）
 	TArray<TSharedPtr<FJsonValue>> TracksArray;
 	for (const UAKAbilityTrack* Track : Asset->Tracks)
@@ -241,6 +263,58 @@ bool UAKAbilityJsonSerializer::ImportFromJson(UAKAbilityAsset* Asset, const FStr
 				(*MarkerObject)->TryGetNumberField(TEXT("time"), Marker.Time);
 				Asset->Markers.Add(Marker);
 			}
+		}
+	}
+
+	// Channeling（引导 / 吟唱）
+	Root->TryGetBoolField(TEXT("channeled"), Asset->bChanneled);
+	Root->TryGetNumberField(TEXT("channelingStartTime"), Asset->ChannelingStartTime);
+	Root->TryGetNumberField(TEXT("channelingEndTime"), Asset->ChannelingEndTime);
+	Root->TryGetBoolField(TEXT("evaluateChannelingOnAuthorityOnly"), Asset->bEvaluateChannelingOnAuthorityOnly);
+
+	FString FailureActionName;
+	if (Root->TryGetStringField(TEXT("channelFailureAction"), FailureActionName))
+	{
+		if (const UEnum* Enum = StaticEnum<EAKChannelFailureAction>())
+		{
+			Asset->ChannelFailureAction = static_cast<EAKChannelFailureAction>(Enum->GetValueByNameString(FailureActionName));
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* ConditionsArray = nullptr;
+	if (Root->TryGetArrayField(TEXT("channelingConditions"), ConditionsArray) && ConditionsArray)
+	{
+		Asset->ChannelingConditions.Reset();
+		for (const TSharedPtr<FJsonValue>& Value : *ConditionsArray)
+		{
+			const TSharedPtr<FJsonObject>* ConditionObject = nullptr;
+			if (!Value.IsValid() || !Value->TryGetObject(ConditionObject) || !ConditionObject || !ConditionObject->IsValid())
+			{
+				continue;
+			}
+
+			FString TypeName;
+			(*ConditionObject)->TryGetStringField(TEXT("$type"), TypeName);
+
+			UClass* ConditionClass = LoadClass<UAKChannelingCondition>(nullptr,
+				*FString::Printf(TEXT("/Script/UEAbilityKit.%s"), *TypeName));
+			if (!ConditionClass)
+			{
+				ConditionClass = LoadClass<UAKChannelingCondition>(nullptr, *TypeName); // 蓝图派生
+			}
+			if (!ConditionClass || ConditionClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				continue;
+			}
+
+			UAKChannelingCondition* Condition = NewObject<UAKChannelingCondition>(Asset, ConditionClass);
+			if (!Condition)
+			{
+				continue;
+			}
+
+			Condition->ImportJson(**ConditionObject);
+			Asset->ChannelingConditions.Add(Condition);
 		}
 	}
 

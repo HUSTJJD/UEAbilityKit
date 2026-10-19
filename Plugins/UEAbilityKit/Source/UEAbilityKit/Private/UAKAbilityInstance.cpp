@@ -29,6 +29,7 @@ void UAKAbilityInstance::SetTrace(UAKTrace* InTrace)
 {
 	Trace = InTrace;
 	RootNodeIndex = Trace ? Trace->GetRootIndex() : INDEX_NONE;
+	Context.Trace = Trace;
 }
 
 void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityContext& InContext)
@@ -53,6 +54,7 @@ void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityCo
 	{
 		RootNodeIndex = Trace->GetRootIndex();
 	}
+	Context.Trace = Trace;
 
 	// 复合轨道（Sequence / Parallel / Repeat）在这里被展开成扁平调度表
 	Asset->BuildExecutionPlan(Plan, /*bOnlyEnabledTracks=*/true);
@@ -250,7 +252,12 @@ void UAKAbilityInstance::StartDueTasks()
 			? Trace->AddNode(RootNodeIndex, EAKTraceNodeKind::Task, TraceLabel, Scheduled.StartTime)
 			: INDEX_NONE;
 
+		// 让任务能往这条节点下挂子节点（GE / 属性 / 目标）
+		Context.CurrentTaskNodeIndex = NodeIndex;
+
 		Task->OnTaskStart(Context);
+
+		Context.CurrentTaskNodeIndex = INDEX_NONE;
 
 		const bool bSingleFrame = (Scheduled.EndTime <= Scheduled.StartTime);
 		if (bSingleFrame)

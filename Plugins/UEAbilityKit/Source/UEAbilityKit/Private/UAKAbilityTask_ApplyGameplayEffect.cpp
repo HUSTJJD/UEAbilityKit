@@ -2,6 +2,7 @@
 
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityContext.h"
+#include "UAKTrace.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
@@ -68,6 +69,22 @@ void UAKAbilityTask_ApplyGameplayEffect::OnTaskStart(FAKAbilityContext& Context)
 		}
 
 		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+
+		// 血缘下钻：GE → 目标，让"这 120 伤害哪来的"可一路追下去
+		if (Context.Trace && Context.CurrentTaskNodeIndex != INDEX_NONE)
+		{
+			const int32 EffectNode = Context.Trace->AddNode(Context.CurrentTaskNodeIndex,
+				EAKTraceNodeKind::Effect, EffectClass->GetName(), Context.CurrentTime);
+
+			for (const TPair<FName, float>& Pair : SetByCaller)
+			{
+				Context.Trace->AddDetail(EffectNode,
+					FString::Printf(TEXT("SetByCaller %s = %.2f"), *Pair.Key.ToString(), Pair.Value));
+			}
+
+			Context.Trace->AddNode(EffectNode, EAKTraceNodeKind::Target,
+				TargetActor->GetName(), Context.CurrentTime);
+		}
 	}
 }
 

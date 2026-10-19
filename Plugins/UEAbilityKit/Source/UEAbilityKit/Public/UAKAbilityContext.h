@@ -6,6 +6,7 @@
 class UAbilitySystemComponent;
 class UGameplayAbility;
 class UAKAbilityTaskBase;
+class UAKTrace;
 
 /**
  * 一次技能运行的上下文（对标 Able 的 UAblAbilityContext）。
@@ -63,6 +64,20 @@ struct FAKAbilityContext
 	/** 本次运行中被 Branch 任务停用的轨道名 */
 	UPROPERTY(BlueprintReadWrite, Category = "Context")
 	TSet<FName> DisabledTracks;
+
+	/**
+	 * 溯源记录器（未开启时为 nullptr）。
+	 * 任务可以往里写子节点，让血缘树能下钻到 GE / 属性 / 目标，而不只到任务层。
+	 */
+	UPROPERTY(BlueprintReadWrite, Category = "Context")
+	UAKTrace* Trace = nullptr;
+
+	/**
+	 * 当前正在执行的任务对应的溯源节点索引。
+	 * 执行器在调用 OnTaskStart 之前设置，任务据此挂子节点。
+	 */
+	UPROPERTY(BlueprintReadWrite, Category = "Context")
+	int32 CurrentTaskNodeIndex = INDEX_NONE;
 
 	void Reset()
 	{

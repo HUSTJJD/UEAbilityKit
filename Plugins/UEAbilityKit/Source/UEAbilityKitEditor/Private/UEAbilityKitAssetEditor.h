@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
+#include "EditorUndoClient.h"
 #include "SUAKTimelineToolbar.h"
 #include "Toolkits/AssetEditorToolkit.h"
 #include "Toolkits/IToolkitHost.h"
@@ -25,7 +26,7 @@ class IDetailsView;
  * - Bloodline：血缘 / Explain 视图（UAK 独创）
  * - Details：Inspector（分层展示当前选中任务的参数）
  */
-class FUEAbilityKitAssetEditor : public FAssetEditorToolkit
+class FUEAbilityKitAssetEditor : public FAssetEditorToolkit, public FEditorUndoClient
 {
 public:
 	void InitEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost>& InitToolkitHost, UAKAbilityAsset* InAsset);
@@ -50,9 +51,16 @@ private:
 	void OnCursorTimeChanged(float Time);
 	float GetCursorTime() const { return CursorTime; }
 
-	/** 键盘 / 工具条：删除与复制当前选中的任务 */
+	/** 键盘 / 工具条：删除与复制当前选中的任务（复制返回新任务，供 Alt+拖拽接管） */
 	void DeleteSelectedTask();
-	void DuplicateSelectedTask();
+	UAKAbilityTaskBase* DuplicateSelectedTask();
+
+	// FEditorUndoClient
+	virtual void PostUndo(bool bSuccess) override;
+	virtual void PostRedo(bool bSuccess) override;
+
+	/** 撤销 / 重做后刷新所有视图 */
+	void RefreshAfterUndo();
 
 	/** 任务选择器：把新任务加到指定轨道（INDEX_NONE 表示新建轨道） */
 	void OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskClass, int32 TrackIndex);

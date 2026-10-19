@@ -6,7 +6,10 @@
 #include "UAKTypes.h"
 
 #include "Fonts/SlateFontInfo.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Framework/MultiBox/MenuBuilder.h"
 #include "Rendering/DrawElements.h"
+#include "ScopedTransaction.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Input/SButton.h"
 
@@ -45,6 +48,7 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 	OnCursorTimeChanged = InArgs._OnCursorTimeChanged;
 	OnRequestDeleteTask = InArgs._OnRequestDeleteTask;
 	OnRequestDuplicateTask = InArgs._OnRequestDuplicateTask;
+	OnAction = InArgs._OnAction;
 
 	SetCanTick(true);
 	SetCanSupportFocus(true);
@@ -256,7 +260,35 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		return FReply::Handled().CaptureMouse(SharedThis(this));
 	}
 
+	// 右键：弹出上下文菜单
+	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+	{
+		UAKAbilityTaskBase* RightHit = (Row == INDEX_NONE) ? nullptr : HitTestTask(Local.X, Row);
+		if (RightHit)
+		{
+			SelectedTask = RightHit;
+			OnTaskSelected.ExecuteIfBound(RightHit);
+		}
+		if (Row != INDEX_NONE)
+		{
+			SelectedTrackIndex = Row;
+		}
+
+		ShowContextMenu(MouseEvent, MyGeometry, RightHit, Row);
+		return FReply::Handled();
+	}
+
 	UAKAbilityTaskBase* Hit = HitTestTask(Local.X, Row);
+
+	// Alt + 拖拽：复制一份再拖（复制动作由编辑器完成，这里只接管拖动）
+	if (Hit && MouseEvent.IsAltDown())
+	{
+		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
+		{
+			Hit = Copy;
+		}
+	}
+
 	if (Hit)
 	{
 		SelectedTask = Hit;
@@ -265,6 +297,13 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		DraggingTask = Hit;
 		DragGrabOffset = XToTime(Local.X) - Hit->StartTime;
 		bDragging = true;
+
+		// 一次拖动 = 一次可撤销的事务（撤销粒度而不是每帧一个）
+		DragTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveTask", "移动任务"));
+		if (UAKAbilityAsset* AssetPtr = Asset.Get())
+		{
+			AssetPtr->Modify();
+		}
 	}
 	else
 	{
@@ -318,7 +357,82 @@ FReply SUAKTimeline::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointer
 {
 	bDragging = false;
 	DraggingTask = nullptr;
+
+	// 结束拖动事务（析构即提交）
+	DragTransaction.Reset();
+
 	return FReply::Handled().ReleaseMouseCapture();
+}
+
+void SUAKTimeline::ForceRefresh()
+{
+	LastPlanSignature.Empty();
+	RebuildPlanIfNeeded();
+}
+
+TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTask, int32 Row)
+{
+	const bool bHasTask = (HitTask != nullptr);
+
+	FMenuBuilder MenuBuilder(/*bInShouldCloseWindowAfterMenuSelection=*/true, nullptr);
+
+	MenuBuilder.BeginSection(TEXT("Task"), LOCTEXT("MenuSection_Task", "任务"));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_DuplicateTask", "复制任务"),
+		LOCTEXT("Menu_DuplicateTaskTip", "复制当前选中的任务（Ctrl+D）"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateLambda([this]() { OnRequestDuplicateTask.ExecuteIfBound(); }),
+			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_DeleteTask", "删除任务"),
+		LOCTEXT("Menu_DeleteTaskTip", "删除当前选中的任务（Delete）"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateLambda([this]() { OnRequestDeleteTask.ExecuteIfBound(); }),
+			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
+	MenuBuilder.EndSection();
+
+	MenuBuilder.BeginSection(TEXT("Track"), LOCTEXT("MenuSection_Track", "轨道"));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_AddTrack", "添加轨道"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::AddTrack); })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_RemoveTrack", "删除当前轨道"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::RemoveTrack); })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_TrackUp", "上移轨道"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::MoveTrackUp); })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_TrackDown", "下移轨道"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::MoveTrackDown); })));
+	MenuBuilder.EndSection();
+
+	MenuBuilder.BeginSection(TEXT("Asset"), LOCTEXT("MenuSection_Asset", "资产"));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_AddMarker", "在此处添加标记"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::AddMarker); })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_SelectAsset", "资产属性"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::SelectAsset); })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_GenFromMontage", "从 Montage 生成"), FText::GetEmpty(), FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::GenerateFromMontage); })));
+	MenuBuilder.EndSection();
+
+	return MenuBuilder.MakeWidget();
+}
+
+void SUAKTimeline::ShowContextMenu(const FPointerEvent& MouseEvent, const FGeometry& MyGeometry, UAKAbilityTaskBase* HitTask, int32 Row)
+{
+	FWidgetPath WidgetPath = MouseEvent.GetEventPath() ? *MouseEvent.GetEventPath() : FWidgetPath();
+
+	FSlateApplication::Get().PushMenu(
+		SharedThis(this),
+		WidgetPath,
+		GenerateContextMenu(HitTask, Row),
+		MouseEvent.GetScreenSpacePosition(),
+		FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu));
 }
 
 FReply SUAKTimeline::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)

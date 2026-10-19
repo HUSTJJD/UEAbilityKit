@@ -34,6 +34,10 @@ public:
 	 */
 	virtual bool RequiresServerNotification() const { return false; }
 
+	/** Json 双向（子类必须调用 Super，并写入与 ImportJson 对称的字段） */
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const;
+	virtual void ImportJson(const FJsonObject& InJson);
+
 #if WITH_EDITOR
 	virtual FText GetConditionDescription() const;
 #endif
@@ -50,6 +54,8 @@ public:
 	FAKCondition Condition;
 
 	virtual bool IsSatisfied(const FAKAbilityContext& Context) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
 
 /** 站桩吟唱：移动速度超过阈值即打断 */
@@ -68,6 +74,8 @@ public:
 	bool bUseXYSpeedOnly = true;
 
 	virtual bool IsSatisfied(const FAKAbilityContext& Context) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
 
 /** 距离维持：与第一个目标的距离超过阈值即打断 */
@@ -93,6 +101,8 @@ public:
 	bool bPassWhenNoTarget = true;
 
 	virtual bool IsSatisfied(const FAKAbilityContext& Context) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
 
 /**
@@ -116,4 +126,6 @@ public:
 
 	virtual bool IsSatisfied(const FAKAbilityContext& Context) const override;
 	virtual bool RequiresServerNotification() const override { return bRequiresServerNotification; }
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };

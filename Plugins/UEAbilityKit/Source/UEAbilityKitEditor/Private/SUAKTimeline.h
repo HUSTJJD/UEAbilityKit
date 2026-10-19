@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ScopedTransaction.h"
+#include "SUAKTimelineToolbar.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 
@@ -13,6 +15,7 @@ DECLARE_DELEGATE_OneParam(FOnAKTaskSelected, UAKAbilityTaskBase* /*Task*/);
 DECLARE_DELEGATE_TwoParams(FOnAKTrackSelected, UAKAbilityTrack* /*Track*/, int32 /*TrackIndex*/);
 DECLARE_DELEGATE_OneParam(FOnAKCursorTimeChanged, float /*Time*/);
 DECLARE_DELEGATE(FOnAKTimelineRequest);
+DECLARE_DELEGATE_RetVal(UAKAbilityTaskBase*, FOnAKDuplicateTask);
 
 /**
  * 时间轴画布（自绘 Slate）。
@@ -33,7 +36,8 @@ public:
 		SLATE_EVENT(FOnAKTrackSelected, OnTrackSelected)
 		SLATE_EVENT(FOnAKCursorTimeChanged, OnCursorTimeChanged)
 		SLATE_EVENT(FOnAKTimelineRequest, OnRequestDeleteTask)
-		SLATE_EVENT(FOnAKTimelineRequest, OnRequestDuplicateTask)
+		SLATE_EVENT(FOnAKDuplicateTask, OnRequestDuplicateTask)
+		SLATE_EVENT(FOnAKToolbarAction, OnAction)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -71,6 +75,14 @@ public:
 	UAKAbilityTaskBase* GetSelectedTask() const { return SelectedTask.Get(); }
 	float GetAssetLength() const;
 
+	/** 外部改动资产后强制重建执行计划（撤销/重做用） */
+	void ForceRefresh();
+
+private:
+	/** 右键菜单 */
+	TSharedRef<SWidget> GenerateContextMenu(UAKAbilityTaskBase* HitTask, int32 Row);
+	void ShowContextMenu(const FPointerEvent& MouseEvent, const FGeometry& MyGeometry, UAKAbilityTaskBase* HitTask, int32 Row);
+
 private:
 	float TimeToX(float Time) const;
 	float XToTime(float X) const;
@@ -89,6 +101,9 @@ private:
 	FOnAKTaskSelected OnTaskSelected;
 	FOnAKTrackSelected OnTrackSelected;
 	FOnAKCursorTimeChanged OnCursorTimeChanged;
+	FOnAKTimelineRequest OnRequestDeleteTask;
+	FOnAKDuplicateTask OnRequestDuplicateTask;
+	FOnAKToolbarAction OnAction;
 
 	/**
 	 * 缓存的执行计划：复合轨道（Sequence / Parallel / Repeat）展开后的真实时间。
@@ -109,6 +124,9 @@ private:
 	TWeakObjectPtr<UAKAbilityTaskBase> DraggingTask;
 	float DragGrabOffset = 0.f;
 	bool bDragging = false;
+
+	/** 一次拖动 = 一个事务（抬起鼠标时提交） */
+	TUniquePtr<FScopedTransaction> DragTransaction;
 
 	TWeakObjectPtr<UAKAbilityTaskBase> SelectedTask;
 	int32 SelectedTrackIndex = INDEX_NONE;

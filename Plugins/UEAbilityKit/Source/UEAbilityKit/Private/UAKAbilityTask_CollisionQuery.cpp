@@ -5,6 +5,7 @@
 
 #include "UAKQuery.h"
 
+#include "UAKTrace.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
@@ -45,6 +46,13 @@ void UAKAbilityTask_CollisionQuery::OnTaskStart(FAKAbilityContext& Context)
 	for (AActor* HitActor : HitActors)
 	{
 		Context.Targets.AddUnique(TWeakObjectPtr<AActor>(HitActor));
+
+		// 血缘下钻：把命中的目标记下来
+		if (Context.Trace && Context.CurrentTaskNodeIndex != INDEX_NONE)
+		{
+			Context.Trace->AddNode(Context.CurrentTaskNodeIndex, EAKTraceNodeKind::Target,
+				HitActor->GetName(), Context.CurrentTime);
+		}
 	}
 }
 

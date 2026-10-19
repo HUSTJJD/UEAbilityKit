@@ -15,6 +15,8 @@
 #include "UAKTypes.h"
 
 #include "Animation/AnimMontage.h"
+#include "Editor.h"
+#include "ScopedTransaction.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/World.h"
@@ -78,6 +80,12 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 	// PIE 联动：每 0.1s 检查一次正在运行的技能，让光标与血缘视图跟随
 	PIETickerHandle = FTSTicker::GetCoreTicker().AddTicker(
 		FTickerDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::TickPIELink), 0.1f);
+
+	// 撤销 / 重做：注册为 UndoClient，Ctrl+Z / Ctrl+Y 才能作用于本编辑器
+	if (GEditor)
+	{
+		GEditor->RegisterForUndo(this);
+	}
 }
 
 FUEAbilityKitAssetEditor::~FUEAbilityKitAssetEditor()
@@ -86,6 +94,11 @@ FUEAbilityKitAssetEditor::~FUEAbilityKitAssetEditor()
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(PIETickerHandle);
 		PIETickerHandle.Reset();
+	}
+
+	if (GEditor)
+	{
+		GEditor->UnregisterForUndo(this);
 	}
 }
 
@@ -244,7 +257,8 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.OnTrackSelected(this, &FUEAbilityKitAssetEditor::OnTrackSelected)
 		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged)
 		.OnRequestDeleteTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DeleteSelectedTask))
-		.OnRequestDuplicateTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DuplicateSelectedTask));
+		.OnRequestDuplicateTask(FOnAKDuplicateTask::CreateRaw(this, &FUEAbilityKitAssetEditor::DuplicateSelectedTask))
+		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 	TimelineWidget = Timeline;
 
 	TSharedRef<SUAKTimelineToolbar> Toolbar = SNew(SUAKTimelineToolbar)
@@ -403,6 +417,7 @@ void FUEAbilityKitAssetEditor::DeleteSelectedTask()
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("DeleteTask", "删除任务"));
 	Track->Modify();
 	Track->Tasks.Remove(Task);
 
@@ -418,27 +433,28 @@ void FUEAbilityKitAssetEditor::DeleteSelectedTask()
 	}
 }
 
-void FUEAbilityKitAssetEditor::DuplicateSelectedTask()
+UAKAbilityTaskBase* FUEAbilityKitAssetEditor::DuplicateSelectedTask()
 {
 	UAKAbilityAsset* AssetPtr = Asset.Get();
 	UAKAbilityTaskBase* Task = SelectedTask.Get();
 	if (!AssetPtr || !Task)
 	{
-		return;
+		return nullptr;
 	}
 
 	UAKAbilityTrack* Track = Cast<UAKAbilityTrack>(Task->GetOuter());
 	if (!Track)
 	{
-		return;
+		return nullptr;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("DuplicateTask", "复制任务"));
 	Track->Modify();
 
 	UAKAbilityTaskBase* Copy = DuplicateObject<UAKAbilityTaskBase>(Task, Track);
 	if (!Copy)
 	{
-		return;
+		return nullptr;
 	}
 
 	// 复制出来的任务紧接在原任务之后
@@ -447,6 +463,7 @@ void FUEAbilityKitAssetEditor::DuplicateSelectedTask()
 	AssetPtr->MarkPackageDirty();
 
 	OnTaskSelected(Copy);
+	return Copy;
 }
 
 void FUEAbilityKitAssetEditor::OnToolbarAction(EAKToolbarAction Action)
@@ -474,6 +491,7 @@ void FUEAbilityKitAssetEditor::AddTrack()
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("AddTrack", "添加轨道"));
 	AssetPtr->Modify();
 
 	UAKAbilityTrack* Track = NewObject<UAKAbilityTrack>(AssetPtr);
@@ -499,6 +517,7 @@ void FUEAbilityKitAssetEditor::RemoveSelectedTrack()
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("RemoveTrack", "删除轨道"));
 	AssetPtr->Modify();
 	AssetPtr->Tracks.RemoveAt(SelectedTrackIndex);
 	AssetPtr->MarkPackageDirty();
@@ -530,6 +549,7 @@ void FUEAbilityKitAssetEditor::MoveSelectedTrack(int32 Delta)
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("MoveTrack", "移动轨道"));
 	AssetPtr->Modify();
 	AssetPtr->Tracks.Swap(SelectedTrackIndex, Target);
 	AssetPtr->MarkPackageDirty();
@@ -544,6 +564,7 @@ void FUEAbilityKitAssetEditor::AddMarkerAtCursor()
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("AddMarker", "添加标记"));
 	AssetPtr->Modify();
 
 	FAKTimeMarker Marker;
@@ -585,6 +606,7 @@ void FUEAbilityKitAssetEditor::GenerateFromMontage()
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("GenerateFromMontage", "从 Montage 生成"));
 	AssetPtr->Modify();
 
 	// 1) 按 Montage 长度设置技能长度
@@ -680,6 +702,7 @@ void FUEAbilityKitAssetEditor::OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskCla
 		return;
 	}
 
+	const FScopedTransaction Transaction(LOCTEXT("AddTask", "添加任务"));
 	AssetPtr->Modify();
 
 	UAKAbilityTrack* Track = AssetPtr->Tracks.IsValidIndex(TrackIndex) ? AssetPtr->Tracks[TrackIndex] : nullptr;
@@ -724,6 +747,43 @@ FReply FUEAbilityKitAssetEditor::OnPreviewStopClicked()
 		return PreviewWidget->OnStopClicked();
 	}
 	return FReply::Handled();
+}
+
+void FUEAbilityKitAssetEditor::PostUndo(bool bSuccess)
+{
+	RefreshAfterUndo();
+}
+
+void FUEAbilityKitAssetEditor::PostRedo(bool bSuccess)
+{
+	RefreshAfterUndo();
+}
+
+void FUEAbilityKitAssetEditor::RefreshAfterUndo()
+{
+	// 撤销后内容可能完全变了：强制重建执行计划、刷新选择器，并清掉失效的选中
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->ForceRefresh();
+	}
+
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+
+	if (!SelectedTask.IsValid())
+	{
+		SelectedTask = nullptr;
+		if (DetailsView.IsValid())
+		{
+			DetailsView->SetObject(nullptr);
+		}
+	}
+	else if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(SelectedTask.Get());
+	}
 }
 
 FReply FUEAbilityKitAssetEditor::OnPreviewLoopClicked()

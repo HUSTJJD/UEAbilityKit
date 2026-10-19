@@ -81,8 +81,16 @@
 - [x] **Task 编辑器元数据**：集中式元数据表（分类 / 显示名 / 说明 / 配色 / 废弃标记），
       Task Picker 与时间轴都已使用
 - [x] **查询**：新增 Cone（锥形）形状；过滤器与形状解耦（`Tag` / `Distance` / `LineOfSight`）
-- [ ] 多人示例工程
-- [ ] 引导条件的 Json 序列化
+- [x] **撤销 / 重做**：所有改资产的操作包进 `FScopedTransaction`；
+      编辑器实现 `FEditorUndoClient`（`PostUndo` / `PostRedo`），Ctrl+Z / Ctrl+Y 生效
+- [x] **Alt+拖拽复制**：拖动时按住 Alt 先复制再拖（复制返回新任务供拖拽接管）
+- [x] **右键菜单**：任务（复制/删除）、轨道（增删/上下移）、资产（加标记/属性/从 Montage 生成）
+- [x] **引导条件 Json 序列化**：`ChannelingConditions` 按 `$type` 进出 Json
+- [x] **血缘下钻到 GE / 目标**：`Context.Trace` + `CurrentTaskNodeIndex`，
+      ApplyGE 记 GE→SetByCaller→目标，CollisionQuery 记命中目标
+- [x] 多人接入示例：[examples/01-minimal-multiplayer-setup.md](examples/01-minimal-multiplayer-setup.md)
+- [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
+- [ ] 多人**示例工程**（目前是文档，尚未提供一个可编译的 Sample 工程）
 
 ## 剩余工作
 
@@ -92,9 +100,3 @@
 | 事项 | 状态 | 说明 |
 |---|---|---|
 | **编译验证** | ❌ 阻塞中 | 唯一的功能性阻塞：另一实例的 UBT 互斥锁 |
-| 撤销 / 重做集成 | ⬜ 打磨 | 已用 `Modify()`，但缺事务包装与 Undo 菜单 |
-| Alt+拖拽复制 / 右键菜单 | ⬜ 打磨 | 目前只有 Ctrl+D 与工具条按钮 |
-| 引导条件 Json 序列化 | ⬜ 已知限制 | `ChannelingConditions` 是内联对象，需按 `$type` 展开 |
-| 血缘视图下钻到 GE/属性 | ⬜ 已知限制 | 目前 Trace 只到 Task 层 |
-| 多人示例工程 | ⬜ 示例 | 需要一个可跑的 ASC + LocalPredicted 示例 |
-| 冷却 / 消耗 / 堆叠示例 | ⬜ 示例 | GAS 原生能力，UAK 不自建；只需示例展示如何配 |
