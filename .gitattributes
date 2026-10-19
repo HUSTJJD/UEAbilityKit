@@ -1,0 +1,23 @@
+# 文本：统一换行，diff 友好
+* text=auto eol=lf
+
+*.h      text
+*.cpp    text
+*.inl    text
+*.cs     text
+*.json   text
+*.uplugin text
+*.md     text
+*.txt    text
+LICENSE  text
+NOTICE   text
+
+# 二进制：不参与 diff
+*.uasset binary
+*.umap   binary
+*.png    binary
+*.jpg    binary
+*.psd    binary
+*.wav    binary
+*.mp3    binary
+*.fbx    binary

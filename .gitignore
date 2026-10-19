@@ -1,0 +1,50 @@
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.sln.DotSettings
+*.vcxproj*
+*.csproj*
+*.opensdf
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+
+# Unreal Engine 生成物
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/
+*.target.json
+*.modules.json
+*.uhtmanifest
+*.hotreload
+
+# 编译产物
+*.obj
+*.ilk
+*.pdb
+*.lib
+*.exp
+*.dll
+*.exe
+*.dylib
+*.so
+*.a
+*.o
+
+# 资源与日志
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 插件本地临时文件
+*.autosave

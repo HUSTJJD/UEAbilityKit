@@ -1,0 +1,448 @@
+#include "SUAKTimeline.h"
+
+#include "UAKAbilityAsset.h"
+#include "UAKAbilityTaskBase.h"
+#include "UAKAbilityTrack.h"
+#include "UAKTypes.h"
+
+#include "Fonts/SlateFontInfo.h"
+#include "Rendering/DrawElements.h"
+#include "Styling/CoreStyle.h"
+#include "Widgets/Input/SButton.h"
+
+#define LOCTEXT_NAMESPACE "SUAKTimeline"
+
+namespace
+{
+	const FLinearColor ColorBackground(0.043f, 0.043f, 0.043f);
+	const FLinearColor ColorHeader(0.075f, 0.075f, 0.075f);
+	const FLinearColor ColorGrid(0.11f, 0.11f, 0.11f);
+	const FLinearColor ColorGridMajor(0.16f, 0.16f, 0.16f);
+	const FLinearColor ColorRuler(0.055f, 0.055f, 0.055f);
+	const FLinearColor ColorCursor(1.f, 0.85f, 0.2f);
+
+	FLinearColor ColorForTrack(EAKTrackType Type)
+	{
+		switch (Type)
+		{
+		case EAKTrackType::Main:			return FLinearColor(0.85f, 0.85f, 0.90f);
+		case EAKTrackType::Effect:			return FLinearColor(0.95f, 0.35f, 0.35f);
+		case EAKTrackType::Presentation:	return FLinearColor(0.40f, 0.80f, 0.95f);
+		case EAKTrackType::Query:			return FLinearColor(0.55f, 0.85f, 0.45f);
+		case EAKTrackType::Motion:			return FLinearColor(0.95f, 0.75f, 0.30f);
+		case EAKTrackType::Rule:			return FLinearColor(0.75f, 0.50f, 0.95f);
+		case EAKTrackType::Custom:
+		default:							return FLinearColor(0.60f, 0.60f, 0.65f);
+		}
+	}
+}
+
+void SUAKTimeline::Construct(const FArguments& InArgs)
+{
+	Asset = InArgs._Asset;
+	OnTaskSelected = InArgs._OnTaskSelected;
+	OnCursorTimeChanged = InArgs._OnCursorTimeChanged;
+
+	SetCanTick(true);
+	SetClipping(EWidgetClipping::ClipToBounds);
+}
+
+void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+
+	ViewWidth = FMath::Max(0.f, AllottedGeometry.GetLocalSize().X - TrackHeaderWidth);
+	ViewHeight = AllottedGeometry.GetLocalSize().Y;
+}
+
+void SUAKTimeline::SetCursorTime(float InTime)
+{
+	CursorTime = FMath::Max(0.f, InTime);
+	OnCursorTimeChanged.ExecuteIfBound(CursorTime);
+}
+
+void SUAKTimeline::StepFrame(int32 Frames)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	const float FrameRate = AssetPtr ? FMath::Max(1, AssetPtr->FrameRate) : 60;
+	SetCursorTime(CursorTime + static_cast<float>(Frames) / static_cast<float>(FrameRate));
+}
+
+float SUAKTimeline::SnapTime(float Time) const
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return Time;
+	}
+	const float Frame = 1.f / static_cast<float>(FMath::Max(1, AssetPtr->FrameRate));
+	return FMath::RoundToFloat(Time / Frame) * Frame;
+}
+
+float SUAKTimeline::TimeToX(float Time) const
+{
+	return TrackHeaderWidth + Time * PixelsPerSecond;
+}
+
+float SUAKTimeline::XToTime(float X) const
+{
+	return (X - TrackHeaderWidth) / PixelsPerSecond;
+}
+
+int32 SUAKTimeline::HitTestRow(float Y) const
+{
+	if (Y < RulerHeight)
+	{
+		return INDEX_NONE;
+	}
+	return static_cast<int32>((Y - RulerHeight) / RowHeight);
+}
+
+UAKAbilityTaskBase* SUAKTimeline::HitTestTask(float X, int32 Row) const
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || Row < 0 || Row >= AssetPtr->Tracks.Num())
+	{
+		return nullptr;
+	}
+
+	UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+	if (!Track)
+	{
+		return nullptr;
+	}
+
+	const float Time = XToTime(X);
+	for (UAKAbilityTaskBase* Task : Track->Tasks)
+	{
+		if (!Task)
+		{
+			continue;
+		}
+		if (Time >= Task->StartTime && Time <= Task->GetEndTime())
+		{
+			return Task;
+		}
+	}
+	return nullptr;
+}
+
+FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+
+	if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	{
+		return FReply::Unhandled();
+	}
+
+	// 点轨道头：切换该轨道开关（UAK 独有的整轨静音）
+	if (Local.X < TrackHeaderWidth)
+	{
+		const int32 Row = HitTestRow(Local.Y);
+		UAKAbilityAsset* AssetPtr = Asset.Get();
+		if (AssetPtr && AssetPtr->Tracks.IsValidIndex(Row) && AssetPtr->Tracks[Row])
+		{
+			UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+			Track->bEnabled = !Track->bEnabled;
+			Track->Modify();
+			AssetPtr->MarkPackageDirty();
+		}
+		return FReply::Handled().CaptureMouse(SharedThis(this));
+	}
+
+	// 标尺区：移动光标
+	const int32 Row = HitTestRow(Local.Y);
+	if (Row == INDEX_NONE)
+	{
+		SetCursorTime(SnapTime(XToTime(Local.X)));
+		return FReply::Handled().CaptureMouse(SharedThis(this));
+	}
+
+	UAKAbilityTaskBase* Hit = HitTestTask(Local.X, Row);
+	if (Hit)
+	{
+		SelectedTask = Hit;
+		OnTaskSelected.ExecuteIfBound(Hit);
+
+		DraggingTask = Hit;
+		DragGrabOffset = XToTime(Local.X) - Hit->StartTime;
+		bDragging = true;
+	}
+	else
+	{
+		SelectedTask = nullptr;
+		OnTaskSelected.ExecuteIfBound(nullptr);
+		SetCursorTime(SnapTime(XToTime(Local.X)));
+	}
+
+	return FReply::Handled().CaptureMouse(SharedThis(this));
+}
+
+FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (!bDragging)
+	{
+		return FReply::Unhandled();
+	}
+
+	UAKAbilityTaskBase* Task = DraggingTask.Get();
+	if (!Task)
+	{
+		return FReply::Unhandled();
+	}
+
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+	const float NewStart = FMath::Max(0.f, SnapTime(XToTime(Local.X) - DragGrabOffset));
+
+	if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
+	{
+		Task->Modify();
+		Task->StartTime = NewStart;
+		if (UAKAbilityAsset* AssetPtr = Asset.Get())
+		{
+			AssetPtr->MarkPackageDirty();
+		}
+	}
+
+	return FReply::Handled();
+}
+
+FReply SUAKTimeline::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	bDragging = false;
+	DraggingTask = nullptr;
+	return FReply::Handled().ReleaseMouseCapture();
+}
+
+FReply SUAKTimeline::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	const float Delta = MouseEvent.GetWheelDelta();
+	PixelsPerSecond = FMath::Clamp(PixelsPerSecond * (1.f + Delta * 0.1f), 20.f, 4000.f);
+	return FReply::Handled();
+}
+
+int32 SUAKTimeline::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
+	int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+{
+	ViewWidth = FMath::Max(0.f, AllottedGeometry.GetLocalSize().X - TrackHeaderWidth);
+	ViewHeight = AllottedGeometry.GetLocalSize().Y;
+
+	LayerId = SCompoundWidget::OnPaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
+
+	DrawRuler(AllottedGeometry, OutDrawElements, LayerId);
+	DrawTrackRows(AllottedGeometry, OutDrawElements, LayerId + 1);
+	DrawSegments(AllottedGeometry, OutDrawElements, LayerId + 2);
+	DrawCursor(AllottedGeometry, OutDrawElements, LayerId + 3);
+
+	return LayerId + 4;
+}
+
+void SUAKTimeline::DrawRuler(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+	// 标尺底
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+		Geometry.ToPaintGeometry(FVector2D(0, 0), FVector2D(Geometry.GetLocalSize().X, RulerHeight)),
+		FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorRuler);
+
+	const float Width = Geometry.GetLocalSize().X;
+	const float StartTime = XToTime(TrackHeaderWidth);
+	const float EndTime = XToTime(Width);
+
+	// 目标：屏幕上每 ~80px 一个刻度
+	float Step = 0.1f;
+	while (Step * PixelsPerSecond < 80.f)
+	{
+		Step *= (FMath::IsNearlyEqual(Step, 0.1f) ? 5.f : 2.f);
+		if (Step > 60.f) { break; }
+	}
+
+	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 9);
+	const float FirstTick = FMath::FloorToFloat(StartTime / Step) * Step;
+
+	for (float T = FirstTick; T <= EndTime; T += Step)
+	{
+		const float X = TimeToX(T);
+		if (X < TrackHeaderWidth - 1.f || X > Width)
+		{
+			continue;
+		}
+
+		const bool bMajor = FMath::IsNearlyEqual(FMath::Fmod(T, Step * 5.f), 0.f, Step * 0.01f);
+		const FLinearColor Color = bMajor ? ColorGridMajor : ColorGrid;
+
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+			Geometry.ToPaintGeometry(FVector2D(X, RulerHeight - (bMajor ? 10.f : 5.f)), FVector2D(1.f, bMajor ? 10.f : 5.f)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Color);
+
+		if (bMajor)
+		{
+			UAKAbilityAsset* AssetPtr = Asset.Get();
+			const int32 FrameRate = AssetPtr ? FMath::Max(1, AssetPtr->FrameRate) : 60;
+			const FText Label = bShowFrames
+				? FText::AsNumber(FMath::RoundToInt(T * FrameRate))
+				: FText::Format(LOCTEXT("TimeLabel", "{0}s"), FText::AsNumber(FMath::RoundToFloat(T * 100.f) / 100.f));
+
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId,
+				Geometry.ToPaintGeometry(FVector2D(X + 3.f, 3.f), FVector2D(60.f, 14.f)),
+				Label, Font, ESlateDrawEffect::None, FLinearColor(0.65f, 0.65f, 0.65f));
+		}
+	}
+}
+
+void SUAKTimeline::DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	const float Width = Geometry.GetLocalSize().X;
+	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 10);
+
+	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
+	{
+		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+		const float Y = RulerHeight + Row * RowHeight;
+
+		// 行底
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+			Geometry.ToPaintGeometry(FVector2D(0, Y), FVector2D(Width, RowHeight - 1.f)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
+			(Row % 2 == 0) ? ColorBackground : FLinearColor(0.05f, 0.05f, 0.05f));
+
+		// 轨道头
+		const FLinearColor TrackColor = Track ? ColorForTrack(Track->TrackType) : FLinearColor::Gray;
+		const FLinearColor HeaderColor = Track && !Track->bEnabled ? FLinearColor(0.05f, 0.05f, 0.05f) : ColorHeader;
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+			Geometry.ToPaintGeometry(FVector2D(0, Y), FVector2D(TrackHeaderWidth - 1.f, RowHeight - 1.f)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HeaderColor);
+
+		// 轨道色条 + 开关方块
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+			Geometry.ToPaintGeometry(FVector2D(4.f, Y + 6.f), FVector2D(6.f, RowHeight - 13.f)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
+			Track && Track->bEnabled ? TrackColor : FLinearColor(0.25f, 0.25f, 0.25f));
+
+		if (Track)
+		{
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
+				Geometry.ToPaintGeometry(FVector2D(18.f, Y + 7.f), FVector2D(TrackHeaderWidth - 24.f, 16.f)),
+				Track->GetDisplayName(), Font, ESlateDrawEffect::None,
+				Track->bEnabled ? FLinearColor(0.85f, 0.85f, 0.85f) : FLinearColor(0.4f, 0.4f, 0.4f));
+		}
+
+		// 时间轴网格
+		const float StartTime = XToTime(TrackHeaderWidth);
+		const float EndTime = XToTime(Width);
+		float Step = 0.1f;
+		while (Step * PixelsPerSecond < 80.f)
+		{
+			Step *= (FMath::IsNearlyEqual(Step, 0.1f) ? 5.f : 2.f);
+			if (Step > 60.f) { break; }
+		}
+		for (float T = FMath::FloorToFloat(StartTime / Step) * Step; T <= EndTime; T += Step)
+		{
+			const float X = TimeToX(T);
+			if (X < TrackHeaderWidth || X > Width) { continue; }
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+				Geometry.ToPaintGeometry(FVector2D(X, Y), FVector2D(1.f, RowHeight - 1.f)),
+				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorGrid);
+		}
+	}
+}
+
+void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 9);
+	const float Width = Geometry.GetLocalSize().X;
+
+	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
+	{
+		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+		if (!Track)
+		{
+			continue;
+		}
+
+		const float Y = RulerHeight + Row * RowHeight;
+		const FLinearColor TrackColor = ColorForTrack(Track->TrackType);
+
+		for (UAKAbilityTaskBase* Task : Track->Tasks)
+		{
+			if (!Task)
+			{
+				continue;
+			}
+
+			const float X0 = TimeToX(Task->StartTime);
+			const float X1 = TimeToX(Task->GetEndTime());
+			const float W = FMath::Max(4.f, X1 - X0);
+			if (X0 > Width || X1 < TrackHeaderWidth)
+			{
+				continue;
+			}
+
+			const bool bSelected = (SelectedTask.Get() == Task);
+			FLinearColor Fill = Track->bEnabled ? TrackColor : FLinearColor(0.3f, 0.3f, 0.3f);
+			Fill.A = bSelected ? 0.95f : 0.7f;
+
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+				Geometry.ToPaintGeometry(FVector2D(X0, Y + 4.f), FVector2D(W, RowHeight - 9.f)),
+				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Fill);
+
+			if (bSelected)
+			{
+				// 选中描边
+				const FLinearColor Outline(1.f, 1.f, 1.f, 0.9f);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					Geometry.ToPaintGeometry(FVector2D(X0, Y + 4.f), FVector2D(W, 1.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Outline);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					Geometry.ToPaintGeometry(FVector2D(X0, Y + RowHeight - 5.f), FVector2D(W, 1.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Outline);
+			}
+
+			if (W > 30.f)
+			{
+				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
+					Geometry.ToPaintGeometry(FVector2D(X0 + 4.f, Y + 7.f), FVector2D(W - 8.f, 14.f)),
+					FText::FromString(Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT(""))),
+					Font, ESlateDrawEffect::None, FLinearColor(0.05f, 0.05f, 0.05f));
+			}
+		}
+	}
+
+	// Markers（命名时间点）
+	for (const FAKTimeMarker& Marker : AssetPtr->Markers)
+	{
+		const float X = TimeToX(Marker.Time);
+		if (X < TrackHeaderWidth || X > Width) { continue; }
+
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+			Geometry.ToPaintGeometry(FVector2D(X, RulerHeight), FVector2D(1.f, ViewHeight - RulerHeight)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, FLinearColor(0.4f, 0.75f, 0.95f, 0.55f));
+
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
+			Geometry.ToPaintGeometry(FVector2D(X + 3.f, RulerHeight + 2.f), FVector2D(80.f, 12.f)),
+			FText::FromName(Marker.Name), Font, ESlateDrawEffect::None, FLinearColor(0.4f, 0.75f, 0.95f));
+	}
+}
+
+void SUAKTimeline::DrawCursor(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+	const float X = TimeToX(CursorTime);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+		Geometry.ToPaintGeometry(FVector2D(X, 0.f), FVector2D(1.5f, ViewHeight)),
+		FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorCursor);
+}
+
+#undef LOCTEXT_NAMESPACE

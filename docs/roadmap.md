@@ -1,0 +1,59 @@
+# 路线图
+
+## M0 — 仓库与插件骨架 ✅
+
+- [x] 仓库治理：`README` / `NOTICE` / `LICENSE`(Apache-2.0) / `.gitignore` / `.gitattributes`
+- [x] 插件骨架：`UEAbilityKit.uplugin` + Runtime 模块 + Editor 模块
+- [x] 资产模型：`UAKAbilityAsset`（时间轴数据）
+- [x] Task 基类：`UAKAbilityTaskBase`
+- [x] GAS 桥接：`UAKGameplayAbility`（M0 为瞬时执行）
+- [x] 示例 Task：`UAKAbilityTask_ApplyGameplayEffect`
+- [x] 内容浏览器可创建 Ability Asset
+
+## M1 — 时间轴执行器 + GAS 桥接（进行中）
+
+- [x] **两级数据模型**：`UAKAbilityAsset` → `UAKAbilityTrack`（轨道容器）→ `UAKAbilityTaskBase`（片段）
+- [x] **资产与 Ability 解耦（N:M）**：资产只描述时间轴，冷却/消耗/目标/网络策略归 `UAKGameplayAbility`
+- [x] **Task 三契约**：生命周期 / `Validate()` 自校验 / `GetGASImpact()` 自述 GAS 影响
+- [x] **`UAKAbilityInstance`**：按时间轴推进，支持 Duration / bLoop / MaxLoops / 中断 / PlayRate / ScratchPad
+- [x] **驱动方式定稿**：`UAKAbilityTickTask`（`UAbilityTask` 子类，`bTickingTask=true`）——
+      技能结束 → 任务自动结束 → 时间轴自动收尾；网络预测与复制仍由 GAS 负责
+- [x] **执行端过滤**：`EAKTaskNetMode`（Both / ServerOnly / ClientOnly），避免在错误的一端空跑
+- [x] 内置 Task：`PlayMontage`、`SendGameplayCue`、`CollisionQuery`、`Dash`、`ApplyGameplayEffect`
+- [x] 目标选择接入 `FGameplayAbilityTargetDataHandle`（`UAKTargeting`，只做适配不自建目标选择系统）
+- [ ] 冷却 / 消耗 / 堆叠示例（全部用 GE，不自建）
+- [ ] 编译验证（当前被另一实例的 UBT 互斥锁阻塞）
+
+## M2 — 编辑器 ✅
+
+- [x] `FUEAbilityKitAssetEditor`（`FAssetEditorToolkit`）：Timeline / Inspector / Bloodline 三 Tab
+- [x] `SUAKTimeline` 自绘时间轴：标尺、网格、轨道头（点击整轨静音）、片段、Markers、光标
+- [x] 通用交互：拖拽移动片段、滚轮缩放、按帧吸附、单帧步进、帧/秒切换
+- [x] `SUAKGASImpactBar`：随光标实时汇总 GE / Cue / Tags（**UAK 独创**）
+- [x] `SUAKValidationBar`：常驻底栏，改动即增量重算（Able 是弹窗）
+- [x] `SUAKBloodlineView`：血缘 / Explain 视图（设计期用 `GetGASImpact`，运行时接 `UAKTrace`）
+- [x] `UAKAbilityAssetFactory`：内容浏览器 Right-click → Miscellaneous → Ability Asset
+- [ ] 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放）
+- [ ] Task Picker（分类 / 搜索 / 支持蓝图 Task）
+- [ ] Ability Asset 缩略图渲染
+
+## M3 — 治理能力 ✅
+
+- [x] Task 自带 `Validate()`（内聚，而非外部绑定 Validator）+ 资产级规则
+- [x] `UAKAbilityJsonSerializer`：资产 ↔ Json 双向（`$type` 定位类、`version` 迁移、Preview 字段不导出）
+- [x] 校验 UI 与指纹增量重算
+- [x] `UAKValidateCommandlet`：`-run=UAKValidate -path=... -strict -json`，可在 CI 中作为门禁
+
+## M4 — 调试闭环 ✅（数据结构与视图，实况联调待做）
+
+- [x] `FAKTraceNode` / `UAKTrace`：血缘树（ParentIndex 构树，可下钻）
+- [x] `UAKTraceSubsystem`：世界级记录器，可开关（关闭时零开销）
+- [x] 血缘视图支持运行时实况数据源（`SetRuntimeTrace`）
+- [x] 执行器把每次施放写入 Trace（`UAKAbilityInstance::SetTrace`，任务进入时建节点）
+- [ ] PIE 联动：时间轴光标跟随 + 血缘视图切实况
+
+## M5 — 高级编排
+
+- [ ] ECA / Trigger 轨道（事件 → 条件 → 动作）
+- [ ] 复合轨道：Sequence / Parallel / Repeat / WaitUntil
+- [ ] 投射物、区域效果、连续效果（复用 GE + Tag 规则）
