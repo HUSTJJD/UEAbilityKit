@@ -47,6 +47,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
 	FText Note;
 
+	/**
+	 * 是否冻结时间轴推进（"门控"）。
+	 * 为 true 时，该任务存活期间整个时间轴的时间不前进（但持续任务仍会收到 Tick）。
+	 * 用于"等待目标进入范围 / 等待玩家输入"这类语义。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
+	bool bGateTimeline = false;
+
 	UFUNCTION(BlueprintPure, Category = "Task")
 	float GetEndTime() const { return StartTime + Duration; }
 
@@ -62,6 +70,12 @@ public:
 
 	/** 结束任务。bInterrupted 为 true 表示被中断（技能被打断/取消） */
 	virtual void OnTaskEnd(FAKAbilityContext& Context, bool bInterrupted) {}
+
+	/**
+	 * 是否要求提前结束（早于 EndTime）。
+	 * 由 WaitUntil 这类"条件满足即可继续"的任务使用；默认按 EndTime 结束。
+	 */
+	virtual bool ShouldEndEarly(const FAKAbilityContext& Context) const { return false; }
 
 	/** 创建运行时状态对象；返回 nullptr 表示不需要 ScratchPad */
 	virtual UObject* CreateScratchPad(const FAKAbilityContext& Context) { return nullptr; }

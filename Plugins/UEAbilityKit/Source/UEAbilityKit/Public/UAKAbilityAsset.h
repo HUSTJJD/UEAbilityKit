@@ -91,6 +91,16 @@ public:
 	/** 收集所有轨道上的任务；bOnlyEnabledTracks 为 true 时跳过被关闭的轨道 */
 	void CollectTasks(TArray<UAKAbilityTaskBase*>& OutTasks, bool bOnlyEnabledTracks = true) const;
 
+	/**
+	 * 生成执行计划：把"轨道的复合模式 + 重复次数"展开成一张扁平的调度表。
+	 *
+	 * Timeline：用任务自己的绝对时间；
+	 * Sequence：按数组顺序首尾相接；
+	 * Parallel：全部同时开始；
+	 * Repeat：Sequence / Parallel 下把整条轨道重复 N 遍（Timeline 模式不支持重复）。
+	 */
+	void BuildExecutionPlan(TArray<FAKScheduledTask>& OutPlan, bool bOnlyEnabledTracks = true) const;
+
 	/** 汇总全部任务的校验结果（含资产级校验） */
 	void Validate(FAKValidationResult& OutResult) const;
 };

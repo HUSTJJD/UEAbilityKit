@@ -3,11 +3,11 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "UAKAbilityContext.h"
+#include "UAKTypes.h"
 #include "UAKAbilityInstance.generated.h"
 
 class UAKAbilityAsset;
 class UAKAbilityTaskBase;
-class UAKTrace;
 
 /** 正在运行中的持续型任务 */
 USTRUCT()
@@ -25,6 +25,9 @@ struct FAKActiveTask
 	UPROPERTY()
 	bool bNeedsTick = false;
 
+	UPROPERTY()
+	bool bGate = false;
+
 	/** 对应的溯源节点索引（未开启记录时为 INDEX_NONE） */
 	UPROPERTY()
 	int32 TraceNodeIndex = INDEX_NONE;
@@ -33,13 +36,12 @@ struct FAKActiveTask
 DECLARE_DELEGATE_OneParam(FOnAKAbilityInstanceFinished, bool /*bInterrupted*/);
 
 /**
- * 技能时间轴的一次运行实例（对标 Able 的 UAblAbilityInstance，但语义更严格）。
+ * 技能时间轴的一次运行实例。
  *
- * 职责：把「一条资产」推进成「一次施放」——负责时间推进、任务进入/结束、循环与中断。
- * 不做的事：不碰网络（交给 GAS）、不做目标选择（交给 Task 与 TargetData）、不做表现（交给 Cue）。
+ * 职责：把「一条资产」推进成「一次施放」——时间推进、任务进入/结束、循环、中断、门控。
+ * 不做的事：不碰网络（交给 GAS）、不做目标选择（交给 TargetData 与 Query 任务）、不做表现（交给 Cue）。
  *
  * 驱动方式：由 UAKAbilityTickTask（UAbilityTask 子类）每帧调用 Tick()。
- * 这样时间轴随技能生命周期自动结束，且天然处于 GAS 的能力作用域内。
  */
 UCLASS(BlueprintType)
 class UEABILITYKIT_API UAKAbilityInstance : public UObject
@@ -47,7 +49,7 @@ class UEABILITYKIT_API UAKAbilityInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	/** 用资产与上下文初始化，并把待执行任务按 StartTime 排序 */
+	/** 用资产与上下文初始化，并展开执行计划（复合轨道 → 扁平调度表） */
 	void Initialize(UAKAbilityAsset* InAsset, const FAKAbilityContext& InContext);
 
 	/** 每帧推进（DeltaTime 为真实时间，内部按 PlayRate 缩放） */
@@ -58,13 +60,14 @@ public:
 
 	bool IsFinished() const { return bFinished; }
 	int32 GetLoopCount() const { return LoopCount; }
-
-	/** 绑定溯源记录（传 nullptr 表示不记录，零开销） */
-	void SetTrace(UAKTrace* InTrace);
+	bool IsGated() const;
 
 	UAKAbilityAsset* GetAsset() const { return Asset; }
 	FAKAbilityContext& GetContext() { return Context; }
 	const FAKAbilityContext& GetContext() const { return Context; }
+
+	/** 绑定溯源记录（传 nullptr 表示不记录，零开销） */
+	void SetTrace(UAKTrace* InTrace);
 
 	/** 时间轴跑完或被中断时触发（由 UAKGameplayAbility 监听并结束技能） */
 	FOnAKAbilityInstanceFinished OnFinished;
@@ -82,9 +85,9 @@ private:
 	UPROPERTY()
 	FAKAbilityContext Context;
 
-	/** 按 StartTime 升序排列的待执行任务 */
+	/** 执行计划（按 StartTime 升序） */
 	UPROPERTY()
-	TArray<UAKAbilityTaskBase*> PendingTasks;
+	TArray<FAKScheduledTask> Plan;
 
 	UPROPERTY()
 	TArray<FAKActiveTask> ActiveTasks;

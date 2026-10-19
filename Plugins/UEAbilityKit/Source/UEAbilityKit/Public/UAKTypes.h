@@ -22,6 +22,42 @@ enum class EAKTrackType : uint8
 };
 
 /**
+ * 轨道的复合执行模式（AbilityKit Pipeline 的 Sequence/Parallel/Repeat 思想在 UAK 的落地方式）。
+ *
+ * 设计取舍：AbilityKit 用"Phase 图"表达组合，UAK 把它放进**轨道**这一层——
+ * 因为任务本来就是"时间轴上的片段"，组合语义天然属于"这一串片段怎么排"。
+ */
+UENUM(BlueprintType)
+enum class EAKTrackCompositeMode : uint8
+{
+	/** 按任务自己的绝对时间排布（默认，与手工时间轴一致） */
+	Timeline	UMETA(DisplayName = "Timeline (绝对时间)"),
+	/** 忽略绝对时间，按数组顺序依次执行：上一个结束，下一个开始 */
+	Sequence	UMETA(DisplayName = "Sequence (依次)"),
+	/** 忽略绝对时间，全部同时开始 */
+	Parallel	UMETA(DisplayName = "Parallel (同时)")
+};
+
+/** 执行计划中的一条：任务 + 本次运行的起止时间 + 所属轨道 */
+USTRUCT()
+struct FAKScheduledTask
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	UAKAbilityTaskBase* Task = nullptr;
+
+	UPROPERTY()
+	float StartTime = 0.f;
+
+	UPROPERTY()
+	float EndTime = 0.f;
+
+	UPROPERTY()
+	int32 TrackIndex = INDEX_NONE;
+};
+
+/**
  * 任务的执行端标记。
  * 注意：UAK 不自建网络同步——网络交给 GAS（FPredictionKey + ASC 复制）。
  * 这里只是"哪一端应该执行"的标记，用于避免表现类任务在权威端空跑。

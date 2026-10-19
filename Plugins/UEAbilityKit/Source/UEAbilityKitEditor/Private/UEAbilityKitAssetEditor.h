@@ -45,6 +45,7 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Preview(const FSpawnTabArgs& Args);
 
 	void OnTaskSelected(UAKAbilityTaskBase* Task);
+	void OnTrackSelected(class UAKAbilityTrack* Track);
 	void OnCursorTimeChanged(float Time);
 	float GetCursorTime() const { return CursorTime; }
 

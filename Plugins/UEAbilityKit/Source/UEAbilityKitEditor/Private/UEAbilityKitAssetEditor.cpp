@@ -238,6 +238,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 	TSharedRef<SUAKTimeline> Timeline = SNew(SUAKTimeline)
 		.Asset(Asset)
 		.OnTaskSelected(this, &FUEAbilityKitAssetEditor::OnTaskSelected)
+		.OnTrackSelected(this, &FUEAbilityKitAssetEditor::OnTrackSelected)
 		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged);
 	TimelineWidget = Timeline;
 
@@ -359,6 +360,15 @@ void FUEAbilityKitAssetEditor::OnTaskSelected(UAKAbilityTaskBase* Task)
 	if (DetailsView.IsValid())
 	{
 		DetailsView->SetObject(Task);
+	}
+}
+
+void FUEAbilityKitAssetEditor::OnTrackSelected(UAKAbilityTrack* Track)
+{
+	// 选中轨道：在 Inspector 里改复合模式（Sequence / Parallel / Repeat）与延迟
+	if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(Track);
 	}
 }
 

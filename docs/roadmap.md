@@ -56,9 +56,13 @@
 
 - [x] Rule 轨道：`UAKAbilityTask_Branch`（Tag / 属性条件 → 开关另一条轨道）
 - [x] 执行器支持 `Context.DisabledTracks`（分支结果过滤）
-- [ ] 复合轨道：Repeat / WaitUntil / Parallel
+- [x] 复合轨道：`Sequence` / `Parallel` / `RepeatCount` / `RepeatInterval` / `StartDelay`
+- [x] `BuildExecutionPlan()`：复合模式展开成扁平调度表，编辑器与运行时共用
+- [x] `UAKAbilityTask_WaitUntil`：条件满足即继续 + `bGateTimeline` 冻结时间轴
+- [x] `FAKCondition`：Branch 与 WaitUntil 共用同一套条件语义
 - [ ] 投射物与区域效果（GE + Cue 组合）
 - [ ] 多人示例工程
+- [ ] 打断传播：复合轨道中断时的子任务顺序与回滚语义
 
 ## M5 — 高级编排
 

@@ -5,6 +5,12 @@
 #include "UAKAbilityTrack.h"
 #include "UAKTrace.h"
 
+void UAKAbilityInstance::SetTrace(UAKTrace* InTrace)
+{
+	Trace = InTrace;
+	RootNodeIndex = Trace ? Trace->GetRootIndex() : INDEX_NONE;
+}
+
 void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityContext& InContext)
 {
 	Asset = InAsset;
@@ -27,23 +33,26 @@ void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityCo
 		RootNodeIndex = Trace->GetRootIndex();
 	}
 
-	Asset->CollectTasks(PendingTasks, /*bOnlyEnabledTracks=*/true);
-	PendingTasks.Sort([](const UAKAbilityTaskBase& A, const UAKAbilityTaskBase& B)
-	{
-		return A.StartTime < B.StartTime;
-	});
+	// 复合轨道（Sequence / Parallel / Repeat）在这里被展开成扁平调度表
+	Asset->BuildExecutionPlan(Plan, /*bOnlyEnabledTracks=*/true);
 
-	if (PendingTasks.Num() == 0 && Asset->Length <= 0.f)
+	if (Plan.Num() == 0 && Asset->Length <= 0.f)
 	{
 		// 空技能：立刻结束，避免空转
 		bFinished = true;
 	}
 }
 
-void UAKAbilityInstance::SetTrace(UAKTrace* InTrace)
+bool UAKAbilityInstance::IsGated() const
 {
-	Trace = InTrace;
-	RootNodeIndex = Trace ? Trace->GetRootIndex() : INDEX_NONE;
+	for (const FAKActiveTask& Active : ActiveTasks)
+	{
+		if (Active.bGate)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void UAKAbilityInstance::Tick(float DeltaTime)
@@ -55,7 +64,12 @@ void UAKAbilityInstance::Tick(float DeltaTime)
 
 	const float Rate = FMath::Max(Asset->PlayRate, 0.01f);
 	const float ScaledDelta = DeltaTime * Rate;
-	Context.CurrentTime += ScaledDelta;
+
+	// 门控：存在"冻结时间轴"的任务时，时间不前进（但持续任务仍会 Tick）
+	if (!IsGated())
+	{
+		Context.CurrentTime += ScaledDelta;
+	}
 
 	StartDueTasks();
 	TickActiveTasks(ScaledDelta);
@@ -77,33 +91,37 @@ void UAKAbilityInstance::Tick(float DeltaTime)
 
 void UAKAbilityInstance::StartDueTasks()
 {
-	while (PendingIndex < PendingTasks.Num())
+	while (PendingIndex < Plan.Num())
 	{
-		UAKAbilityTaskBase* Task = PendingTasks[PendingIndex];
+		const FAKScheduledTask& Scheduled = Plan[PendingIndex];
+		UAKAbilityTaskBase* Task = Scheduled.Task;
+
 		if (!Task)
 		{
 			++PendingIndex;
 			continue;
 		}
 
-		if (Task->StartTime > Context.CurrentTime)
+		if (Scheduled.StartTime > Context.CurrentTime)
 		{
-			break; // 后面的任务起始时间更晚，停止本轮
+			break; // 后面的更晚，停止本轮
 		}
 
 		++PendingIndex;
 
-		// 执行端过滤：ServerOnly 的任务不在非权威端执行，ClientOnly 的任务不在非本地端执行。
-		// 注意这不是网络同步——UAK 不自建同步，只是避免任务在不该跑的一端空跑。
 		// 分支结果：被 Branch 任务停用的轨道不参与本次运行
-		if (const UAKAbilityTrack* OwnerTrack = Cast<UAKAbilityTrack>(Task->GetOuter()))
+		if (Asset->Tracks.IsValidIndex(Scheduled.TrackIndex))
 		{
-			if (Context.DisabledTracks.Contains(OwnerTrack->TrackName))
+			if (const UAKAbilityTrack* OwnerTrack = Asset->Tracks[Scheduled.TrackIndex])
 			{
-				continue;
+				if (Context.DisabledTracks.Contains(OwnerTrack->TrackName))
+				{
+					continue;
+				}
 			}
 		}
 
+		// 执行端过滤：ServerOnly 不在非权威端跑，ClientOnly 不在非本地端跑
 		const bool bSkipServerOnly = (Task->NetMode == EAKTaskNetMode::ServerOnly) && !Context.bIsAuthority;
 		const bool bSkipClientOnly = (Task->NetMode == EAKTaskNetMode::ClientOnly) && !Context.bIsLocallyControlled;
 		if (bSkipServerOnly || bSkipClientOnly)
@@ -116,15 +134,16 @@ void UAKAbilityInstance::StartDueTasks()
 			Context.ScratchPads.Add(Task, ScratchPad);
 		}
 
-		Task->OnTaskStart(Context);
-
-		// 溯源：记录任务节点（未开启记录时 Trace 为 nullptr，此处是空判断，无额外开销）
+		// 溯源：记录任务节点（未开启记录时 Trace 为 nullptr）
 		const int32 NodeIndex = Trace
 			? Trace->AddNode(RootNodeIndex, EAKTraceNodeKind::Task,
-				Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")), Task->StartTime)
+				Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")), Scheduled.StartTime)
 			: INDEX_NONE;
 
-		if (Task->IsSingleFrame())
+		Task->OnTaskStart(Context);
+
+		const bool bSingleFrame = (Scheduled.EndTime <= Scheduled.StartTime);
+		if (bSingleFrame)
 		{
 			// 单帧任务：进入即结束，不进入活跃列表
 			Task->OnTaskEnd(Context, /*bInterrupted=*/false);
@@ -133,8 +152,9 @@ void UAKAbilityInstance::StartDueTasks()
 		{
 			FAKActiveTask Active;
 			Active.Task = Task;
-			Active.EndTime = Task->GetEndTime();
+			Active.EndTime = Scheduled.EndTime;
 			Active.bNeedsTick = Task->bNeedsTick;
+			Active.bGate = Task->bGateTimeline;
 			Active.TraceNodeIndex = NodeIndex;
 			ActiveTasks.Add(Active);
 		}
@@ -156,12 +176,26 @@ void UAKAbilityInstance::EndDueTasks()
 {
 	for (int32 Index = ActiveTasks.Num() - 1; Index >= 0; --Index)
 	{
-		if (Context.CurrentTime >= ActiveTasks[Index].EndTime)
+		const FAKActiveTask& Active = ActiveTasks[Index];
+		if (!Active.Task)
 		{
-			if (UAKAbilityTaskBase* Task = ActiveTasks[Index].Task)
+			ActiveTasks.RemoveAtSwap(Index);
+			continue;
+		}
+
+		const bool bTimeUp = (Context.CurrentTime >= Active.EndTime);
+		const bool bEarly = Active.Task->ShouldEndEarly(Context);
+
+		if (bTimeUp || bEarly)
+		{
+			Active.Task->OnTaskEnd(Context, /*bInterrupted=*/false);
+
+			// 门控任务结束时把状态写回，供下一帧判断是否恢复推进
+			if (Active.TraceNodeIndex != INDEX_NONE && Trace)
 			{
-				Task->OnTaskEnd(Context, /*bInterrupted=*/false);
+				Trace->AddDetail(Active.TraceNodeIndex, bEarly ? TEXT("条件满足，提前结束") : TEXT("到时结束"));
 			}
+
 			ActiveTasks.RemoveAtSwap(Index);
 		}
 	}
@@ -169,7 +203,7 @@ void UAKAbilityInstance::EndDueTasks()
 
 void UAKAbilityInstance::RestartLoop()
 {
-	// 循环：结束当前存活任务（视为正常结束），回到循环起点并重新武装任务队列
+	// 循环：结束当前存活任务（视为正常结束），回到循环起点并重新武装调度表
 	for (const FAKActiveTask& Active : ActiveTasks)
 	{
 		if (Active.Task)
@@ -177,6 +211,7 @@ void UAKAbilityInstance::RestartLoop()
 			Active.Task->OnTaskEnd(Context, /*bInterrupted=*/false);
 		}
 	}
+
 	ActiveTasks.Reset();
 	Context.ScratchPads.Reset();
 	PendingIndex = 0;
@@ -201,7 +236,7 @@ void UAKAbilityInstance::Finish(bool bInterrupted)
 
 	ActiveTasks.Reset();
 	Context.ScratchPads.Reset();
-	PendingIndex = PendingTasks.Num();
+	PendingIndex = Plan.Num();
 	bFinished = true;
 
 	OnFinished.ExecuteIfBound(bInterrupted);

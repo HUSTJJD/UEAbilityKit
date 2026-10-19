@@ -69,7 +69,13 @@
 - Rule 轨道 `UAKAbilityTask_Branch`：用 GAS 的 Tag / 属性条件开关另一条轨道
 - 设计文档补齐：`10-executor` / `11-targeting` / `12-trace` / `13-network` / `14-serialization` / `15-validation`
 
-> 待完成：复合轨道（Repeat / WaitUntil / Parallel）、投射物与区域效果、多人示例，以及**编译验证**。
+**M5 — 复合编排**
+- 轨道级 `Sequence` / `Parallel` / 重复次数 / 重复间隔 / 起始延迟
+- `BuildExecutionPlan()`：复合模式展开成扁平调度表，编辑器与运行时共用同一张表
+- `UAKAbilityTask_WaitUntil`：条件满足即继续，`bGateTimeline` 可冻结时间轴
+- `FAKCondition`：Branch 与 WaitUntil 共用同一套 GAS 条件语义
+
+> 待完成：投射物与区域效果、多人示例工程、打断传播语义，以及**编译验证**。
 
 ## 目录结构
 

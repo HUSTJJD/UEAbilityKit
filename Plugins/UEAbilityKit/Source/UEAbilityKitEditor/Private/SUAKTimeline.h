@@ -7,7 +7,10 @@
 class UAKAbilityAsset;
 class UAKAbilityTaskBase;
 
+class UAKAbilityTrack;
+
 DECLARE_DELEGATE_OneParam(FOnAKTaskSelected, UAKAbilityTaskBase* /*Task*/);
+DECLARE_DELEGATE_OneParam(FOnAKTrackSelected, UAKAbilityTrack* /*Track*/);
 DECLARE_DELEGATE_OneParam(FOnAKCursorTimeChanged, float /*Time*/);
 
 /**
@@ -26,6 +29,7 @@ public:
 	SLATE_BEGIN_ARGS(SUAKTimeline) {}
 		SLATE_ARGUMENT(TWeakObjectPtr<UAKAbilityAsset>, Asset)
 		SLATE_EVENT(FOnAKTaskSelected, OnTaskSelected)
+		SLATE_EVENT(FOnAKTrackSelected, OnTrackSelected)
 		SLATE_EVENT(FOnAKCursorTimeChanged, OnCursorTimeChanged)
 	SLATE_END_ARGS()
 
@@ -56,6 +60,7 @@ private:
 	int32 HitTestRow(float Y) const;
 	UAKAbilityTaskBase* HitTestTask(float X, int32 Row) const;
 	float SnapTime(float Time) const;
+	void RebuildPlanIfNeeded();
 
 	void DrawRuler(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const;
 	void DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const;
@@ -65,7 +70,16 @@ private:
 private:
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	FOnAKTaskSelected OnTaskSelected;
+	FOnAKTrackSelected OnTrackSelected;
 	FOnAKCursorTimeChanged OnCursorTimeChanged;
+
+	/**
+	 * 缓存的执行计划：复合轨道（Sequence / Parallel / Repeat）展开后的真实时间。
+	 * 编辑器据此绘制，保证"看到的"就是"跑出来的"。
+	 */
+	TArray<FAKScheduledTask> CachedPlan;
+	float PlanRefreshTimer = 0.f;
+	FString LastPlanSignature;
 
 	mutable float ViewWidth = 0.f;
 	mutable float ViewHeight = 0.f;

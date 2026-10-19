@@ -41,10 +41,47 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 {
 	Asset = InArgs._Asset;
 	OnTaskSelected = InArgs._OnTaskSelected;
+	OnTrackSelected = InArgs._OnTrackSelected;
 	OnCursorTimeChanged = InArgs._OnCursorTimeChanged;
 
 	SetCanTick(true);
 	SetClipping(EWidgetClipping::ClipToBounds);
+
+	RebuildPlanIfNeeded();
+}
+
+void SUAKTimeline::RebuildPlanIfNeeded()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		CachedPlan.Reset();
+		LastPlanSignature.Empty();
+		return;
+	}
+
+	// 用"轨道设置 + 任务时间"做指纹，避免每次 Tick 都重建
+	FString Signature;
+	for (const UAKAbilityTrack* Track : AssetPtr->Tracks)
+	{
+		if (!Track) { continue; }
+		Signature += FString::Printf(TEXT("%d|%d|%d|%.3f|%.3f|"),
+			static_cast<int32>(Track->CompositeMode), Track->RepeatCount,
+			Track->bEnabled ? 1 : 0, Track->RepeatInterval, Track->StartDelay);
+		for (const UAKAbilityTaskBase* Task : Track->Tasks)
+		{
+			if (!Task) { continue; }
+			Signature += FString::Printf(TEXT("%s:%.3f:%.3f;"), *Task->GetClass()->GetName(), Task->StartTime, Task->Duration);
+		}
+	}
+
+	if (Signature == LastPlanSignature)
+	{
+		return;
+	}
+
+	LastPlanSignature = Signature;
+	AssetPtr->BuildExecutionPlan(CachedPlan, /*bOnlyEnabledTracks=*/false);
 }
 
 void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
@@ -53,6 +90,13 @@ void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurren
 
 	ViewWidth = FMath::Max(0.f, AllottedGeometry.GetLocalSize().X - TrackHeaderWidth);
 	ViewHeight = AllottedGeometry.GetLocalSize().Y;
+
+	PlanRefreshTimer += InDeltaTime;
+	if (PlanRefreshTimer >= 0.25f)
+	{
+		PlanRefreshTimer = 0.f;
+		RebuildPlanIfNeeded();
+	}
 }
 
 void SUAKTimeline::SetCursorTime(float InTime)
@@ -100,28 +144,17 @@ int32 SUAKTimeline::HitTestRow(float Y) const
 
 UAKAbilityTaskBase* SUAKTimeline::HitTestTask(float X, int32 Row) const
 {
-	UAKAbilityAsset* AssetPtr = Asset.Get();
-	if (!AssetPtr || Row < 0 || Row >= AssetPtr->Tracks.Num())
-	{
-		return nullptr;
-	}
-
-	UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
-	if (!Track)
-	{
-		return nullptr;
-	}
-
+	// 用执行计划做命中测试，保证 Sequence / Parallel / Repeat 下点到的位置与实际运行一致
 	const float Time = XToTime(X);
-	for (UAKAbilityTaskBase* Task : Track->Tasks)
+	for (const FAKScheduledTask& Scheduled : CachedPlan)
 	{
-		if (!Task)
+		if (Scheduled.TrackIndex != Row || !Scheduled.Task)
 		{
 			continue;
 		}
-		if (Time >= Task->StartTime && Time <= Task->GetEndTime())
+		if (Time >= Scheduled.StartTime && Time <= Scheduled.EndTime)
 		{
-			return Task;
+			return Scheduled.Task;
 		}
 	}
 	return nullptr;
@@ -136,7 +169,7 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		return FReply::Unhandled();
 	}
 
-	// 点轨道头：切换该轨道开关（UAK 独有的整轨静音）
+	// 点轨道头：色条区 = 切换整轨开关（UAK 独有的整轨静音）；名称区 = 选中轨道改复合设置
 	if (Local.X < TrackHeaderWidth)
 	{
 		const int32 Row = HitTestRow(Local.Y);
@@ -144,9 +177,16 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		if (AssetPtr && AssetPtr->Tracks.IsValidIndex(Row) && AssetPtr->Tracks[Row])
 		{
 			UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
-			Track->bEnabled = !Track->bEnabled;
-			Track->Modify();
-			AssetPtr->MarkPackageDirty();
+			if (Local.X <= 12.f)
+			{
+				Track->Modify();
+				Track->bEnabled = !Track->bEnabled;
+				AssetPtr->MarkPackageDirty();
+			}
+			else
+			{
+				OnTrackSelected.ExecuteIfBound(Track);
+			}
 		}
 		return FReply::Handled().CaptureMouse(SharedThis(this));
 	}
@@ -190,6 +230,15 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 	if (!Task)
 	{
 		return FReply::Unhandled();
+	}
+
+	// 复合轨道（Sequence / Parallel）的任务时间由轨道计算，不允许手动改绝对时间
+	if (const UAKAbilityTrack* OwnerTrack = Cast<UAKAbilityTrack>(Task->GetOuter()))
+	{
+		if (OwnerTrack->CompositeMode != EAKTrackCompositeMode::Timeline)
+		{
+			return FReply::Handled();
+		}
 	}
 
 	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
@@ -365,10 +414,23 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 9);
 	const float Width = Geometry.GetLocalSize().X;
 
-	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
+	// 按执行计划绘制：复合轨道展开后的真实时间，做到"看到的即跑出来的"
+	for (const FAKScheduledTask& Scheduled : CachedPlan)
 	{
+		const int32 Row = Scheduled.TrackIndex;
+		if (!AssetPtr->Tracks.IsValidIndex(Row))
+		{
+			continue;
+		}
+
 		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
 		if (!Track)
+		{
+			continue;
+		}
+
+		UAKAbilityTaskBase* Task = Scheduled.Task;
+		if (!Task)
 		{
 			continue;
 		}
@@ -376,15 +438,9 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 		const float Y = RulerHeight + Row * RowHeight;
 		const FLinearColor TrackColor = ColorForTrack(Track->TrackType);
 
-		for (UAKAbilityTaskBase* Task : Track->Tasks)
 		{
-			if (!Task)
-			{
-				continue;
-			}
-
-			const float X0 = TimeToX(Task->StartTime);
-			const float X1 = TimeToX(Task->GetEndTime());
+			const float X0 = TimeToX(Scheduled.StartTime);
+			const float X1 = TimeToX(Scheduled.EndTime);
 			const float W = FMath::Max(4.f, X1 - X0);
 			if (X0 > Width || X1 < TrackHeaderWidth)
 			{

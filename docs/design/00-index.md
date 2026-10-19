@@ -36,13 +36,14 @@
 | 网络 | [13-network.md](13-network.md) | **UAK 逻辑层一行网络代码都不写**，全部落在 GAS 原语上 |
 | 序列化 | [14-serialization.md](14-serialization.md) | Json 双向；`$type` 定位类；只导出逻辑字段 |
 | 验证 | [15-validation.md](15-validation.md) | Task 自带 `Validate()`（内聚）+ 常驻底栏 + CI 门禁 |
+| 复合编排 | [16-composite.md](16-composite.md) | 组合语义放在**轨道**上（Sequence / Parallel / Repeat）；`WaitUntil` 门控冻结时间轴 |
 
 ## 待定稿（M5 及以后）
 
 | 主题 | 说明 |
 |---|---|
 | 投射物与区域效果 | 建议用 GE + Cue 组合实现，不自建物理 |
-| 复合轨道 | Repeat / WaitUntil / Parallel 的语义与打断传播 |
+| 打断传播 | 复合轨道被中断时，子任务的中断顺序与回滚语义 |
 | 多人示例 | ASC on PlayerState + LocalPredicted 的最小可跑示例 |
 | 规则集扩展 | 让项目能注册自己的校验规则 |
 

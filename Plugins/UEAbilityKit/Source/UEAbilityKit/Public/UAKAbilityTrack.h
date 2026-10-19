@@ -33,6 +33,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Track")
 	bool bCollapsed = false;
 
+	// ── 复合编排（Sequence / Parallel / Repeat）─────────────────────────────
+	/** 该轨道上任务的排布方式 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composite")
+	EAKTrackCompositeMode CompositeMode = EAKTrackCompositeMode::Timeline;
+
+	/** 整条轨道重复执行多少次（仅 Sequence / Parallel 生效） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composite",
+		meta = (ClampMin = "1", UIMin = "1", EditCondition = "CompositeMode != EAKTrackCompositeMode::Timeline"))
+	int32 RepeatCount = 1;
+
+	/** 每次重复之间的间隔（秒） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composite",
+		meta = (ClampMin = "0.0", UIMin = "0.0", EditCondition = "CompositeMode != EAKTrackCompositeMode::Timeline"))
+	float RepeatInterval = 0.f;
+
+	/** 整条轨道的起始延迟（秒） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Composite", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float StartDelay = 0.f;
+
 	/** 轨道上的任务片段（内联实例化） */
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Track")
 	TArray<UAKAbilityTaskBase*> Tasks;
