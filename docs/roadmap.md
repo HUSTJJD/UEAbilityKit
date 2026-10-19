@@ -50,7 +50,15 @@
 - [x] `UAKTraceSubsystem`：世界级记录器，可开关（关闭时零开销）
 - [x] 血缘视图支持运行时实况数据源（`SetRuntimeTrace`）
 - [x] 执行器把每次施放写入 Trace（`UAKAbilityInstance::SetTrace`，任务进入时建节点）
-- [ ] PIE 联动：时间轴光标跟随 + 血缘视图切实况
+- [x] PIE 联动：光标跟随最晚节点时间 + 血缘视图自动切实况 + PIE 期间自动开启记录
+
+## M5 — 高级编排（部分）
+
+- [x] Rule 轨道：`UAKAbilityTask_Branch`（Tag / 属性条件 → 开关另一条轨道）
+- [x] 执行器支持 `Context.DisabledTracks`（分支结果过滤）
+- [ ] 复合轨道：Repeat / WaitUntil / Parallel
+- [ ] 投射物与区域效果（GE + Cue 组合）
+- [ ] 多人示例工程
 
 ## M5 — 高级编排
 

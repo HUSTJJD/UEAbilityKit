@@ -1,11 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 #include "Toolkits/AssetEditorToolkit.h"
 #include "Toolkits/IToolkitHost.h"
 
 class UAKAbilityAsset;
 class UAKAbilityTaskBase;
+class UAKTrace;
 class SUAKTimeline;
 class SUAKGASImpactBar;
 class SUAKValidationBar;
@@ -26,6 +28,7 @@ class FUEAbilityKitAssetEditor : public FAssetEditorToolkit
 {
 public:
 	void InitEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost>& InitToolkitHost, UAKAbilityAsset* InAsset);
+	virtual ~FUEAbilityKitAssetEditor();
 
 	// FAssetEditorToolkit
 	virtual void RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager) override;
@@ -53,6 +56,9 @@ private:
 	FReply OnPreviewStopClicked();
 	FReply OnPreviewLoopClicked();
 
+	/** PIE 联动：光标跟随 + 血缘视图切实况数据 */
+	bool TickPIELink(float DeltaTime);
+
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	TSharedPtr<SUAKTimeline> TimelineWidget;
 	TSharedPtr<SUAKGASImpactBar> ImpactBarWidget;
@@ -63,6 +69,10 @@ private:
 	TSharedPtr<IDetailsView> DetailsView;
 
 	float CursorTime = 0.f;
+
+	FTSTicker::FDelegateHandle PIETickerHandle;
+	TWeakObjectPtr<const UAKTrace> LastLinkedTrace;
+	bool bPIERecordingForced = false;
 
 	static const FName TimelineTabId;
 	static const FName DetailsTabId;

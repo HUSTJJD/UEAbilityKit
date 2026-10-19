@@ -64,7 +64,12 @@
 - Task Picker（搜索 + 指定目标轨道 + 支持蓝图派生 Task）
 - `UAKAbilityThumbnailRenderer`（内容浏览器画"技能结构示意图"）
 
-> 待完成：PIE 联动（时间轴光标跟随 + 血缘视图切实况），以及**编译验证**。
+**M4/M5 收尾**
+- PIE 联动：时间轴光标跟随 + 血缘视图自动切实况 + PIE 期间自动开启记录
+- Rule 轨道 `UAKAbilityTask_Branch`：用 GAS 的 Tag / 属性条件开关另一条轨道
+- 设计文档补齐：`10-executor` / `11-targeting` / `12-trace` / `13-network` / `14-serialization` / `15-validation`
+
+> 待完成：复合轨道（Repeat / WaitUntil / Parallel）、投射物与区域效果、多人示例，以及**编译验证**。
 
 ## 目录结构
 

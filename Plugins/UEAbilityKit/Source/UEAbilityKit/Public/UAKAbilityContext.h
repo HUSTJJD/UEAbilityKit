@@ -60,6 +60,10 @@ struct FAKAbilityContext
 	UPROPERTY()
 	TMap<UAKAbilityTaskBase*, UObject*> ScratchPads;
 
+	/** 本次运行中被 Branch 任务停用的轨道名 */
+	UPROPERTY(BlueprintReadWrite, Category = "Context")
+	TSet<FName> DisabledTracks;
+
 	void Reset()
 	{
 		Owner.Reset();
@@ -69,5 +73,6 @@ struct FAKAbilityContext
 		CurrentTime = 0.f;
 		PlayRate = 1.f;
 		ScratchPads.Reset();
+		DisabledTracks.Reset();
 	}
 };

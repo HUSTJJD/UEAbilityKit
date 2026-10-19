@@ -2,6 +2,7 @@
 
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
+#include "UAKAbilityTrack.h"
 #include "UAKTrace.h"
 
 void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityContext& InContext)
@@ -94,6 +95,15 @@ void UAKAbilityInstance::StartDueTasks()
 
 		// 执行端过滤：ServerOnly 的任务不在非权威端执行，ClientOnly 的任务不在非本地端执行。
 		// 注意这不是网络同步——UAK 不自建同步，只是避免任务在不该跑的一端空跑。
+		// 分支结果：被 Branch 任务停用的轨道不参与本次运行
+		if (const UAKAbilityTrack* OwnerTrack = Cast<UAKAbilityTrack>(Task->GetOuter()))
+		{
+			if (Context.DisabledTracks.Contains(OwnerTrack->TrackName))
+			{
+				continue;
+			}
+		}
+
 		const bool bSkipServerOnly = (Task->NetMode == EAKTaskNetMode::ServerOnly) && !Context.bIsAuthority;
 		const bool bSkipClientOnly = (Task->NetMode == EAKTaskNetMode::ClientOnly) && !Context.bIsLocallyControlled;
 		if (bSkipServerOnly || bSkipClientOnly)

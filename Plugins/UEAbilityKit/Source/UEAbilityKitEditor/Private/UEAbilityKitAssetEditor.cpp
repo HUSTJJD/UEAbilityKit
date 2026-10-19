@@ -9,7 +9,12 @@
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTrack.h"
+#include "UAKTrace.h"
 #include "UAKTypes.h"
+
+#include "Engine/Engine.h"
+#include "Engine/EngineBaseTypes.h"
+#include "Engine/World.h"
 
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
@@ -66,6 +71,115 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 
 	InitAssetEditor(Mode, InitToolkitHost, FName(TEXT("UAKAbilityEditorApp")), Layout,
 		/*bCreateDefaultStandaloneMenu=*/true, /*bCreateDefaultToolbar=*/true, InAsset);
+
+	// PIE 联动：每 0.1s 检查一次正在运行的技能，让光标与血缘视图跟随
+	PIETickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+		FTickerDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::TickPIELink), 0.1f);
+}
+
+FUEAbilityKitAssetEditor::~FUEAbilityKitAssetEditor()
+{
+	if (PIETickerHandle.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(PIETickerHandle);
+		PIETickerHandle.Reset();
+	}
+}
+
+bool FUEAbilityKitAssetEditor::TickPIELink(float DeltaTime)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return true;
+	}
+
+	// 找到 PIE 世界
+	UWorld* PIEWorld = nullptr;
+	for (const FWorldContext& Context : GEngine->GetWorldContexts())
+	{
+		if (Context.WorldType == EWorldType::PIE && Context.World())
+		{
+			PIEWorld = Context.World();
+			break;
+		}
+	}
+
+	if (!PIEWorld)
+	{
+		// PIE 已结束：血缘视图切回设计期
+		if (LastLinkedTrace.IsValid() || bPIERecordingForced)
+		{
+			LastLinkedTrace.Reset();
+			bPIERecordingForced = false;
+			if (BloodlineWidget.IsValid())
+			{
+				BloodlineWidget->SetRuntimeTrace(nullptr);
+			}
+		}
+		return true;
+	}
+
+	UAKTraceSubsystem* TraceSubsystem = PIEWorld->GetSubsystem<UAKTraceSubsystem>();
+	if (!TraceSubsystem)
+	{
+		return true;
+	}
+
+	// PIE 期间自动开启记录，省去手动开关
+	if (!TraceSubsystem->bRecordingEnabled)
+	{
+		TraceSubsystem->bRecordingEnabled = true;
+		bPIERecordingForced = true;
+	}
+
+	// 找与本资产同名的最新一条溯源记录
+	const UAKTrace* Match = nullptr;
+	auto Scan = [&](const TArray<UAKTrace*>& Traces)
+	{
+		for (const UAKTrace* Trace : Traces)
+		{
+			if (!Trace || Trace->GetNodes().Num() == 0)
+			{
+				continue;
+			}
+			if (Trace->GetNodes()[0].Label == AssetPtr->GetName())
+			{
+				Match = Trace;
+			}
+		}
+	};
+	Scan(TraceSubsystem->GetActiveTraces());
+	if (!Match)
+	{
+		Scan(TraceSubsystem->GetFinishedTraces());
+	}
+
+	if (!Match)
+	{
+		return true;
+	}
+
+	if (LastLinkedTrace.Get() != Match && BloodlineWidget.IsValid())
+	{
+		LastLinkedTrace = Match;
+		BloodlineWidget->SetRuntimeTrace(Match);
+	}
+
+	// 光标跟随：取当前记录中最晚的节点时间
+	const TArray<FAKTraceNode>& Nodes = Match->GetNodes();
+	float MaxTime = 0.f;
+	for (const FAKTraceNode& Node : Nodes)
+	{
+		MaxTime = FMath::Max(MaxTime, Node.Time);
+	}
+
+	if (TimelineWidget.IsValid() && !FMath::IsNearlyEqual(MaxTime, CursorTime, 0.001f))
+	{
+		TimelineWidget->SetCursorTime(MaxTime);
+	}
+
+	return true;
 }
 
 void FUEAbilityKitAssetEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)

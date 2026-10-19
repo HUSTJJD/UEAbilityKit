@@ -26,16 +26,25 @@
 - [03-editor-design.md](03-editor-design.md) — 编辑器：**三视图（时间轴 / 血缘 / 校验）**、布局、
   与 Able 的逐处对照（通用 / 刻意不同 / 独创）、GAS 影响条、血缘视图、交互约定
 
-## 待定稿（M1–M5，按里程碑补写）
+## 已定稿（机制）
 
-| 主题 | 计划文档 | 说明 |
+| 主题 | 文档 | 关键结论 |
 |---|---|---|
-| 执行器 | `10-executor.md` | `UAKAbilityInstance` 的推进方式（每帧驱动 vs AbilityTask / Ticker）、中断与循环语义 |
-| 目标选择 | `11-targeting.md` | 复用 `FGameplayAbilityTargetDataHandle` 与目标选择 Task |
-| 溯源 | `12-trace.md` | root/parent/owner 血缘，供调试、伤害归因与回放 |
-| 网络 | `13-network.md` | 明确依赖 GAS 预测 + ASC 复制，本项目不自建同步 |
-| 序列化 | `14-serialization.md` | Json 双向导出、版本升级、CI 校验 |
-| 验证 | `15-validation.md` | `Validate()` 规则集与命令行校验 |
+| 执行器 | [10-executor.md](10-executor.md) | `UAKAbilityInstance` + `UAKAbilityTickTask`（AbilityTask 驱动）；三个过滤（轨道停用 / 执行端 / 轨道开关） |
+| 目标选择 | [11-targeting.md](11-targeting.md) | 不自建目标选择系统，只把 GAS 的 TargetData 适配进 Context |
+| 溯源 | [12-trace.md](12-trace.md) | `ParentIndex` 构树；关闭时零开销；PIE 联动切实况 |
+| 网络 | [13-network.md](13-network.md) | **UAK 逻辑层一行网络代码都不写**，全部落在 GAS 原语上 |
+| 序列化 | [14-serialization.md](14-serialization.md) | Json 双向；`$type` 定位类；只导出逻辑字段 |
+| 验证 | [15-validation.md](15-validation.md) | Task 自带 `Validate()`（内聚）+ 常驻底栏 + CI 门禁 |
+
+## 待定稿（M5 及以后）
+
+| 主题 | 说明 |
+|---|---|
+| 投射物与区域效果 | 建议用 GE + Cue 组合实现，不自建物理 |
+| 复合轨道 | Repeat / WaitUntil / Parallel 的语义与打断传播 |
+| 多人示例 | ASC on PlayerState + LocalPredicted 的最小可跑示例 |
+| 规则集扩展 | 让项目能注册自己的校验规则 |
 
 ## 不属于本项目解决的问题
 
