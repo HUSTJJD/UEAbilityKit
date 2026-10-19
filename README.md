@@ -75,7 +75,13 @@
 - `UAKAbilityTask_WaitUntil`：条件满足即继续，`bGateTimeline` 可冻结时间轴
 - `FAKCondition`：Branch 与 WaitUntil 共用同一套 GAS 条件语义
 
-> 待完成：投射物与区域效果、多人示例工程、打断传播语义，以及**编译验证**。
+**M5 — 投射物与区域效果**
+- `UAKQuery`：`CollisionQuery` / `AreaEffect` / 投射物共用同一份查询与过滤规则
+- `AAKProjectile`：服务端权威、逐帧扫掠推进、命中打 GE + Cue、支持穿透/重力/超时
+- `UAKAbilityTask_SpawnProjectile`：插槽或偏移生成、瞄准首个目标、扇形弹幕
+- `UAKAbilityTask_AreaEffect`：周期生效、可跟随/固定中心、每目标只吃一次（ScratchPad 演示）
+
+> 待完成：多人示例工程、打断传播语义，以及**编译验证**。
 
 ## 目录结构
 

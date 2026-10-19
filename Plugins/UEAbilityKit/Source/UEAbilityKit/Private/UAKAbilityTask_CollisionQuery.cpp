@@ -3,10 +3,8 @@
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityContext.h"
 
-#include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemComponent.h"
-#include "CollisionShape.h"
-#include "Engine/OverlapResult.h"
+#include "UAKQuery.h"
+
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
@@ -27,63 +25,20 @@ void UAKAbilityTask_CollisionQuery::OnTaskStart(FAKAbilityContext& Context)
 	}
 
 	const FVector Origin = Owner->GetActorLocation() + Owner->GetActorRotation().RotateVector(Offset);
-	const FQuat Rotation = Owner->GetActorQuat();
 
-	FCollisionShape CollisionShape;
-	switch (Shape)
-	{
-	case EAKQueryShape::Sphere:
-		CollisionShape = FCollisionShape::MakeSphere(Radius);
-		break;
-	case EAKQueryShape::Box:
-		CollisionShape = FCollisionShape::MakeBox(Extent);
-		break;
-	case EAKQueryShape::Capsule:
-	default:
-		CollisionShape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
-		break;
-	}
-
-	TArray<FOverlapResult> Overlaps;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(UAKCollisionQuery), /*bTraceComplex=*/false);
-	Params.AddIgnoredActor(Owner);
-
-	const bool bHit = World->OverlapMultiByChannel(Overlaps, Origin, Rotation, TraceChannel, CollisionShape, Params);
-	if (!bHit)
-	{
-		if (!bAppendToTargets)
-		{
-			Context.Targets.Reset();
-		}
-		return;
-	}
+	// 与 AreaEffect、投射物共用同一份查询实现
+	TArray<AActor*> HitActors = UAKQuery::OverlapActors(
+		World, Origin, Owner->GetActorQuat(), Shape, Radius, Extent, HalfHeight,
+		TraceChannel, Owner, bRequireAbilitySystem, MaxTargets);
 
 	if (!bAppendToTargets)
 	{
 		Context.Targets.Reset();
 	}
 
-	int32 Added = 0;
-	for (const FOverlapResult& Overlap : Overlaps)
+	for (AActor* HitActor : HitActors)
 	{
-		AActor* HitActor = Overlap.GetActor();
-		if (!HitActor || HitActor == Owner)
-		{
-			continue;
-		}
-
-		if (bRequireAbilitySystem && !UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor))
-		{
-			continue;
-		}
-
 		Context.Targets.AddUnique(TWeakObjectPtr<AActor>(HitActor));
-		++Added;
-
-		if (MaxTargets > 0 && Added >= MaxTargets)
-		{
-			break;
-		}
 	}
 }
 

@@ -60,7 +60,10 @@
 - [x] `BuildExecutionPlan()`：复合模式展开成扁平调度表，编辑器与运行时共用
 - [x] `UAKAbilityTask_WaitUntil`：条件满足即继续 + `bGateTimeline` 冻结时间轴
 - [x] `FAKCondition`：Branch 与 WaitUntil 共用同一套条件语义
-- [ ] 投射物与区域效果（GE + Cue 组合）
+- [x] `UAKQuery`：`CollisionQuery` / `AreaEffect` / 投射物共用同一份查询与过滤规则
+- [x] `AAKProjectile`：服务端权威，逐帧扫掠推进，命中打 GE + Cue，支持穿透/重力/超时
+- [x] `UAKAbilityTask_SpawnProjectile`：插槽/偏移生成、瞄准首个目标、`SpawnCount`+`SpreadAngle` 扇形弹幕
+- [x] `UAKAbilityTask_AreaEffect`：周期生效、可跟随/固定中心、每目标只吃一次（ScratchPad 演示）
 - [ ] 多人示例工程
 - [ ] 打断传播：复合轨道中断时的子任务顺序与回滚语义
 

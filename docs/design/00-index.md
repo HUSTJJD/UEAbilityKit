@@ -37,15 +37,16 @@
 | 序列化 | [14-serialization.md](14-serialization.md) | Json 双向；`$type` 定位类；只导出逻辑字段 |
 | 验证 | [15-validation.md](15-validation.md) | Task 自带 `Validate()`（内聚）+ 常驻底栏 + CI 门禁 |
 | 复合编排 | [16-composite.md](16-composite.md) | 组合语义放在**轨道**上（Sequence / Parallel / Repeat）；`WaitUntil` 门控冻结时间轴 |
+| 投射物与区域 | [17-projectile-and-area.md](17-projectile-and-area.md) | 只负责"飞、撞到谁、把 GE+Cue 打上去"；持续与周期交给 GE，物理交给引擎 |
 
 ## 待定稿（M5 及以后）
 
 | 主题 | 说明 |
 |---|---|
-| 投射物与区域效果 | 建议用 GE + Cue 组合实现，不自建物理 |
 | 打断传播 | 复合轨道被中断时，子任务的中断顺序与回滚语义 |
 | 多人示例 | ASC on PlayerState + LocalPredicted 的最小可跑示例 |
 | 规则集扩展 | 让项目能注册自己的校验规则 |
+| 投射物的客户端预测 | 当前不做本地预生成，需要时评估用 Cue 补手感 |
 
 ## 不属于本项目解决的问题
 
