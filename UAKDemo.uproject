@@ -1,0 +1,30 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "Samples",
+	"Description": "UEAbilityKit 示例工程：项目本身即示例，UAK 作为插件使用",
+	"Modules": [
+		{
+			"Name": "UAKDemo",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "UEAbilityKit",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayAbilities",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayTags",
+			"Enabled": true
+		}
+	]
+}

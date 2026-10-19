@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
 #include "AbilitySystemComponent.h"
-#include "UAKSampleAttributeSet.generated.h"
+#include "UAKDemoAttributeSet.generated.h"
 
 /**
  * 示例属性集：Health / MaxHealth / Mana / MaxMana。
@@ -13,12 +13,12 @@
  * 否则客户端预测出的伤害会看起来"回滚"。
  */
 UCLASS()
-class UAKSAMPLE_API UAKSampleAttributeSet : public UAttributeSet
+class UAKDEMO_API UAKDemoAttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
 
 public:
-	UAKSampleAttributeSet();
+	UAKDemoAttributeSet();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -36,10 +36,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_MaxMana)
 	FGameplayAttributeData MaxMana;
 
-	ATTRIBUTE_ACCESSORS(UAKSampleAttributeSet, Health);
-	ATTRIBUTE_ACCESSORS(UAKSampleAttributeSet, MaxHealth);
-	ATTRIBUTE_ACCESSORS(UAKSampleAttributeSet, Mana);
-	ATTRIBUTE_ACCESSORS(UAKSampleAttributeSet, MaxMana);
+	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, Health);
+	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, MaxHealth);
+	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, Mana);
+	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, MaxMana);
 
 protected:
 	UFUNCTION()

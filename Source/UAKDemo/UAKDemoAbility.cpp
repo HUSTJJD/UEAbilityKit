@@ -1,13 +1,13 @@
-#include "UAKSampleAbility.h"
+#include "UAKDemoAbility.h"
 
-UAKSampleAbility::UAKSampleAbility()
+UAKDemoAbility::UAKDemoAbility()
 {
 	// UAK 执行器需要实例；预测需要 Local Predicted
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 }
 
-void UAKSampleAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+void UAKDemoAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)

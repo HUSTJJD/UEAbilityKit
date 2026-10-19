@@ -90,8 +90,10 @@
       ApplyGE 记 GE→SetByCaller→目标，CollisionQuery 记命中目标
 - [x] 多人接入示例：[examples/01-minimal-multiplayer-setup.md](examples/01-minimal-multiplayer-setup.md)
 - [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
-- [x] 多人示例：`Samples/UAKSample` —— 可编译的源码示例插件
-      （ASC + 属性集 + 带冷却/消耗的技能 + README 使用步骤）
+- [x] 多人示例：`Source/UAKDemo/` —— 工程自带的示例模块
+      （ASC + 属性集 + 带冷却/消耗的技能）
+- [x] **工程化改造**：仓库本身成为可打开的 UE 工程（对照 UnLua 布局），
+      UAK 作为 `Plugins/UEAbilityKit`；示例插件用 `git mv` 迁为工程模块 `Source/UAKDemo`
 
 ## 剩余工作
 

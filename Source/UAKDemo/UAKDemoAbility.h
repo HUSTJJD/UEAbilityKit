@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UAKGameplayAbility.h"
-#include "UAKSampleAbility.generated.h"
+#include "UAKDemoAbility.generated.h"
 
 class UGameplayEffect;
 
@@ -17,12 +17,12 @@ class UGameplayEffect;
  * 建议在蓝图里派生本类并填写这三个字段，然后把蓝图类填进角色的 DefaultAbilities。
  */
 UCLASS()
-class UAKSAMPLE_API UAKSampleAbility : public UAKGameplayAbility
+class UAKDEMO_API UAKDemoAbility : public UAKGameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	UAKSampleAbility();
+	UAKDemoAbility();
 
 	/** 冷却 GE：Duration + GrantedTags(Cooldown.*) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sample")

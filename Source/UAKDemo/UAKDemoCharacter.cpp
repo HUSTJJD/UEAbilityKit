@@ -1,11 +1,11 @@
-#include "UAKSampleCharacter.h"
+#include "UAKDemoCharacter.h"
 
-#include "UAKSampleAttributeSet.h"
+#include "UAKDemoAttributeSet.h"
 
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 
-AAKSampleCharacter::AAKSampleCharacter()
+AAKDemoCharacter::AAKDemoCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -15,10 +15,10 @@ AAKSampleCharacter::AAKSampleCharacter()
 	// 玩家用 Mixed（属性复制到拥有者、GE 复制给所有人）；AI 用 Minimal
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	AttributeSet = CreateDefaultSubobject<UAKSampleAttributeSet>(TEXT("AttributeSet"));
+	AttributeSet = CreateDefaultSubobject<UAKDemoAttributeSet>(TEXT("AttributeSet"));
 }
 
-void AAKSampleCharacter::BeginPlay()
+void AAKDemoCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -29,7 +29,7 @@ void AAKSampleCharacter::BeginPlay()
 	InitAbilityActorInfo();
 }
 
-void AAKSampleCharacter::PossessedBy(AController* NewController)
+void AAKDemoCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
@@ -38,7 +38,7 @@ void AAKSampleCharacter::PossessedBy(AController* NewController)
 	GrantDefaultAbilities();
 }
 
-void AAKSampleCharacter::OnRep_PlayerState()
+void AAKDemoCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
@@ -46,7 +46,7 @@ void AAKSampleCharacter::OnRep_PlayerState()
 	InitAbilityActorInfo();
 }
 
-void AAKSampleCharacter::InitAbilityActorInfo()
+void AAKDemoCharacter::InitAbilityActorInfo()
 {
 	if (!AbilitySystemComponent)
 	{
@@ -67,7 +67,7 @@ void AAKSampleCharacter::InitAbilityActorInfo()
 	}
 }
 
-void AAKSampleCharacter::GrantDefaultAbilities()
+void AAKDemoCharacter::GrantDefaultAbilities()
 {
 	if (!AbilitySystemComponent || !HasAuthority())
 	{

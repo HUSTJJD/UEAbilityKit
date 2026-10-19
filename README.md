@@ -103,37 +103,59 @@
 
 | 文档 / 目录 | 内容 |
 |---|---|
-| [`Samples/UAKSample`](Samples/UAKSample) | 可编译的源码示例插件：ASC + 属性集 + 带冷却/消耗的技能 |
+| [`Source/UAKDemo/`](Source/UAKDemo) | 工程自带的示例模块：ASC + 属性集 + 带冷却/消耗的技能 |
 | [`examples/01`](docs/examples/01-minimal-multiplayer-setup.md) | 最小多人接入（ASC 放哪、复制模式、NetMode 配对、常见坑） |
 | [`examples/02`](docs/examples/02-cooldown-cost-stacking.md) | 冷却 / 消耗 / 堆叠该怎么配（全是 GAS，UAK 不自建） |
+| [`examples/03`](docs/examples/03-sample-project.md) | 工程结构说明（对照 UnLua 的布局） |
 
 > 待完成：**编译验证**。功能、文档、示例均已完整，只差一次编译把报错修干净。
 
 ## 目录结构
 
+> 本仓库**本身就是一个可打开的 UE 工程**，UAK 作为插件存在——布局参照 [UnLua](https://github.com/Tencent/UnLua)：
+> 项目即示例，库放 `Plugins`。
+
 ```
-UEAbilityKit/
-├─ Plugins/UEAbilityKit/
-│  ├─ UEAbilityKit.uplugin
-│  └─ Source/
-│     ├─ UEAbilityKit/            # Runtime（不依赖 Editor）
-│     │   ├─ Public/  Private/
-│     └─ UEAbilityKitEditor/      # Editor（M2 起承载时间轴编辑器）
+UEAbilityKit/                       ← 仓库根 = UE 工程根
+├─ UAKDemo.uproject                 ← 示例工程
+├─ Source/
+│  ├─ UAKDemo/                      ← 示例游戏模块（属性集 / 角色 / 技能）
+│  └─ UAKDemo*.Target.cs
+├─ Plugins/
+│  └─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
+│     ├─ UEAbilityKit.uplugin
+│     └─ Source/
+│        ├─ UEAbilityKit/           # Runtime（不依赖 Editor）
+│        └─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
+├─ Config/                          # 工程配置（最小）
+├─ Content/                         # 内容目录（不提交二进制，见 Content/README.md）
 ├─ docs/
-│  ├─ research/                   # Able / AbilityKit 调研与命名提案
-│  ├─ design/                     # 设计文档（canonical 入口见 00-index.md）
+│  ├─ research/                     # Able / AbilityKit 调研与命名提案
+│  ├─ design/                       # 设计文档（canonical 入口见 00-index.md）
+│  ├─ examples/                     # 接入与配置示例
 │  └─ roadmap.md
 ├─ NOTICE
-└─ LICENSE                        # Apache-2.0
+└─ LICENSE                          # Apache-2.0
 ```
 
 ## 快速开始
+
+### 只想用插件
 
 1. 把 `Plugins/UEAbilityKit` 整个目录拷贝到你的 UE 项目的 `Plugins/` 下。
 2. 在 `.uproject` 的 `Plugins` 数组或通过编辑器启用 **UE Ability Kit** 插件，并确保 **GameplayAbilities** 插件已启用。
 3. 重新生成工程文件并编译。
 4. 在内容浏览器右键 → Miscellaneous → **Ability Asset** 创建技能资产，往 `Tasks` 里添加 Task。
 5. 新建一个继承 `UAKGameplayAbility` 的蓝图，把 `AbilityAsset` 指向刚创建的资产，通过 ASC 授予并激活即可。
+
+### 想直接跑示例工程
+
+```bash
+git clone https://github.com/HUSTJJD/UEAbilityKit.git
+```
+
+用 UE 打开 `UAKDemo.uproject`（源码版引擎需把 `EngineAssociation` 改成 `""`），
+然后按 [`docs/examples/03-sample-project.md`](docs/examples/03-sample-project.md) 创建资产。
 
 ### 开发与验证环境
 

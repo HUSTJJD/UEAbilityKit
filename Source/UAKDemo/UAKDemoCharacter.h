@@ -3,10 +3,10 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
-#include "UAKSampleCharacter.generated.h"
+#include "UAKDemoCharacter.generated.h"
 
 class UAbilitySystemComponent;
-class UAKSampleAttributeSet;
+class UAKDemoAttributeSet;
 class UGameplayAbility;
 
 /**
@@ -17,12 +17,12 @@ class UGameplayAbility;
  * 详见 docs/examples/01-minimal-multiplayer-setup.md。
  */
 UCLASS()
-class UAKSAMPLE_API AAKSampleCharacter : public ACharacter, public IAbilitySystemInterface
+class UAKDEMO_API AAKDemoCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
-	AAKSampleCharacter();
+	AAKDemoCharacter();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
 
@@ -31,16 +31,16 @@ public:
 	virtual void OnRep_PlayerState() override;
 
 	/** 供 UI 读取属性 */
-	const UAKSampleAttributeSet* GetSampleAttributeSet() const { return AttributeSet; }
+	const UAKDemoAttributeSet* GetSampleAttributeSet() const { return AttributeSet; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Abilities")
-	UAKSampleAttributeSet* AttributeSet = nullptr;
+	UAKDemoAttributeSet* AttributeSet = nullptr;
 
-	/** 初始授予的技能（填 UAKSampleAbility 的蓝图子类） */
+	/** 初始授予的技能（填 UAKDemoAbility 的蓝图子类） */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 

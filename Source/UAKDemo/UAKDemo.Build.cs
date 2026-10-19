@@ -1,8 +1,8 @@
 using UnrealBuildTool;
 
-public class UAKSample : ModuleRules
+public class UAKDemo : ModuleRules
 {
-	public UAKSample(ReadOnlyTargetRules Target) : base(Target)
+	public UAKDemo(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
