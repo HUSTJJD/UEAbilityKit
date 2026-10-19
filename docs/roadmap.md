@@ -64,8 +64,11 @@
 - [x] `AAKProjectile`：服务端权威，逐帧扫掠推进，命中打 GE + Cue，支持穿透/重力/超时
 - [x] `UAKAbilityTask_SpawnProjectile`：插槽/偏移生成、瞄准首个目标、`SpawnCount`+`SpreadAngle` 扇形弹幕
 - [x] `UAKAbilityTask_AreaEffect`：周期生效、可跟随/固定中心、每目标只吃一次（ScratchPad 演示）
+- [x] 打断传播：`EAKInterruptOrder`（后启动先结束 / 顺序 / 轨道优先级）
+- [x] 轨道被 Branch 停用 → 正在运行的任务按"取消"结束（与技能中断区分）
+- [x] `bAlwaysExecute`：即使被中断也保证执行一次（未轮到的补执行）
+- [x] 门控任务在中断时必然解除（清空活跃列表，避免时间轴永久冻结）
 - [ ] 多人示例工程
-- [ ] 打断传播：复合轨道中断时的子任务顺序与回滚语义
 
 ## M5 — 高级编排
 

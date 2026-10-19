@@ -28,6 +28,13 @@ struct FAKActiveTask
 	UPROPERTY()
 	bool bGate = false;
 
+	/** 启动序号，用于中断时确定结束顺序 */
+	UPROPERTY()
+	int32 StartOrder = 0;
+
+	UPROPERTY()
+	int32 TrackIndex = INDEX_NONE;
+
 	/** 对应的溯源节点索引（未开启记录时为 INDEX_NONE） */
 	UPROPERTY()
 	int32 TraceNodeIndex = INDEX_NONE;
@@ -76,6 +83,19 @@ private:
 	void StartDueTasks();
 	void TickActiveTasks(float ScaledDeltaTime);
 	void EndDueTasks();
+
+	/** 轨道被 Branch 停用后，取消该轨道上仍在运行的任务 */
+	void EndTasksOnDisabledTracks();
+
+	/** 中断时补执行"保证执行"但还没轮到的任务 */
+	void RunGuaranteedPendingTasks();
+
+	bool IsTrackDisabled(int32 TrackIndex) const;
+	bool ShouldRunOnThisEnd(const UAKAbilityTaskBase* Task) const;
+
+	/** 按资产的 InterruptOrder 排序，决定中断时的结束顺序 */
+	void SortForInterrupt(TArray<FAKActiveTask>& InOut) const;
+
 	void RestartLoop();
 
 	UPROPERTY()
@@ -98,5 +118,6 @@ private:
 	int32 PendingIndex = 0;
 	int32 LoopCount = 0;
 	int32 RootNodeIndex = INDEX_NONE;
+	int32 StartOrderCounter = 0;
 	bool bFinished = false;
 };

@@ -48,6 +48,16 @@ public:
 	FText Note;
 
 	/**
+	 * 即使技能被中断，也保证至少执行一次。
+	 *
+	 * 典型用途：必中的收尾 GE、必须落地的资源回收、必须发的关键 Cue。
+	 * 中断时若该任务还没轮到，执行器会补执行一次（OnTaskStart → OnTaskEnd(false)）；
+	 * 若正在运行，则以"未被中断"的方式结束，避免表现突兀。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
+	bool bAlwaysExecute = false;
+
+	/**
 	 * 是否冻结时间轴推进（"门控"）。
 	 * 为 true 时，该任务存活期间整个时间轴的时间不前进（但持续任务仍会收到 Tick）。
 	 * 用于"等待目标进入范围 / 等待玩家输入"这类语义。

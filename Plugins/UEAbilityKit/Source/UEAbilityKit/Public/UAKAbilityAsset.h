@@ -72,6 +72,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
 	FGameplayTagContainer RequiredTags;
 
+	/** 被打断时，存活任务的结束顺序（见 EAKInterruptOrder） */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	EAKInterruptOrder InterruptOrder = EAKInterruptOrder::ReverseStartOrder;
+
 	// ── 时间轴结构 ─────────────────────────────────────────────────────────
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Ability")
 	TArray<UAKAbilityTrack*> Tracks;

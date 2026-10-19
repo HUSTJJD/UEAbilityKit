@@ -38,6 +38,23 @@ enum class EAKTrackCompositeMode : uint8
 	Parallel	UMETA(DisplayName = "Parallel (同时)")
 };
 
+/**
+ * 中断时结束任务的顺序。
+ *
+ * 为什么要有这个：多段技能被打断时，"先停哪个"直接决定表现是否突兀、
+ * 以及关键逻辑会不会丢。把它显式化，而不是让遍历顺序隐式决定。
+ */
+UENUM(BlueprintType)
+enum class EAKInterruptOrder : uint8
+{
+	/** 后启动的先结束（栈式撤销，默认）——最符合"回退到打断前"的直觉 */
+	ReverseStartOrder	UMETA(DisplayName = "后启动的先结束"),
+	/** 按启动顺序结束 */
+	StartOrder			UMETA(DisplayName = "按启动顺序"),
+	/** 按轨道优先级：先停表现，再停逻辑，最后停主时序 */
+	TrackPriority		UMETA(DisplayName = "按轨道优先级")
+};
+
 /** 执行计划中的一条：任务 + 本次运行的起止时间 + 所属轨道 */
 USTRUCT()
 struct FAKScheduledTask
