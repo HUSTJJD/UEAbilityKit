@@ -2,16 +2,21 @@
 
 #include "SUAKBloodlineView.h"
 #include "SUAKGASImpactBar.h"
+#include "SUAKPreviewViewport.h"
+#include "SUAKTaskPicker.h"
 #include "SUAKTimeline.h"
 #include "SUAKValidationBar.h"
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
+#include "UAKAbilityTrack.h"
+#include "UAKTypes.h"
 
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 #include "IDetailsView.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
 
 #define LOCTEXT_NAMESPACE "FUEAbilityKitAssetEditor"
@@ -19,6 +24,7 @@
 const FName FUEAbilityKitAssetEditor::TimelineTabId(TEXT("UAKTimeline"));
 const FName FUEAbilityKitAssetEditor::DetailsTabId(TEXT("UAKDetails"));
 const FName FUEAbilityKitAssetEditor::BloodlineTabId(TEXT("UAKBloodline"));
+const FName FUEAbilityKitAssetEditor::PreviewTabId(TEXT("UAKPreview"));
 
 void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 	const TSharedPtr<IToolkitHost>& InitToolkitHost, UAKAbilityAsset* InAsset)
@@ -48,6 +54,7 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 				(
 					FTabManager::NewStack()->SetSizeCoefficient(0.25f)
 					->AddTab(DetailsTabId, ETabState::OpenedTab)
+					->AddTab(PreviewTabId, ETabState::ClosedTab)
 				)
 			)
 			->Split
@@ -82,6 +89,11 @@ void FUEAbilityKitAssetEditor::RegisterTabSpawners(const TSharedRef<FTabManager>
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Bloodline))
 		.SetDisplayName(LOCTEXT("BloodlineTab", "血缘"))
 		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
+
+	InTabManager->RegisterTabSpawner(PreviewTabId,
+		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Preview))
+		.SetDisplayName(LOCTEXT("PreviewTab", "预览"))
+		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
 }
 
 void FUEAbilityKitAssetEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
@@ -91,6 +103,7 @@ void FUEAbilityKitAssetEditor::UnregisterTabSpawners(const TSharedRef<FTabManage
 	InTabManager->UnregisterTabSpawner(TimelineTabId);
 	InTabManager->UnregisterTabSpawner(DetailsTabId);
 	InTabManager->UnregisterTabSpawner(BloodlineTabId);
+	InTabManager->UnregisterTabSpawner(PreviewTabId);
 }
 
 FName FUEAbilityKitAssetEditor::GetToolkitFName() const { return FName(TEXT("UEAbilityKitAssetEditor")); }
@@ -150,10 +163,67 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Details(const FSpawnTabA
 {
 	check(Args.GetTabId() == DetailsTabId);
 
+	TaskPickerWidget = SNew(SUAKTaskPicker)
+		.Asset(Asset)
+		.OnAddTask(this, &FUEAbilityKitAssetEditor::OnAddTask);
+
 	return SNew(SDockTab)
 		.Label(LOCTEXT("DetailsTabLabel", "Inspector"))
 		[
-			DetailsView.ToSharedRef()
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.MaxHeight(280.f)
+			[
+				TaskPickerWidget.ToSharedRef()
+			]
+			+ SVerticalBox::Slot()
+			.FillHeight(1.f)
+			[
+				DetailsView.ToSharedRef()
+			]
+		];
+}
+
+TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Preview(const FSpawnTabArgs& Args)
+{
+	check(Args.GetTabId() == PreviewTabId);
+
+	PreviewWidget = SNew(SUAKEditorViewport).Asset(Asset);
+
+	return SNew(SDockTab)
+		.Label(LOCTEXT("PreviewTabLabel", "预览"))
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(2.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth()
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("PreviewPlay", "播放"))
+					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewPlayClicked)
+				]
+				+ SHorizontalBox::Slot().AutoWidth()
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("PreviewStop", "停止"))
+					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewStopClicked)
+				]
+				+ SHorizontalBox::Slot().AutoWidth()
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("PreviewLoop", "循环"))
+					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewLoopClicked)
+				]
+			]
+			+ SVerticalBox::Slot()
+			.FillHeight(1.f)
+			[
+				PreviewWidget.ToSharedRef()
+			]
 		];
 }
 
@@ -181,6 +251,69 @@ void FUEAbilityKitAssetEditor::OnTaskSelected(UAKAbilityTaskBase* Task)
 void FUEAbilityKitAssetEditor::OnCursorTimeChanged(float Time)
 {
 	CursorTime = Time;
+}
+
+void FUEAbilityKitAssetEditor::OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskClass, int32 TrackIndex)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !TaskClass)
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+
+	UAKAbilityTrack* Track = AssetPtr->Tracks.IsValidIndex(TrackIndex) ? AssetPtr->Tracks[TrackIndex] : nullptr;
+	if (!Track)
+	{
+		Track = NewObject<UAKAbilityTrack>(AssetPtr);
+		Track->TrackName = FName(TEXT("New Track"));
+		Track->TrackType = EAKTrackType::Custom;
+		AssetPtr->Tracks.Add(Track);
+	}
+
+	Track->Modify();
+
+	UAKAbilityTaskBase* Task = NewObject<UAKAbilityTaskBase>(Track, TaskClass);
+	Task->StartTime = FMath::Clamp(CursorTime, 0.f, AssetPtr->Length);
+	Track->Tasks.Add(Task);
+
+	AssetPtr->MarkPackageDirty();
+
+	// 立刻在 Inspector 里选中新任务，方便直接改参数
+	OnTaskSelected(Task);
+
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+}
+
+FReply FUEAbilityKitAssetEditor::OnPreviewPlayClicked()
+{
+	if (PreviewWidget.IsValid())
+	{
+		return PreviewWidget->OnPlayClicked();
+	}
+	return FReply::Handled();
+}
+
+FReply FUEAbilityKitAssetEditor::OnPreviewStopClicked()
+{
+	if (PreviewWidget.IsValid())
+	{
+		return PreviewWidget->OnStopClicked();
+	}
+	return FReply::Handled();
+}
+
+FReply FUEAbilityKitAssetEditor::OnPreviewLoopClicked()
+{
+	if (PreviewWidget.IsValid())
+	{
+		PreviewWidget->ToggleLooping();
+	}
+	return FReply::Handled();
 }
 
 #undef LOCTEXT_NAMESPACE

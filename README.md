@@ -59,7 +59,12 @@
 - `UAKValidateCommandlet`：CI 校验门禁（`-run=UAKValidate -path=/Game/Abilities -strict -json`）
 - 执行器写入 `UAKTrace`（每次施放生成血缘树）
 
-> 待完成：预览 Tab（`FPreviewScene`）、Task Picker、缩略图渲染、PIE 联动，以及**编译验证**。
+**M2 收尾**
+- 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放/停止/循环）
+- Task Picker（搜索 + 指定目标轨道 + 支持蓝图派生 Task）
+- `UAKAbilityThumbnailRenderer`（内容浏览器画"技能结构示意图"）
+
+> 待完成：PIE 联动（时间轴光标跟随 + 血缘视图切实况），以及**编译验证**。
 
 ## 目录结构
 

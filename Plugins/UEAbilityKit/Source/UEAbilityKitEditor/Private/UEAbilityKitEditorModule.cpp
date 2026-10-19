@@ -1,9 +1,12 @@
 #include "UEAbilityKitEditorModule.h"
 
+#include "UAKAbilityAsset.h"
 #include "UAKAbilityAssetTypeActions.h"
+#include "UAKAbilityThumbnailRenderer.h"
 
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
 
 void FUEAbilityKitEditorModule::StartupModule()
 {
@@ -16,7 +19,9 @@ void FUEAbilityKitEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(Action.ToSharedRef());
 	}
 
-	// TODO(M2): 注册 FAssetEditorToolkit（时间轴编辑器：轨道 / 视口 / 详情 / 工具栏）。
+	// 技能资产缩略图：画"技能结构示意图"
+	UThumbnailManager::Get().RegisterCustomRenderer(
+		UAKAbilityAsset::StaticClass(), UAKAbilityThumbnailRenderer::StaticClass());
 }
 
 void FUEAbilityKitEditorModule::ShutdownModule()
@@ -30,6 +35,11 @@ void FUEAbilityKitEditorModule::ShutdownModule()
 		}
 	}
 	RegisteredAssetTypeActions.Empty();
+
+	if (UObjectInitialized() && !IsEngineExitRequested())
+	{
+		UThumbnailManager::Get().UnregisterCustomRenderer(UAKAbilityAsset::StaticClass());
+	}
 }
 
 IMPLEMENT_MODULE(FUEAbilityKitEditorModule, UEAbilityKitEditor)

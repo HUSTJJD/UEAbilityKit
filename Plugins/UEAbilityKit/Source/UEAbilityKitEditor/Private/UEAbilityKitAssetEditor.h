@@ -10,6 +10,8 @@ class SUAKTimeline;
 class SUAKGASImpactBar;
 class SUAKValidationBar;
 class SUAKBloodlineView;
+class SUAKEditorViewport;
+class SUAKTaskPicker;
 class IDetailsView;
 
 /**
@@ -37,16 +39,27 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Timeline(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Bloodline(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_Preview(const FSpawnTabArgs& Args);
 
 	void OnTaskSelected(UAKAbilityTaskBase* Task);
 	void OnCursorTimeChanged(float Time);
 	float GetCursorTime() const { return CursorTime; }
+
+	/** 任务选择器：把新任务加到指定轨道（INDEX_NONE 表示新建轨道） */
+	void OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskClass, int32 TrackIndex);
+
+	/** 预览视口工具条 */
+	FReply OnPreviewPlayClicked();
+	FReply OnPreviewStopClicked();
+	FReply OnPreviewLoopClicked();
 
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	TSharedPtr<SUAKTimeline> TimelineWidget;
 	TSharedPtr<SUAKGASImpactBar> ImpactBarWidget;
 	TSharedPtr<SUAKValidationBar> ValidationBarWidget;
 	TSharedPtr<SUAKBloodlineView> BloodlineWidget;
+	TSharedPtr<SUAKEditorViewport> PreviewWidget;
+	TSharedPtr<SUAKTaskPicker> TaskPickerWidget;
 	TSharedPtr<IDetailsView> DetailsView;
 
 	float CursorTime = 0.f;
@@ -54,4 +67,5 @@ private:
 	static const FName TimelineTabId;
 	static const FName DetailsTabId;
 	static const FName BloodlineTabId;
+	static const FName PreviewTabId;
 };

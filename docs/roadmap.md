@@ -33,9 +33,9 @@
 - [x] `SUAKValidationBar`：常驻底栏，改动即增量重算（Able 是弹窗）
 - [x] `SUAKBloodlineView`：血缘 / Explain 视图（设计期用 `GetGASImpact`，运行时接 `UAKTrace`）
 - [x] `UAKAbilityAssetFactory`：内容浏览器 Right-click → Miscellaneous → Ability Asset
-- [ ] 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放）
-- [ ] Task Picker（分类 / 搜索 / 支持蓝图 Task）
-- [ ] Ability Asset 缩略图渲染
+- [x] 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放 / 停止 / 循环）
+- [x] Task Picker（搜索 + 列表 + 指定目标轨道 + 支持蓝图派生 Task）
+- [x] `UAKAbilityThumbnailRenderer`：内容浏览器里画"技能结构示意图"
 
 ## M3 — 治理能力 ✅
 
