@@ -21,8 +21,8 @@
 - [x] **执行端过滤**：`EAKTaskNetMode`（Both / ServerOnly / ClientOnly），避免在错误的一端空跑
 - [x] 内置 Task：`PlayMontage`、`SendGameplayCue`、`CollisionQuery`、`Dash`、`ApplyGameplayEffect`
 - [x] 目标选择接入 `FGameplayAbilityTargetDataHandle`（`UAKTargeting`，只做适配不自建目标选择系统）
-- [ ] 冷却 / 消耗 / 堆叠示例（全部用 GE，不自建）
-- [ ] 编译验证（当前被另一实例的 UBT 互斥锁阻塞）
+- [ ] 冷却 / 消耗 / 堆叠示例（GAS 原生能力，UAK 不自建，只需示例展示如何配 → 见「剩余工作」）
+- [ ] **编译验证**（当前被另一实例的 UBT 互斥锁阻塞 → 见「剩余工作」）
 
 ## M2 — 编辑器 ✅
 
@@ -84,8 +84,17 @@
 - [ ] 多人示例工程
 - [ ] 引导条件的 Json 序列化
 
-## M5 — 高级编排
+## 剩余工作
 
-- [ ] ECA / Trigger 轨道（事件 → 条件 → 动作）
-- [ ] 复合轨道：Sequence / Parallel / Repeat / WaitUntil
-- [ ] 投射物、区域效果、连续效果（复用 GE + Tag 规则）
+> 说明：上面另有一个 "M5 — 高级编排（部分）" 小节，本节只汇总**尚未完成**的事项，
+> 避免两处清单重复导致状态不一致。
+
+| 事项 | 状态 | 说明 |
+|---|---|---|
+| **编译验证** | ❌ 阻塞中 | 唯一的功能性阻塞：另一实例的 UBT 互斥锁 |
+| 撤销 / 重做集成 | ⬜ 打磨 | 已用 `Modify()`，但缺事务包装与 Undo 菜单 |
+| Alt+拖拽复制 / 右键菜单 | ⬜ 打磨 | 目前只有 Ctrl+D 与工具条按钮 |
+| 引导条件 Json 序列化 | ⬜ 已知限制 | `ChannelingConditions` 是内联对象，需按 `$type` 展开 |
+| 血缘视图下钻到 GE/属性 | ⬜ 已知限制 | 目前 Trace 只到 Task 层 |
+| 多人示例工程 | ⬜ 示例 | 需要一个可跑的 ASC + LocalPredicted 示例 |
+| 冷却 / 消耗 / 堆叠示例 | ⬜ 示例 | GAS 原生能力，UAK 不自建；只需示例展示如何配 |

@@ -22,6 +22,13 @@ namespace
 			StaticEnum<EAKTrackType>()->GetNameStringByValue(static_cast<int64>(Track->TrackType)));
 		TrackJson->SetBoolField(TEXT("enabled"), Track->bEnabled);
 
+		// 复合编排参数（Sequence / Parallel / Repeat）
+		TrackJson->SetStringField(TEXT("compositeMode"),
+			StaticEnum<EAKTrackCompositeMode>()->GetNameStringByValue(static_cast<int64>(Track->CompositeMode)));
+		TrackJson->SetNumberField(TEXT("repeatCount"), Track->RepeatCount);
+		TrackJson->SetNumberField(TEXT("repeatInterval"), Track->RepeatInterval);
+		TrackJson->SetNumberField(TEXT("startDelay"), Track->StartDelay);
+
 		TArray<TSharedPtr<FJsonValue>> TasksArray;
 		for (const UAKAbilityTaskBase* Task : Track->Tasks)
 		{
@@ -56,6 +63,19 @@ namespace
 		}
 
 		TrackJson.TryGetBoolField(TEXT("enabled"), Track->bEnabled);
+
+		// 复合编排参数
+		FString CompositeName;
+		if (TrackJson.TryGetStringField(TEXT("compositeMode"), CompositeName))
+		{
+			if (const UEnum* Enum = StaticEnum<EAKTrackCompositeMode>())
+			{
+				Track->CompositeMode = static_cast<EAKTrackCompositeMode>(Enum->GetValueByNameString(CompositeName));
+			}
+		}
+		TrackJson.TryGetNumberField(TEXT("repeatCount"), Track->RepeatCount);
+		TrackJson.TryGetNumberField(TEXT("repeatInterval"), Track->RepeatInterval);
+		TrackJson.TryGetNumberField(TEXT("startDelay"), Track->StartDelay);
 
 		const TArray<TSharedPtr<FJsonValue>>* TasksArray = nullptr;
 		if (!TrackJson.TryGetArrayField(TEXT("tasks"), TasksArray) || !TasksArray)

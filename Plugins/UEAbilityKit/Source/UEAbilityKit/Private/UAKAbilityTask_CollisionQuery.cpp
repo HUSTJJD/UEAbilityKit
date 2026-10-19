@@ -85,6 +85,21 @@ void UAKAbilityTask_CollisionQuery::ExportJson(TSharedRef<FJsonObject> OutJson) 
 	OutJson->SetArrayField(TEXT("extent"), ExtentArray);
 
 	OutJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
+
+	// 锥形参数
+	OutJson->SetNumberField(TEXT("coneAngle"), ConeAngle);
+
+	TArray<TSharedPtr<FJsonValue>> ConeDirArray;
+	ConeDirArray.Add(MakeShared<FJsonValueNumber>(ConeDirection.X));
+	ConeDirArray.Add(MakeShared<FJsonValueNumber>(ConeDirection.Y));
+	ConeDirArray.Add(MakeShared<FJsonValueNumber>(ConeDirection.Z));
+	OutJson->SetArrayField(TEXT("coneDirection"), ConeDirArray);
+
+	// 过滤器
+	TArray<TSharedPtr<FJsonValue>> FilterArray;
+	UAKQueryFilter::ExportFilterArray(Filters, FilterArray);
+	OutJson->SetArrayField(TEXT("filters"), FilterArray);
+
 	OutJson->SetNumberField(TEXT("traceChannel"), static_cast<double>(TraceChannel.GetValue()));
 	OutJson->SetBoolField(TEXT("appendToTargets"), bAppendToTargets);
 	OutJson->SetNumberField(TEXT("maxTargets"), MaxTargets);
@@ -122,6 +137,28 @@ void UAKAbilityTask_CollisionQuery::ImportJson(const FJsonObject& InJson)
 	if (InJson.TryGetNumberField(TEXT("halfHeight"), OutHalfHeight))
 	{
 		HalfHeight = static_cast<float>(OutHalfHeight);
+	}
+
+	// 锥形参数
+	double OutConeAngle = ConeAngle;
+	if (InJson.TryGetNumberField(TEXT("coneAngle"), OutConeAngle))
+	{
+		ConeAngle = static_cast<float>(OutConeAngle);
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* ConeDirArray = nullptr;
+	if (InJson.TryGetArrayField(TEXT("coneDirection"), ConeDirArray) && ConeDirArray && ConeDirArray->Num() == 3)
+	{
+		ConeDirection.X = static_cast<float>((*ConeDirArray)[0]->AsNumber());
+		ConeDirection.Y = static_cast<float>((*ConeDirArray)[1]->AsNumber());
+		ConeDirection.Z = static_cast<float>((*ConeDirArray)[2]->AsNumber());
+	}
+
+	// 过滤器
+	const TArray<TSharedPtr<FJsonValue>>* FilterArray = nullptr;
+	if (InJson.TryGetArrayField(TEXT("filters"), FilterArray) && FilterArray)
+	{
+		UAKQueryFilter::ImportFilterArray(*FilterArray, GetOuter(), Filters);
 	}
 
 	int32 ChannelValue = TraceChannel.GetValue();

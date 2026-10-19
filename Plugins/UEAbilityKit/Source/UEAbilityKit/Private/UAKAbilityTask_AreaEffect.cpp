@@ -203,6 +203,10 @@ void UAKAbilityTask_AreaEffect::ExportJson(TSharedRef<FJsonObject> OutJson) cons
 	OutJson->SetNumberField(TEXT("maxTargetsPerTick"), MaxTargetsPerTick);
 	OutJson->SetBoolField(TEXT("requireAbilitySystem"), bRequireAbilitySystem);
 	OutJson->SetBoolField(TEXT("applyOncePerTarget"), bApplyOncePerTarget);
+
+	TArray<TSharedPtr<FJsonValue>> FilterArray;
+	UAKQueryFilter::ExportFilterArray(Filters, FilterArray);
+	OutJson->SetArrayField(TEXT("filters"), FilterArray);
 	OutJson->SetStringField(TEXT("effectClass"), EffectClass ? EffectClass->GetPathName() : TEXT(""));
 	OutJson->SetNumberField(TEXT("effectLevel"), EffectLevel);
 	OutJson->SetStringField(TEXT("cueTag"), CueTag.ToString());
@@ -234,6 +238,12 @@ void UAKAbilityTask_AreaEffect::ImportJson(const FJsonObject& InJson)
 
 	InJson.TryGetBoolField(TEXT("requireAbilitySystem"), bRequireAbilitySystem);
 	InJson.TryGetBoolField(TEXT("applyOncePerTarget"), bApplyOncePerTarget);
+
+	const TArray<TSharedPtr<FJsonValue>>* FilterArray = nullptr;
+	if (InJson.TryGetArrayField(TEXT("filters"), FilterArray) && FilterArray)
+	{
+		UAKQueryFilter::ImportFilterArray(*FilterArray, GetOuter(), Filters);
+	}
 
 	FString EffectPath;
 	if (InJson.TryGetStringField(TEXT("effectClass"), EffectPath) && !EffectPath.IsEmpty())

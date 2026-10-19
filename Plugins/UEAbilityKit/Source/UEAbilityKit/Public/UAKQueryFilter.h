@@ -24,6 +24,14 @@ public:
 	/** 返回 true 表示保留该候选目标 */
 	virtual bool Passes(const AActor* Candidate, const AActor* Source) const { return true; }
 
+	/** Json 双向（子类必须调用 Super，并写入与 ImportJson 对称的字段） */
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const;
+	virtual void ImportJson(const FJsonObject& InJson);
+
+	/** 过滤器数组的序列化辅助（供查询类任务复用） */
+	static void ExportFilterArray(const TArray<UAKQueryFilter*>& Filters, TArray<TSharedPtr<FJsonValue>>& OutArray);
+	static void ImportFilterArray(const TArray<TSharedPtr<FJsonValue>>& InArray, UObject* Outer, TArray<UAKQueryFilter*>& OutFilters);
+
 #if WITH_EDITOR
 	virtual FText GetFilterDescription() const;
 #endif
@@ -49,6 +57,8 @@ public:
 	bool bKeepIfNoAbilitySystem = false;
 
 	virtual bool Passes(const AActor* Candidate, const AActor* Source) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
 
 /** 按距离过滤 */
@@ -70,6 +80,8 @@ public:
 	bool bUseCapsuleRadius = false;
 
 	virtual bool Passes(const AActor* Candidate, const AActor* Source) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
 
 /** 视线检测：中间有遮挡就排除 */
@@ -87,4 +99,6 @@ public:
 	bool bTraceFromEyeHeight = true;
 
 	virtual bool Passes(const AActor* Candidate, const AActor* Source) const override;
+	virtual void ExportJson(TSharedRef<FJsonObject> OutJson) const override;
+	virtual void ImportJson(const FJsonObject& InJson) override;
 };
