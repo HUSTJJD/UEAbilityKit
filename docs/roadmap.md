@@ -90,7 +90,8 @@
       ApplyGE 记 GE→SetByCaller→目标，CollisionQuery 记命中目标
 - [x] 多人接入示例：[examples/01-minimal-multiplayer-setup.md](examples/01-minimal-multiplayer-setup.md)
 - [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
-- [ ] 多人**示例工程**（目前是文档，尚未提供一个可编译的 Sample 工程）
+- [x] 多人示例：`Samples/UAKSample` —— 可编译的源码示例插件
+      （ASC + 属性集 + 带冷却/消耗的技能 + README 使用步骤）
 
 ## 剩余工作
 

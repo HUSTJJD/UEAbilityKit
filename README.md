@@ -99,7 +99,15 @@
 - **Task 编辑器元数据**：分类 / 显示名 / 说明 / 配色，Task Picker 与时间轴直接使用
 - **查询升级**：新增 Cone（锥形）形状；过滤器与形状解耦（Tag / 距离 / 视线）
 
-> 待完成：撤销/重做集成、右键菜单、引导条件的 Json 序列化、多人示例工程，以及**编译验证**。
+**示例**
+
+| 文档 / 目录 | 内容 |
+|---|---|
+| [`Samples/UAKSample`](Samples/UAKSample) | 可编译的源码示例插件：ASC + 属性集 + 带冷却/消耗的技能 |
+| [`examples/01`](docs/examples/01-minimal-multiplayer-setup.md) | 最小多人接入（ASC 放哪、复制模式、NetMode 配对、常见坑） |
+| [`examples/02`](docs/examples/02-cooldown-cost-stacking.md) | 冷却 / 消耗 / 堆叠该怎么配（全是 GAS，UAK 不自建） |
+
+> 待完成：**编译验证**。功能、文档、示例均已完整，只差一次编译把报错修干净。
 
 ## 目录结构
 
