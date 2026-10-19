@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
+#include "SUAKTimelineToolbar.h"
 #include "Toolkits/AssetEditorToolkit.h"
 #include "Toolkits/IToolkitHost.h"
 
@@ -45,12 +46,25 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Preview(const FSpawnTabArgs& Args);
 
 	void OnTaskSelected(UAKAbilityTaskBase* Task);
-	void OnTrackSelected(class UAKAbilityTrack* Track);
+	void OnTrackSelected(class UAKAbilityTrack* Track, int32 TrackIndex);
 	void OnCursorTimeChanged(float Time);
 	float GetCursorTime() const { return CursorTime; }
 
+	/** 键盘 / 工具条：删除与复制当前选中的任务 */
+	void DeleteSelectedTask();
+	void DuplicateSelectedTask();
+
 	/** 任务选择器：把新任务加到指定轨道（INDEX_NONE 表示新建轨道） */
 	void OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskClass, int32 TrackIndex);
+
+	/** 工具条：改资产的操作 */
+	void OnToolbarAction(EAKToolbarAction Action);
+	void AddTrack();
+	void RemoveSelectedTrack();
+	void MoveSelectedTrack(int32 Delta);
+	void AddMarkerAtCursor();
+	void SelectAssetInInspector();
+	void GenerateFromMontage();
 
 	/** 预览视口工具条 */
 	FReply OnPreviewPlayClicked();
@@ -70,6 +84,10 @@ private:
 	TSharedPtr<IDetailsView> DetailsView;
 
 	float CursorTime = 0.f;
+
+	/** 当前在 Inspector 里编辑的对象 */
+	TWeakObjectPtr<UAKAbilityTaskBase> SelectedTask;
+	int32 SelectedTrackIndex = INDEX_NONE;
 
 	FTSTicker::FDelegateHandle PIETickerHandle;
 	TWeakObjectPtr<const UAKTrace> LastLinkedTrace;

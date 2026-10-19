@@ -5,13 +5,16 @@
 #include "SUAKPreviewViewport.h"
 #include "SUAKTaskPicker.h"
 #include "SUAKTimeline.h"
+#include "SUAKTimelineToolbar.h"
 #include "SUAKValidationBar.h"
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
+#include "UAKAbilityTask_PlayMontage.h"
 #include "UAKAbilityTrack.h"
 #include "UAKTrace.h"
 #include "UAKTypes.h"
 
+#include "Animation/AnimMontage.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/World.h"
@@ -239,8 +242,14 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.Asset(Asset)
 		.OnTaskSelected(this, &FUEAbilityKitAssetEditor::OnTaskSelected)
 		.OnTrackSelected(this, &FUEAbilityKitAssetEditor::OnTrackSelected)
-		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged);
+		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged)
+		.OnRequestDeleteTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DeleteSelectedTask))
+		.OnRequestDuplicateTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DuplicateSelectedTask));
 	TimelineWidget = Timeline;
+
+	TSharedRef<SUAKTimelineToolbar> Toolbar = SNew(SUAKTimelineToolbar)
+		.Timeline(Timeline)
+		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 
 	TSharedRef<SUAKGASImpactBar> ImpactBar = SNew(SUAKGASImpactBar)
 		.Asset(Asset)
@@ -253,6 +262,12 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.Label(LOCTEXT("TimelineTabLabel", "时间轴"))
 		[
 			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(2.f)
+			[
+				Toolbar
+			]
 			+ SVerticalBox::Slot().FillHeight(1.f)
 			[
 				Timeline
@@ -357,18 +372,298 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Bloodline(const FSpawnTa
 
 void FUEAbilityKitAssetEditor::OnTaskSelected(UAKAbilityTaskBase* Task)
 {
+	SelectedTask = Task;
 	if (DetailsView.IsValid())
 	{
 		DetailsView->SetObject(Task);
 	}
 }
 
-void FUEAbilityKitAssetEditor::OnTrackSelected(UAKAbilityTrack* Track)
+void FUEAbilityKitAssetEditor::OnTrackSelected(UAKAbilityTrack* Track, int32 TrackIndex)
 {
 	// 选中轨道：在 Inspector 里改复合模式（Sequence / Parallel / Repeat）与延迟
+	SelectedTrackIndex = TrackIndex;
 	if (DetailsView.IsValid())
 	{
 		DetailsView->SetObject(Track);
+	}
+}
+
+void FUEAbilityKitAssetEditor::DeleteSelectedTask()
+{
+	UAKAbilityTaskBase* Task = SelectedTask.Get();
+	if (!Task)
+	{
+		return;
+	}
+
+	UAKAbilityTrack* Track = Cast<UAKAbilityTrack>(Task->GetOuter());
+	if (!Track)
+	{
+		return;
+	}
+
+	Track->Modify();
+	Track->Tasks.Remove(Task);
+
+	if (UAKAbilityAsset* AssetPtr = Asset.Get())
+	{
+		AssetPtr->MarkPackageDirty();
+	}
+
+	SelectedTask = nullptr;
+	if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(nullptr);
+	}
+}
+
+void FUEAbilityKitAssetEditor::DuplicateSelectedTask()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	UAKAbilityTaskBase* Task = SelectedTask.Get();
+	if (!AssetPtr || !Task)
+	{
+		return;
+	}
+
+	UAKAbilityTrack* Track = Cast<UAKAbilityTrack>(Task->GetOuter());
+	if (!Track)
+	{
+		return;
+	}
+
+	Track->Modify();
+
+	UAKAbilityTaskBase* Copy = DuplicateObject<UAKAbilityTaskBase>(Task, Track);
+	if (!Copy)
+	{
+		return;
+	}
+
+	// 复制出来的任务紧接在原任务之后
+	Copy->StartTime = FMath::Min(Task->GetEndTime(), AssetPtr->Length);
+	Track->Tasks.Add(Copy);
+	AssetPtr->MarkPackageDirty();
+
+	OnTaskSelected(Copy);
+}
+
+void FUEAbilityKitAssetEditor::OnToolbarAction(EAKToolbarAction Action)
+{
+	switch (Action)
+	{
+	case EAKToolbarAction::AddTrack:				AddTrack(); break;
+	case EAKToolbarAction::RemoveTrack:			RemoveSelectedTrack(); break;
+	case EAKToolbarAction::MoveTrackUp:			MoveSelectedTrack(-1); break;
+	case EAKToolbarAction::MoveTrackDown:		MoveSelectedTrack(1); break;
+	case EAKToolbarAction::DuplicateTask:		DuplicateSelectedTask(); break;
+	case EAKToolbarAction::DeleteTask:			DeleteSelectedTask(); break;
+	case EAKToolbarAction::AddMarker:			AddMarkerAtCursor(); break;
+	case EAKToolbarAction::SelectAsset:			SelectAssetInInspector(); break;
+	case EAKToolbarAction::GenerateFromMontage:	GenerateFromMontage(); break;
+	default: break;
+	}
+}
+
+void FUEAbilityKitAssetEditor::AddTrack()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+
+	UAKAbilityTrack* Track = NewObject<UAKAbilityTrack>(AssetPtr);
+	Track->TrackName = FName(*FString::Printf(TEXT("Track_%d"), AssetPtr->Tracks.Num()));
+	Track->TrackType = EAKTrackType::Custom;
+	Track->CompositeMode = EAKTrackCompositeMode::Timeline;
+	AssetPtr->Tracks.Add(Track);
+
+	AssetPtr->MarkPackageDirty();
+	SelectedTrackIndex = AssetPtr->Tracks.Num() - 1;
+
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+}
+
+void FUEAbilityKitAssetEditor::RemoveSelectedTrack()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !AssetPtr->Tracks.IsValidIndex(SelectedTrackIndex))
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+	AssetPtr->Tracks.RemoveAt(SelectedTrackIndex);
+	AssetPtr->MarkPackageDirty();
+
+	SelectedTrackIndex = INDEX_NONE;
+	SelectedTask = nullptr;
+
+	if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(nullptr);
+	}
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+}
+
+void FUEAbilityKitAssetEditor::MoveSelectedTrack(int32 Delta)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !AssetPtr->Tracks.IsValidIndex(SelectedTrackIndex))
+	{
+		return;
+	}
+
+	const int32 Target = SelectedTrackIndex + Delta;
+	if (!AssetPtr->Tracks.IsValidIndex(Target))
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+	AssetPtr->Tracks.Swap(SelectedTrackIndex, Target);
+	AssetPtr->MarkPackageDirty();
+	SelectedTrackIndex = Target;
+}
+
+void FUEAbilityKitAssetEditor::AddMarkerAtCursor()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+
+	FAKTimeMarker Marker;
+	Marker.Name = FName(*FString::Printf(TEXT("Marker_%d"), AssetPtr->Markers.Num()));
+	Marker.Time = CursorTime;
+	AssetPtr->Markers.Add(Marker);
+
+	AssetPtr->MarkPackageDirty();
+}
+
+void FUEAbilityKitAssetEditor::SelectAssetInInspector()
+{
+	// 让长度、Tags、Markers、中断顺序等资产级属性可在 Inspector 里编辑
+	if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(Asset.Get());
+	}
+}
+
+void FUEAbilityKitAssetEditor::GenerateFromMontage()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	UAnimMontage* Montage = AssetPtr->PreviewMontage.LoadSynchronous();
+	if (!Montage)
+	{
+		// 没有预览 Montage：先把资产选中，方便用户去填
+		SelectAssetInInspector();
+		return;
+	}
+
+	const float MontageLength = Montage->GetPlayLength();
+	if (MontageLength <= 0.f)
+	{
+		return;
+	}
+
+	AssetPtr->Modify();
+
+	// 1) 按 Montage 长度设置技能长度
+	AssetPtr->Length = MontageLength;
+
+	// 2) 找到或新建 Main 轨道
+	UAKAbilityTrack* MainTrack = nullptr;
+	for (UAKAbilityTrack* Track : AssetPtr->Tracks)
+	{
+		if (Track && Track->TrackType == EAKTrackType::Main)
+		{
+			MainTrack = Track;
+			break;
+		}
+	}
+
+	if (!MainTrack)
+	{
+		MainTrack = NewObject<UAKAbilityTrack>(AssetPtr);
+		MainTrack->TrackName = FName(TEXT("Main"));
+		MainTrack->TrackType = EAKTrackType::Main;
+		MainTrack->CompositeMode = EAKTrackCompositeMode::Timeline;
+		AssetPtr->Tracks.Add(MainTrack);
+	}
+
+	MainTrack->Modify();
+
+	// 3) 放一个覆盖全长的 PlayMontage 任务（已存在则跳过）
+	bool bAlreadyHasMontageTask = false;
+	for (const UAKAbilityTaskBase* Task : MainTrack->Tasks)
+	{
+		if (const UAKAbilityTask_PlayMontage* Existing = Cast<UAKAbilityTask_PlayMontage>(Task))
+		{
+			if (Existing->Montage == Montage)
+			{
+				bAlreadyHasMontageTask = true;
+				break;
+			}
+		}
+	}
+
+	if (!bAlreadyHasMontageTask)
+	{
+		UAKAbilityTask_PlayMontage* PlayTask = NewObject<UAKAbilityTask_PlayMontage>(MainTrack);
+		PlayTask->Montage = Montage;
+		PlayTask->StartTime = 0.f;
+		PlayTask->Duration = MontageLength;
+		MainTrack->Tasks.Add(PlayTask);
+	}
+
+	// 4) 把动画 Notify 转成命名时间点（比"只按长度裁剪"多做一步）
+	for (const FAnimNotifyEvent& Notify : Montage->Notifies)
+	{
+		FAKTimeMarker Marker;
+		Marker.Name = Notify.NotifyName;
+		Marker.Time = Notify.GetTriggerTime();
+
+		// 同名同时间的标记不重复添加
+		bool bExists = false;
+		for (const FAKTimeMarker& Existing : AssetPtr->Markers)
+		{
+			if (Existing.Name == Marker.Name && FMath::IsNearlyEqual(Existing.Time, Marker.Time, 0.001f))
+			{
+				bExists = true;
+				break;
+			}
+		}
+
+		if (!bExists)
+		{
+			AssetPtr->Markers.Add(Marker);
+		}
+	}
+
+	AssetPtr->MarkPackageDirty();
+
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
 	}
 }
 

@@ -10,8 +10,9 @@ class UAKAbilityTaskBase;
 class UAKAbilityTrack;
 
 DECLARE_DELEGATE_OneParam(FOnAKTaskSelected, UAKAbilityTaskBase* /*Task*/);
-DECLARE_DELEGATE_OneParam(FOnAKTrackSelected, UAKAbilityTrack* /*Track*/);
+DECLARE_DELEGATE_TwoParams(FOnAKTrackSelected, UAKAbilityTrack* /*Track*/, int32 /*TrackIndex*/);
 DECLARE_DELEGATE_OneParam(FOnAKCursorTimeChanged, float /*Time*/);
+DECLARE_DELEGATE(FOnAKTimelineRequest);
 
 /**
  * 时间轴画布（自绘 Slate）。
@@ -31,6 +32,8 @@ public:
 		SLATE_EVENT(FOnAKTaskSelected, OnTaskSelected)
 		SLATE_EVENT(FOnAKTrackSelected, OnTrackSelected)
 		SLATE_EVENT(FOnAKCursorTimeChanged, OnCursorTimeChanged)
+		SLATE_EVENT(FOnAKTimelineRequest, OnRequestDeleteTask)
+		SLATE_EVENT(FOnAKTimelineRequest, OnRequestDuplicateTask)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -44,15 +47,29 @@ public:
 	virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual bool SupportsKeyboardFocus() const override { return true; }
 	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 	float GetCursorTime() const { return CursorTime; }
 	void SetCursorTime(float InTime);
 	void StepFrame(int32 Frames);
 
+	/** 播放控制 */
+	void Play();
+	void Pause();
+	void TogglePlay();
+	void Stop();
+	bool IsPlaying() const { return bPlaying; }
+	void SetLoopPlayback(bool bInLoop) { bLoopPlayback = bInLoop; }
+
 	/** 帧/秒显示切换 */
 	void SetShowFrames(bool bInShowFrames) { bShowFrames = bInShowFrames; }
 	bool IsShowingFrames() const { return bShowFrames; }
+
+	int32 GetSelectedTrackIndex() const { return SelectedTrackIndex; }
+	UAKAbilityTaskBase* GetSelectedTask() const { return SelectedTask.Get(); }
+	float GetAssetLength() const;
 
 private:
 	float TimeToX(float Time) const;
@@ -94,6 +111,12 @@ private:
 	bool bDragging = false;
 
 	TWeakObjectPtr<UAKAbilityTaskBase> SelectedTask;
+	int32 SelectedTrackIndex = INDEX_NONE;
+
+	/** 播放状态 */
+	bool bPlaying = false;
+	bool bLoopPlayback = false;
+	float PlaybackRate = 1.f;
 
 	static constexpr float TrackHeaderWidth = 140.f;
 	static constexpr float RulerHeight = 26.f;

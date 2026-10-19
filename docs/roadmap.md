@@ -36,6 +36,13 @@
 - [x] 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放 / 停止 / 循环）
 - [x] Task Picker（搜索 + 列表 + 指定目标轨道 + 支持蓝图派生 Task）
 - [x] `UAKAbilityThumbnailRenderer`：内容浏览器里画"技能结构示意图"
+- [x] 工具条：播放/暂停/回到起点/单帧步进、按帧显示、资产属性、+标记、从 Montage 生成
+- [x] 轨道管理：增删 + 上下移动（影响执行顺序与绘制行序）
+- [x] 任务管理：复制（Ctrl+D）/ 删除（Delete）
+- [x] 快捷键：空格播放暂停、←→ 单帧（Ctrl 十帧）、Ctrl+D 复制、Delete 删除、滚轮缩放
+- [x] 从 Montage 生成：按长度设置技能长度 + 全长 PlayMontage 任务 + **Notify 转 Marker**
+- [ ] 撤销/重做的事务包装与 Undo 菜单集成
+- [ ] 任务的 Alt+拖拽复制与右键菜单
 
 ## M3 — 治理能力 ✅
 

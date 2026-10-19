@@ -43,8 +43,11 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 	OnTaskSelected = InArgs._OnTaskSelected;
 	OnTrackSelected = InArgs._OnTrackSelected;
 	OnCursorTimeChanged = InArgs._OnCursorTimeChanged;
+	OnRequestDeleteTask = InArgs._OnRequestDeleteTask;
+	OnRequestDuplicateTask = InArgs._OnRequestDuplicateTask;
 
 	SetCanTick(true);
+	SetCanSupportFocus(true);
 	SetClipping(EWidgetClipping::ClipToBounds);
 
 	RebuildPlanIfNeeded();
@@ -97,6 +100,59 @@ void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurren
 		PlanRefreshTimer = 0.f;
 		RebuildPlanIfNeeded();
 	}
+
+	// 播放：按真实时间推进光标（与运行时一样受 PlayRate 影响）
+	if (bPlaying)
+	{
+		const float Length = GetAssetLength();
+		float Next = CursorTime + InDeltaTime * PlaybackRate;
+
+		if (Next >= Length)
+		{
+			if (bLoopPlayback)
+			{
+				Next = 0.f;
+			}
+			else
+			{
+				Next = Length;
+				Pause();
+			}
+		}
+
+		SetCursorTime(Next);
+	}
+}
+
+float SUAKTimeline::GetAssetLength() const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	return AssetPtr ? FMath::Max(AssetPtr->Length, 0.001f) : 1.f;
+}
+
+void SUAKTimeline::Play()
+{
+	if (CursorTime >= GetAssetLength())
+	{
+		CursorTime = 0.f;
+	}
+	bPlaying = true;
+}
+
+void SUAKTimeline::Pause()
+{
+	bPlaying = false;
+}
+
+void SUAKTimeline::TogglePlay()
+{
+	bPlaying ? Pause() : Play();
+}
+
+void SUAKTimeline::Stop()
+{
+	bPlaying = false;
+	SetCursorTime(0.f);
 }
 
 void SUAKTimeline::SetCursorTime(float InTime)
@@ -185,7 +241,8 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 			}
 			else
 			{
-				OnTrackSelected.ExecuteIfBound(Track);
+				SelectedTrackIndex = Row;
+				OnTrackSelected.ExecuteIfBound(Track, Row);
 			}
 		}
 		return FReply::Handled().CaptureMouse(SharedThis(this));
@@ -269,6 +326,46 @@ FReply SUAKTimeline::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEve
 	const float Delta = MouseEvent.GetWheelDelta();
 	PixelsPerSecond = FMath::Clamp(PixelsPerSecond * (1.f + Delta * 0.1f), 20.f, 4000.f);
 	return FReply::Handled();
+}
+
+FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Key = InKeyEvent.GetKey();
+
+	// 播放 / 暂停
+	if (Key == EKeys::SpaceBar)
+	{
+		TogglePlay();
+		return FReply::Handled();
+	}
+
+	// 单帧步进
+	if (Key == EKeys::Right)
+	{
+		StepFrame(InKeyEvent.IsControlDown() ? 10 : 1);
+		return FReply::Handled();
+	}
+	if (Key == EKeys::Left)
+	{
+		StepFrame(InKeyEvent.IsControlDown() ? -10 : -1);
+		return FReply::Handled();
+	}
+
+	// 复制（Ctrl+D）
+	if (Key == EKeys::D && InKeyEvent.IsControlDown())
+	{
+		OnRequestDuplicateTask.ExecuteIfBound();
+		return FReply::Handled();
+	}
+
+	// 删除（Delete / Backspace）
+	if (Key == EKeys::Delete || Key == EKeys::BackSpace)
+	{
+		OnRequestDeleteTask.ExecuteIfBound();
+		return FReply::Handled();
+	}
+
+	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 }
 
 int32 SUAKTimeline::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
