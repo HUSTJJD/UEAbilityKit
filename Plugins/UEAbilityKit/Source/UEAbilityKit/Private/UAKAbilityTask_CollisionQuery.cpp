@@ -26,10 +26,16 @@ void UAKAbilityTask_CollisionQuery::OnTaskStart(FAKAbilityContext& Context)
 
 	const FVector Origin = Owner->GetActorLocation() + Owner->GetActorRotation().RotateVector(Offset);
 
+	// 锥形未指定轴向时用施法者正前方
+	const FVector Direction = ConeDirection.IsNearlyZero()
+		? Owner->GetActorForwardVector()
+		: ConeDirection.GetSafeNormal();
+
 	// 与 AreaEffect、投射物共用同一份查询实现
 	TArray<AActor*> HitActors = UAKQuery::OverlapActors(
 		World, Origin, Owner->GetActorQuat(), Shape, Radius, Extent, HalfHeight,
-		TraceChannel, Owner, bRequireAbilitySystem, MaxTargets);
+		TraceChannel, Owner, bRequireAbilitySystem, MaxTargets,
+		Direction, ConeAngle, Filters);
 
 	if (!bAppendToTargets)
 	{

@@ -39,12 +39,14 @@
 | 复合编排 | [16-composite.md](16-composite.md) | 组合语义放在**轨道**上（Sequence / Parallel / Repeat）；`WaitUntil` 门控冻结时间轴 |
 | 投射物与区域 | [17-projectile-and-area.md](17-projectile-and-area.md) | 只负责"飞、撞到谁、把 GE+Cue 打上去"；持续与周期交给 GE，物理交给引擎 |
 | 打断传播 | [18-interrupt.md](18-interrupt.md) | 三条规则：结束顺序 `EAKInterruptOrder` / 轨道停用=取消 / `bAlwaysExecute` 保证执行 |
+| 引导 / 吟唱 | [19-channeling.md](19-channeling.md) | 条件**不满足**就打断；与 WaitUntil（满足才继续）语义相反；失败动作三种 |
 
 ## 待定稿（M5 及以后）
 
 | 主题 | 说明 |
 |---|---|
 | 多人示例 | ASC on PlayerState + LocalPredicted 的最小可跑示例 |
+| 引导条件序列化 | `ChannelingConditions` 暂未进 Json（需按 `$type` 展开内联对象） |
 | 规则集扩展 | 让项目能注册自己的校验规则 |
 | 投射物的客户端预测 | 当前不做本地预生成，需要时评估用 Cue 补手感 |
 

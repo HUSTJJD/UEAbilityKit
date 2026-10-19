@@ -72,7 +72,8 @@ void UAKAbilityTask_AreaEffect::ApplyOnce(FAKAbilityContext& Context)
 
 	TArray<AActor*> HitActors = UAKQuery::OverlapActors(
 		Owner->GetWorld(), Center, FQuat::Identity, EAKQueryShape::Sphere, Radius,
-		FVector::ZeroVector, 0.f, ECC_Pawn, Owner, bRequireAbilitySystem, 0);
+		FVector::ZeroVector, 0.f, ECC_Pawn, Owner, bRequireAbilitySystem, 0,
+		FVector::ForwardVector, 0.f, Filters);
 
 	int32 Applied = 0;
 	for (AActor* HitActor : HitActors)

@@ -131,6 +131,29 @@ void UAKAbilityAsset::Validate(FAKValidationResult& OutResult) const
 			LOCTEXT("NoTasks", "该技能没有任何任务。"), nullptr);
 	}
 
+	// 引导（Channeling）
+	if (bChanneled)
+	{
+		if (ChannelingConditions.Num() == 0)
+		{
+			OutResult.Add(EAKValidationSeverity::Warning,
+				LOCTEXT("NoChannelConditions", "标记了引导技能，但没有配置任何维持条件，引导永远不会失败。"),
+				nullptr);
+		}
+
+		const float WindowEnd = (ChannelingEndTime < 0.f) ? Length : ChannelingEndTime;
+		if (ChannelingStartTime >= WindowEnd)
+		{
+			OutResult.Add(EAKValidationSeverity::Error,
+				LOCTEXT("BadChannelWindow", "引导窗口的起点必须早于终点。"), nullptr);
+		}
+		if (WindowEnd > Length + KINDA_SMALL_NUMBER)
+		{
+			OutResult.Add(EAKValidationSeverity::Warning,
+				LOCTEXT("ChannelWindowOverflow", "引导窗口超出了技能长度，超出部分不会检查。"), nullptr);
+		}
+	}
+
 	// 任务自带校验（内聚，而不是外部绑定 Validator）
 	for (UAKAbilityTaskBase* Task : Tasks)
 	{

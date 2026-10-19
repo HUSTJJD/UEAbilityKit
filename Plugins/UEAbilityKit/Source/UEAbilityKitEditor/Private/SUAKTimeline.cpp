@@ -566,10 +566,15 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 
 			if (W > 30.f)
 			{
+#if WITH_EDITOR
+				const FText Label = Task->GetTaskDisplayName();
+#else
+				const FText Label = FText::FromString(
+					Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
+#endif
 				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
 					Geometry.ToPaintGeometry(FVector2D(X0 + 4.f, Y + 7.f), FVector2D(W - 8.f, 14.f)),
-					FText::FromString(Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT(""))),
-					Font, ESlateDrawEffect::None, FLinearColor(0.05f, 0.05f, 0.05f));
+					Label, Font, ESlateDrawEffect::None, FLinearColor(0.05f, 0.05f, 0.05f));
 			}
 		}
 	}

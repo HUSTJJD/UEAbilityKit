@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "UAKChanneling.h"
 #include "UAKTypes.h"
 #include "UAKAbilityAsset.generated.h"
 
@@ -75,6 +76,41 @@ public:
 	/** 被打断时，存活任务的结束顺序（见 EAKInterruptOrder） */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	EAKInterruptOrder InterruptOrder = EAKInterruptOrder::ReverseStartOrder;
+
+	// ── 引导 / 吟唱（Channeling）───────────────────────────────────────────
+	/**
+	 * 是否为引导技能：在窗口内持续检查条件，任一不满足即按 ChannelFailureAction 处理。
+	 * 典型场景：蓄力技（松手打断）、站桩吟唱（移动打断）、锁定技（距离拉远打断）。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling")
+	bool bChanneled = false;
+
+	/** 引导窗口起点（秒） */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling",
+		meta = (EditCondition = "bChanneled", ClampMin = "0.0", UIMin = "0.0"))
+	float ChannelingStartTime = 0.f;
+
+	/** 引导窗口终点（秒）；-1 表示到技能结束 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling",
+		meta = (EditCondition = "bChanneled", ClampMin = "-1.0"))
+	float ChannelingEndTime = -1.f;
+
+	/** 需要持续维持的条件（任一不满足即失败） */
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Channeling",
+		meta = (EditCondition = "bChanneled"))
+	TArray<UAKChannelingCondition*> ChannelingConditions;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling",
+		meta = (EditCondition = "bChanneled"))
+	EAKChannelFailureAction ChannelFailureAction = EAKChannelFailureAction::CancelAbility;
+
+	/**
+	 * 只在权威端判定引导失败。
+	 * 取消技能是权威决策；客户端若需要即时反馈，用 Custom 条件 + Cue 自行处理。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling",
+		meta = (EditCondition = "bChanneled"))
+	bool bEvaluateChannelingOnAuthorityOnly = true;
 
 	// ── 时间轴结构 ─────────────────────────────────────────────────────────
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Ability")

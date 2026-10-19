@@ -55,6 +55,18 @@ enum class EAKInterruptOrder : uint8
 	TrackPriority		UMETA(DisplayName = "按轨道优先级")
 };
 
+/** 引导 / 吟唱条件失败时做什么 */
+UENUM(BlueprintType)
+enum class EAKChannelFailureAction : uint8
+{
+	/** 视为被打断：所有存活任务收到 bInterrupted=true，技能被取消 */
+	CancelAbility		UMETA(DisplayName = "取消技能（视为打断）"),
+	/** 视为引导完成：任务正常结束，技能正常结束 */
+	FinishNormally		UMETA(DisplayName = "正常结束（引导完成）"),
+	/** 跳到时间轴末尾再正常结束（跳过剩余编排） */
+	SkipToEnd			UMETA(DisplayName = "跳到末尾后结束")
+};
+
 /** 执行计划中的一条：任务 + 本次运行的起止时间 + 所属轨道 */
 USTRUCT()
 struct FAKScheduledTask

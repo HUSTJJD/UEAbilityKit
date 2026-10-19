@@ -2,15 +2,23 @@
 
 #include "CoreMinimal.h"
 #include "UAKAbilityTaskBase.h"
+#include "UAKQueryFilter.h"
 #include "UAKAbilityTask_CollisionQuery.generated.h"
 
-/** 查询形状 */
+/**
+ * 查询形状。
+ *
+ * 学自 AbleSP 的 Targeting：形状与过滤器分开，形状只回答"在哪查"，
+ * 过滤器（UAKQueryFilter）回答"哪些算数"，两者可自由组合。
+ */
 UENUM(BlueprintType)
 enum class EAKQueryShape : uint8
 {
 	Sphere	UMETA(DisplayName = "球"),
 	Box		UMETA(DisplayName = "盒"),
-	Capsule	UMETA(DisplayName = "胶囊")
+	Capsule	UMETA(DisplayName = "胶囊"),
+	/** 锥形（近战最常见）：以 ConeDirection 为轴，半角 ConeAngle 度的扇形 */
+	Cone	UMETA(DisplayName = "锥")
 };
 
 /**
@@ -38,6 +46,23 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Query", meta = (ClampMin = "0.0", UIMin = "0.0"))
 	float HalfHeight = 50.f;
+
+	/** 锥形轴向（世界空间；零向量则用施法者正前方） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Query",
+		meta = (EditCondition = "Shape == EAKQueryShape::Cone"))
+	FVector ConeDirection = FVector::ZeroVector;
+
+	/** 锥形半角（度） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Query",
+		meta = (EditCondition = "Shape == EAKQueryShape::Cone", ClampMin = "1.0", UIMin = "1.0", ClampMax = "180.0", UIMax = "180.0"))
+	float ConeAngle = 45.f;
+
+	/**
+	 * 结果过滤器（与形状解耦）。
+	 * 形状回答"在哪查"，过滤器回答"哪些算数"，可自由组合：锥形 + 要带 Tag + 8m 内 + 有视线。
+	 */
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Query|Filter")
+	TArray<UAKQueryFilter*> Filters;
 
 	/** 相对于施法者的偏移（会随朝向旋转） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Query")

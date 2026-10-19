@@ -3,6 +3,7 @@
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTrack.h"
+#include "UAKChanneling.h"
 #include "UAKTrace.h"
 
 namespace
@@ -75,6 +76,68 @@ bool UAKAbilityInstance::IsGated() const
 	return false;
 }
 
+bool UAKAbilityInstance::IsInChannelingWindow() const
+{
+	if (!Asset || !Asset->bChanneled)
+	{
+		return false;
+	}
+
+	const float WindowEnd = (Asset->ChannelingEndTime < 0.f) ? Asset->Length : Asset->ChannelingEndTime;
+	return Context.CurrentTime >= Asset->ChannelingStartTime && Context.CurrentTime <= WindowEnd;
+}
+
+bool UAKAbilityInstance::ShouldEvaluateChanneling() const
+{
+	if (!Asset)
+	{
+		return false;
+	}
+	return !Asset->bEvaluateChannelingOnAuthorityOnly || Context.bIsAuthority;
+}
+
+bool UAKAbilityInstance::AreChannelingConditionsSatisfied() const
+{
+	if (!Asset)
+	{
+		return true;
+	}
+
+	for (const UAKChannelingCondition* Condition : Asset->ChannelingConditions)
+	{
+		if (Condition && !Condition->IsSatisfied(Context))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void UAKAbilityInstance::ApplyChannelingFailure()
+{
+	if (!Asset)
+	{
+		return;
+	}
+
+	switch (Asset->ChannelFailureAction)
+	{
+	case EAKChannelFailureAction::CancelAbility:
+		Finish(/*bInterrupted=*/true);
+		break;
+
+	case EAKChannelFailureAction::SkipToEnd:
+		Context.CurrentTime = Asset->Length;
+		Finish(/*bInterrupted=*/false);
+		break;
+
+	case EAKChannelFailureAction::FinishNormally:
+	default:
+		Finish(/*bInterrupted=*/false);
+		break;
+	}
+}
+
 bool UAKAbilityInstance::IsTrackDisabled(int32 TrackIndex) const
 {
 	if (!Asset || !Asset->Tracks.IsValidIndex(TrackIndex))
@@ -112,6 +175,13 @@ void UAKAbilityInstance::Tick(float DeltaTime)
 	if (!IsGated())
 	{
 		Context.CurrentTime += ScaledDelta;
+	}
+
+	// 引导：窗口内持续检查维持条件，任一不满足即按失败动作处理
+	if (IsInChannelingWindow() && ShouldEvaluateChanneling() && !AreChannelingConditionsSatisfied())
+	{
+		ApplyChannelingFailure();
+		return;
 	}
 
 	StartDueTasks();
@@ -171,9 +241,13 @@ void UAKAbilityInstance::StartDueTasks()
 		}
 
 		// 溯源：记录任务节点（未开启记录时 Trace 为 nullptr）
+		// 标签优先用 TaskId——否则同类任务在血缘树里无法区分
+		const FString TraceLabel = Task->TaskId.IsNone()
+			? Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT(""))
+			: Task->TaskId.ToString();
+
 		const int32 NodeIndex = Trace
-			? Trace->AddNode(RootNodeIndex, EAKTraceNodeKind::Task,
-				Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")), Scheduled.StartTime)
+			? Trace->AddNode(RootNodeIndex, EAKTraceNodeKind::Task, TraceLabel, Scheduled.StartTime)
 			: INDEX_NONE;
 
 		Task->OnTaskStart(Context);

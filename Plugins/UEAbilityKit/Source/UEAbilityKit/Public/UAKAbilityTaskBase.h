@@ -43,6 +43,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
 	EAKTaskNetMode NetMode = EAKTaskNetMode::Both;
 
+	/**
+	 * 稳定标识符：同一技能里出现多个同类任务时用于区分。
+	 *
+	 * 没有它，血缘/Trace 里只能显示"ApplyGE"，无法回答"是哪个 ApplyGE 打的这 120 伤害"。
+	 * 建议凡是会被事件回调或需要定位的任务都填一个。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
+	FName TaskId = NAME_None;
+
 	/** 编辑器备注，便于策划之间沟通 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Task")
 	FText Note;
@@ -97,6 +106,24 @@ public:
 	// ── 契约三：自述 GAS 影响 ──────────────────────────────────────────────
 	/** 供编辑器的「GAS 影响条」与「血缘视图」使用，无需运行游戏 */
 	virtual void GetGASImpact(FAKGASImpact& OutImpact) const {}
+
+#if WITH_EDITOR
+	// ── 编辑器元数据（供 Task Picker 与时间轴展示）──────────────────────────
+	/** 分类，例如 "Effect" / "Presentation" / "Query" / "Motion" / "Rule" */
+	virtual FText GetTaskCategory() const;
+
+	/** 显示名，默认去掉 UAKAbilityTask_ 前缀的类名 */
+	virtual FText GetTaskDisplayName() const;
+
+	/** 一句话说明 */
+	virtual FText GetTaskDescription() const;
+
+	/** 在轨道上的颜色（默认由所属轨道类型决定，这里给一个兜底色） */
+	virtual FLinearColor GetTaskColor() const;
+
+	/** 已废弃的任务：编辑器给出迁移提示 */
+	virtual bool IsDeprecated() const { return false; }
+#endif
 
 	// ── 契约四：可读配置（Json 双向）────────────────────────────────────────
 	/** 导出自身参数到 Json；子类必须调用 Super，并写入与 ImportJson 对称的字段 */

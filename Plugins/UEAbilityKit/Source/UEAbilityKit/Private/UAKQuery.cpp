@@ -6,6 +6,8 @@
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "UAKQueryFilter.h"
+#include "UAKTypes.h"
 
 TArray<AActor*> UAKQuery::OverlapActors(
 	UWorld* World,
@@ -18,7 +20,10 @@ TArray<AActor*> UAKQuery::OverlapActors(
 	TEnumAsByte<ECollisionChannel> TraceChannel,
 	const AActor* IgnoreActor,
 	bool bRequireAbilitySystem,
-	int32 MaxResults)
+	int32 MaxResults,
+	const FVector& ConeDirection,
+	float ConeAngleDeg,
+	const TArray<UAKQueryFilter*>& Filters)
 {
 	TArray<AActor*> Results;
 	if (!World)
@@ -36,8 +41,12 @@ TArray<AActor*> UAKQuery::OverlapActors(
 		CollisionShape = FCollisionShape::MakeBox(Extent);
 		break;
 	case EAKQueryShape::Capsule:
-	default:
 		CollisionShape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
+		break;
+	case EAKQueryShape::Cone:
+	default:
+		// 锥形用球做广相，命中后再按夹角筛（窄相）
+		CollisionShape = FCollisionShape::MakeSphere(Radius);
 		break;
 	}
 
@@ -62,6 +71,36 @@ TArray<AActor*> UAKQuery::OverlapActors(
 		}
 
 		if (bRequireAbilitySystem && !UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor))
+		{
+			continue;
+		}
+
+		// 锥形窄相：广相用球，这里再按与轴向的夹角筛掉
+		if (Shape == EAKQueryShape::Cone && ConeAngleDeg > 0.f)
+		{
+			const FVector Direction = ConeDirection.GetSafeNormal();
+			const FVector ToActor = (HitActor->GetActorLocation() - Origin).GetSafeNormal();
+			const float CosAngle = FMath::Clamp(FVector::DotProduct(ToActor, Direction), -1.f, 1.f);
+			const float AngleDeg = FMath::RadiansToDegrees(FMath::Acos(CosAngle));
+
+			if (AngleDeg > ConeAngleDeg)
+			{
+				continue;
+			}
+		}
+
+		// 过滤器链（Source 传的是施法者，即 IgnoreActor）
+		bool bPassedFilters = true;
+		for (const UAKQueryFilter* Filter : Filters)
+		{
+			if (Filter && !Filter->Passes(HitActor, IgnoreActor))
+			{
+				bPassedFilters = false;
+				break;
+			}
+		}
+
+		if (!bPassedFilters)
 		{
 			continue;
 		}

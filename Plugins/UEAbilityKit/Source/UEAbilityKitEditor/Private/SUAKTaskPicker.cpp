@@ -151,12 +151,24 @@ void SUAKTaskPicker::OnSearchChanged(const FText& Text)
 
 TSharedRef<ITableRow> SUAKTaskPicker::GenerateClassRow(TSubclassOf<UAKAbilityTaskBase> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	const FText Label = FText::FromString(
-		Item->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
+	FText Label = FText::FromString(Item->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
+	FLinearColor Color = FLinearColor::White;
+
+#if WITH_EDITOR
+	// 用 CDO 取任务的编辑器元数据（分类 / 显示名 / 配色）
+	if (const UAKAbilityTaskBase* DefaultTask = Item->GetDefaultObject<UAKAbilityTaskBase>())
+	{
+		Label = FText::Format(LOCTEXT("PickerRow", "{0} · {1}"),
+			DefaultTask->GetTaskCategory(), DefaultTask->GetTaskDisplayName());
+		Color = DefaultTask->GetTaskColor();
+	}
+#endif
 
 	return SNew(STableRow<TSubclassOf<UAKAbilityTaskBase>>, OwnerTable)
 		[
-			SNew(STextBlock).Text(Label)
+			SNew(STextBlock)
+			.Text(Label)
+			.ColorAndOpacity(Color)
 		];
 }
 

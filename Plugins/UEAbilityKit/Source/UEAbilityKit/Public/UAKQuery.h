@@ -20,7 +20,7 @@ class UEABILITYKIT_API UAKQuery : public UObject
 	GENERATED_BODY()
 
 public:
-	/** 形状重叠查询，返回命中的 Actor（已按参数过滤） */
+	/** 形状重叠查询，返回命中的 Actor（已按形状、锥形角度与过滤器筛过） */
 	static TArray<AActor*> OverlapActors(
 		UWorld* World,
 		const FVector& Origin,
@@ -32,7 +32,10 @@ public:
 		TEnumAsByte<ECollisionChannel> TraceChannel,
 		const AActor* IgnoreActor,
 		bool bRequireAbilitySystem,
-		int32 MaxResults);
+		int32 MaxResults,
+		const FVector& ConeDirection = FVector::ForwardVector,
+		float ConeAngleDeg = 0.f,
+		const TArray<class UAKQueryFilter*>& Filters = TArray<class UAKQueryFilter*>());
 
 	/** 射线/球体扫掠，用于投射物逐帧推进时的命中检测 */
 	static bool SweepTo(

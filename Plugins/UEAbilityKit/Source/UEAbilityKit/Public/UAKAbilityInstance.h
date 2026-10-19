@@ -90,6 +90,18 @@ private:
 	/** 中断时补执行"保证执行"但还没轮到的任务 */
 	void RunGuaranteedPendingTasks();
 
+	/** 引导：当前是否处于引导窗口内 */
+	bool IsInChannelingWindow() const;
+
+	/** 引导：本端是否需要判定引导失败 */
+	bool ShouldEvaluateChanneling() const;
+
+	/** 引导：所有维持条件是否仍成立 */
+	bool AreChannelingConditionsSatisfied() const;
+
+	/** 引导：按 ChannelFailureAction 处理失败 */
+	void ApplyChannelingFailure();
+
 	bool IsTrackDisabled(int32 TrackIndex) const;
 	bool ShouldRunOnThisEnd(const UAKAbilityTaskBase* Task) const;
 

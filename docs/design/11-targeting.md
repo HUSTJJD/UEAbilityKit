@@ -36,8 +36,28 @@ FGameplayAbilityTargetData::GetActors()         // TArray<TWeakObjectPtr<AActor>
 - `CollisionQuery` 默认 `bRequireAbilitySystem = true`，过滤掉没有 ASC 的 Actor（桌椅板凳）。
 - 顺序保证：查询顺序即写入顺序；`MaxTargets` 可截断。
 
-## 5. 待补（M5）
+## 5. 形状与过滤器分离（M5）
 
-- `bRequireLineOfSight`：查询后补一条射线检测，避免隔墙命中。
+学自 AbleSP 的 Targeting 设计：**形状回答"在哪查"，过滤器回答"哪些算数"**，两者可自由组合。
+
+| 形状 | 说明 |
+|---|---|
+| `Sphere` / `Box` / `Capsule` | 基本形状 |
+| `Cone` | 锥形（近战最常见）：以轴向为中心、`ConeAngle` 为半角；
+  实现上用球做广相，命中后按夹角筛（窄相） |
+
+| 过滤器 | 说明 |
+|---|---|
+| `Tag` | 目标 ASC 需要 / 不能拥有指定 Tag |
+| `Distance` | 距离阈值，可选只算水平、计入胶囊半径 |
+| `LineOfSight` | 射线检测，被遮挡即排除 |
+
+组合示例：`Cone(60°) + Tag(需 State.Burning) + Distance(8m) + LineOfSight`
+
+过滤器是 `UAKQueryFilter` 的 `Instanced` 数组，`CollisionQuery` 与 `AreaEffect` 都能挂。
+
+## 6. 待补（M5+）
+
 - 从 `FGameplayAbilityTargetDataHandle` 读取 `HitResult` 的位置信息，供 Cue 定位。
 - 由项目注入自定义 Targeting（例如 "最近的 N 个敌人"）：建议做成自定义 Task，而不是改框架。
+- 过滤器可扩展：目前三个内置，后续按项目需要加（阵营、高度差、朝向）。
