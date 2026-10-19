@@ -13,7 +13,11 @@ public class UAKDemo : ModuleRules
 			"Engine",
 			"GameplayAbilities",
 			"GameplayTags",
-			"UEAbilityKit"
+			"UEAbilityKit",
+
+			// 脚本方案（git submodule：Plugins/UnLuaNova）
+			// 仅示例模块依赖它；UAK 插件本身不依赖任何脚本系统
+			"UnLuaNova"
 		});
 	}
 }

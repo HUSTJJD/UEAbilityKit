@@ -18,6 +18,12 @@ AAKDemoCharacter::AAKDemoCharacter()
 	AttributeSet = CreateDefaultSubobject<UAKDemoAttributeSet>(TEXT("AttributeSet"));
 }
 
+FString AAKDemoCharacter::GetModuleName_Implementation() const
+{
+	// 对应 Content/Script/UAKDemoCharacter.lua
+	return TEXT("UAKDemoCharacter");
+}
+
 void AAKDemoCharacter::BeginPlay()
 {
 	Super::BeginPlay();

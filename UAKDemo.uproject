@@ -2,7 +2,10 @@
 	"FileVersion": 3,
 	"EngineAssociation": "5.8",
 	"Category": "Samples",
-	"Description": "UEAbilityKit 示例工程：项目本身即示例，UAK 作为插件使用",
+	"Description": "UEAbilityKit 示例工程：项目本身即示例，UAK 作为插件使用，UnLuaNova 作为脚本方案",
+	"AdditionalPluginDirectories": [
+		"Plugins/UnLuaNova/Plugins"
+	],
 	"Modules": [
 		{
 			"Name": "UAKDemo",
@@ -16,6 +19,10 @@
 	"Plugins": [
 		{
 			"Name": "UEAbilityKit",
+			"Enabled": true
+		},
+		{
+			"Name": "UnLuaNova",
 			"Enabled": true
 		},
 		{

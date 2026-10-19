@@ -107,6 +107,9 @@
 | [`examples/01`](docs/examples/01-minimal-multiplayer-setup.md) | 最小多人接入（ASC 放哪、复制模式、NetMode 配对、常见坑） |
 | [`examples/02`](docs/examples/02-cooldown-cost-stacking.md) | 冷却 / 消耗 / 堆叠该怎么配（全是 GAS，UAK 不自建） |
 | [`examples/03`](docs/examples/03-sample-project.md) | 工程结构说明（对照 UnLua 的布局） |
+| [`examples/04`](docs/examples/04-scripting-with-unlua.md) | 脚本方案：UnLuaNova 以 git submodule 引入，核心 C++ / 扩展用 Lua |
+
+> 克隆时请加 `--recursive`，或之后执行 `git submodule update --init --recursive`。
 
 > 待完成：**编译验证**。功能、文档、示例均已完整，只差一次编译把报错修干净。
 
@@ -122,13 +125,14 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 │  ├─ UAKDemo/                      ← 示例游戏模块（属性集 / 角色 / 技能）
 │  └─ UAKDemo*.Target.cs
 ├─ Plugins/
-│  └─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
-│     ├─ UEAbilityKit.uplugin
-│     └─ Source/
-│        ├─ UEAbilityKit/           # Runtime（不依赖 Editor）
-│        └─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
+│  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
+│  │  ├─ UEAbilityKit.uplugin
+│  │  └─ Source/
+│  │     ├─ UEAbilityKit/           # Runtime（不依赖 Editor）
+│  │     └─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
+│  └─ UnLuaNova/                    ← 脚本方案（git submodule）
 ├─ Config/                          # 工程配置（最小）
-├─ Content/                         # 内容目录（不提交二进制，见 Content/README.md）
+├─ Content/                         # 内容目录（不提交二进制；Script/ 为 Lua 脚本）
 ├─ docs/
 │  ├─ research/                     # Able / AbilityKit 调研与命名提案
 │  ├─ design/                       # 设计文档（canonical 入口见 00-index.md）
