@@ -1,135 +1,125 @@
-# UAK — UE5 技能编辑器
+<div align="center">
+
+# UEAbilityKit <sub><code>UAK</code></sub>
+
+**基于 GAS 的 UE5 数据驱动技能时间轴编排框架**
+
+_技能是一条时间轴，逻辑全部落到 GAS，配置是可 diff 的纯数据。_
+
+[![Stars](https://img.shields.io/github/stars/HUSTJJD/UEAbilityKit?style=for-the-badge&color=gold&label=⭐%20Star)](https://github.com/HUSTJJD/UEAbilityKit/stargazers)
+[![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.8-ff3b30?style=for-the-badge&logo=unrealengine&logoColor=white)](https://www.unrealengine.com/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
+[![Docs](https://img.shields.io/badge/Docs-MkDocs%20Material-526CFE?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
+[![中文](https://img.shields.io/badge/语言-中文-2496ed?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
 
 📖 **在线文档**：<https://hustjjd.github.io/UEAbilityKit/>
 
-**UEAbilityKit（简称 UAK）**：基于 Unreal Engine 5 与 Gameplay Ability System（GAS）的数据驱动技能编辑器与运行时工具集。
-
-> 用时间轴编排技能：一段技能 = 一条时间轴 + 若干轨道（Montage / GameplayEffect / GameplayCue / 碰撞检测 / 位移 / 分支），
-> 运行时全部落在 GAS 原语上（`UGameplayAbility` / `UGameplayEffect` / `UGameplayCue` / `FGameplayTag` / `UAttributeSet`），
-> 不另起炉灶、不重复造轮子。
+</div>
 
 ---
 
-## 为什么做这个项目
+## 🎬 30 秒看懂
 
-现有方案各有短板，中间存在一块空白：
+```mermaid
+flowchart LR
+    A["UAKAbilityAsset<br/>纯数据资产"] --> B["UAKAbilityTrack<br/>轨道（可复合编排）"]
+    B --> C["UAKAbilityTask<br/>任务（强类型 C++ UObject）"]
+    C --> D["GAS 原语<br/>GE / Cue / Tag / AttributeSet"]
+    A -.导出.-> E["Json<br/>进 Git、CI 可校验"]
+    C -.每次施放.-> F["UAKTrace<br/>血缘树（可下钻归因）"]
+    style A fill:#4f8ff7,color:#fff
+    style D fill:#1a7f37,color:#fff
+    style F fill:#8250df,color:#fff
+```
+
+一段技能 = **一条时间轴 + 若干轨道**（Montage / GameplayEffect / GameplayCue / 碰撞检测 / 位移 / 分支 / 引导）。
+运行时不另起炉灶——所有效果都落在 GAS 原语上，冷却、消耗、堆叠、预测、复制全部由 GAS 负责。
+
+---
+
+## ✨ 特性
+
+| | 特性 | 说明 |
+|---|---|---|
+| 🎞 | **时间轴编辑器** | 自绘 `SUAKTimeline`：拖拽调时间、缩放、单帧步进、按帧显示、从 Montage 一键生成（Notify→Marker） |
+| 🧩 | **复合编排** | 轨道级 `Timeline` / `Sequence` / `Parallel` + 重复次数 / 间隔 / 起始延迟；编辑器与运行时共用同一张调度表 |
+| 🔒 | **引导 / 吟唱** | 窗口内维持条件（移动、距离、自定义），不满足即打断；失败动作可选取消 / 正常结束 / 跳到结尾 |
+| 🌳 | **血缘树 Explain** | 每次施放生成 `UAKTrace`：技能 → 任务 → GE → SetByCaller → 目标，可逐层下钻回答"这 120 伤害哪来的" |
+| 📄 | **配置可 diff** | 资产 ↔ Json 双向无损转换，进 Git、CI 可校验，告别二进制黑盒 |
+| ✅ | **错误无法被配置出来** | 每个任务自带 `Validate()`，长度 / 越界 / 缺 GE / 引导窗口非法在保存前就被拦住 |
+| 🌐 | **网络与预测** | `NetMode`（Server / Client / Both）逐任务控制；与 GAS 的 `LocalPredicted` 天然配合 |
+| 🧪 | **测试随插件发布** | `UEAbilityKitTests` 模块 + 一键脚本，单元 / 实例 / GAS 三层用例，自动生成报告与 Showcase |
+
+---
+
+## 🆚 和现有方案的区别
 
 | 方案 | 优点 | 短板 |
 |---|---|---|
-| **Able**（UE 商业插件） | 时间轴编辑器体验成熟：轨道拖拽、预览视口、动画长度对齐、Task 验证器 | **不使用 GAS**（只用 `FGameplayTagContainer`），冷却/堆叠/被动全自建；网络只同步"当前技能指针"，无预测回滚；uasset 二进制不可 diff |
-| **AbilityKit**（开源，Unity / 纯 C#，MIT） | 架构严谨：Pipeline 编排、Triggering（事件→条件→强类型 Action）、Trace 血缘溯源、配置可双向回导 | 是 **Unity / C#** 项目，代码无法用于 UE；其帧同步/回滚体系在 UE 里应让位给 GAS + UE 网络 |
-| **裸写 GAS** | 官方、可预测、可复制 | 缺少可视化编排与调试工具，技能一多就靠表驱动硬扛 |
+| **Able**（商业插件） | 时间轴编辑器体验成熟 | **不使用 GAS**：冷却 / 堆叠 / 被动全自建；网络无预测回滚；uasset 二进制不可 diff |
+| **AbilityKit**（开源，Unity / C#） | 架构严谨：Pipeline、Triggering、Trace 溯源 | 是 Unity 项目，代码无法用于 UE；其回滚体系在 UE 里应让位给 GAS |
+| **裸写 GAS** | 官方、可预测 | 缺可视化编排与调试工具，技能一多只能靠表驱动硬扛 |
+| **UAK** | 时间轴编排 + GAS 原语 + 可 diff 配置 + 可溯源 | 需要理解 GAS 基础概念 |
 
 **UAK 的定位**：用 Able 级别的编辑器体验，承载 AbilityKit 级别的架构思想，跑在 GAS 之上。
 
-## 设计原则
+---
 
-1. **GAS 一等公民**：属性、Buff、修正、冷却、消耗、堆叠、表现解耦、网络预测，一律复用 GAS 原语，不自建。
-2. **不重复造轮子**：移动/寻路/碰撞用引擎已有能力；只做"技能编排"这一层真正缺失的东西。
-3. **数据可 diff**：资产可导出为文本（Json）进 Git，CI 可校验，避免二进制黑盒。
-4. **运行时可溯源**：技能 → 投射物 → 区域 → Buff → 伤害保留 root/parent/owner 血缘，便于调试、归因与回放。
-5. **逻辑与表现分离**：逻辑走 GE / Tag / Task，表现一律走 `UGameplayCue`。
-6. **C++ 优先，蓝图可扩展**：核心 Task 用 C++ `UObject` 实现（强类型、可反射、可验证），允许项目派生蓝图 Task。
+## 🚀 快速开始
 
-## 当前状态
+<details open>
+<summary><b>① 只想用插件</b></summary>
 
-**当前进度：M0–M4 的主体代码已落地（尚未编译验证）**
+1. 把 `Plugins/UEAbilityKit` 拷到你项目的 `Plugins/` 下
+2. `.uproject` 里启用 **UE Ability Kit**，并确保 **GameplayAbilities** 已启用
+3. 重新生成工程文件并编译
+4. 内容浏览器右键 → Miscellaneous → **Ability Asset**
+5. 建一个继承 `UAKGameplayAbility` 的蓝图，指向该资产，用 ASC 授予并激活
 
-**M0 — 骨架**
-- 插件骨架：Runtime 模块 `UEAbilityKit` + Editor 模块 `UEAbilityKitEditor`
-- `UAKAbilityAsset`（纯数据资产） + `UAKAbilityTrack` + `UAKAbilityTaskBase`
+</details>
 
-**M1 — 时间轴执行器 + GAS 桥接**
-- 两级数据模型：资产 → 轨道 → 任务；**资产与 Ability 解耦（N:M）**
-- `UAKAbilityInstance`：按时间轴推进，支持 Duration / 循环 / 中断 / PlayRate / ScratchPad
-- 驱动方式：`UAKAbilityTickTask`（`UAbilityTask` 子类）——技能结束即自动收尾
-- Task 三契约：生命周期 / `Validate()` / `GetGASImpact()` / `ExportJson·ImportJson`
-- 内置 Task：`ApplyGameplayEffect`、`PlayMontage`、`SendGameplayCue`、`CollisionQuery`、`Dash`
+<details>
+<summary><b>② 直接跑示例工程</b></summary>
 
-**M2 — 编辑器（三视图）**
-- `FUEAbilityKitAssetEditor`：Timeline / Inspector / Bloodline
-- `SUAKTimeline` 自绘时间轴 + `SUAKGASImpactBar`（独创）+ `SUAKValidationBar`（常驻底栏）
-- `SUAKBloodlineView` 血缘视图（独创）
-- `UAKAbilityAssetFactory`：内容浏览器可创建 Ability Asset
+```bash
+git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
+```
 
-**M3 — 治理**：`UAKAbilityJsonSerializer` 资产 ↔ Json 双向、Task 自校验
+仓库本身就是一个可打开的 UE 工程（`UAKDemo.uproject`），布局参照 [UnLua](https://github.com/Tencent/UnLua)：**项目即示例，库放 Plugins**。
 
-**M4 — 溯源**：`UAKTrace` 血缘树 + `UAKTraceSubsystem` 记录器
+> 必须加 `--recursive`：UnLuaNova 自身还嵌套了 Lua / Luau 两个子模块。忘了就补 `git submodule update --init --recursive`。
 
-**M1/M3/M4 收尾**
-- `UAKTargeting`：把 GAS 的 `FGameplayAbilityTargetDataHandle` 适配进上下文（不自建目标选择）
-- `UAKValidateCommandlet`：CI 校验门禁（`-run=UAKValidate -path=/Game/Abilities -strict -json`）
-- 执行器写入 `UAKTrace`（每次施放生成血缘树）
+</details>
 
-**M2 收尾**
-- 预览 Tab（`FPreviewScene` + 预览角色 + Montage 播放/停止/循环）
-- Task Picker（搜索 + 指定目标轨道 + 支持蓝图派生 Task）
-- `UAKAbilityThumbnailRenderer`（内容浏览器画"技能结构示意图"）
-
-**M4/M5 收尾**
-- PIE 联动：时间轴光标跟随 + 血缘视图自动切实况 + PIE 期间自动开启记录
-- Rule 轨道 `UAKAbilityTask_Branch`：用 GAS 的 Tag / 属性条件开关另一条轨道
-- 设计文档补齐：`10-executor` / `11-targeting` / `12-trace` / `13-network` / `14-serialization` / `15-validation`
-
-**M5 — 复合编排**
-- 轨道级 `Sequence` / `Parallel` / 重复次数 / 重复间隔 / 起始延迟
-- `BuildExecutionPlan()`：复合模式展开成扁平调度表，编辑器与运行时共用同一张表
-- `UAKAbilityTask_WaitUntil`：条件满足即继续，`bGateTimeline` 可冻结时间轴
-- `FAKCondition`：Branch 与 WaitUntil 共用同一套 GAS 条件语义
-
-**M5 — 投射物与区域效果**
-- `UAKQuery`：`CollisionQuery` / `AreaEffect` / 投射物共用同一份查询与过滤规则
-- `AAKProjectile`：服务端权威、逐帧扫掠推进、命中打 GE + Cue、支持穿透/重力/超时
-- `UAKAbilityTask_SpawnProjectile`：插槽或偏移生成、瞄准首个目标、扇形弹幕
-- `UAKAbilityTask_AreaEffect`：周期生效、可跟随/固定中心、每目标只吃一次（ScratchPad 演示）
-
-**M5 — 打断传播语义**
-- `EAKInterruptOrder`：后启动先结束（默认，栈式回退）/ 顺序 / 轨道优先级
-- 轨道被 Branch 停用 → 该轨道正在运行的任务按"取消"结束，与"技能被打断"区分
-- `bAlwaysExecute`：即使被中断也保证执行一次（还没轮到就补执行）
-- 门控任务在中断时必然解除，避免时间轴永久冻结
-
-**M2 — 编辑器交互补全**
-- 工具条：播放/暂停/回到起点/单帧步进、按帧显示、资产属性、+标记、从 Montage 生成
-- 轨道管理（增删 + 上下移动）、任务管理（复制/删除）
-- 快捷键：`空格` 播放暂停 · `←→` 单帧 · `Ctrl+D` 复制 · `Delete` 删除 · 滚轮缩放
-- 从 Montage 生成：按长度设置技能长度 + 全长 PlayMontage 任务 + **Notify 转 Marker**
-
-**M5 — 从实践中补进来的能力**
-- **引导 / 吟唱（Channeling）**：窗口内维持条件，不满足即打断（蓄力 / 站桩 / 锁定）
-- **TaskId**：同类任务的稳定标识符，血缘树里能区分"是哪个 ApplyGE 打的伤害"
-- **Task 编辑器元数据**：分类 / 显示名 / 说明 / 配色，Task Picker 与时间轴直接使用
-- **查询升级**：新增 Cone（锥形）形状；过滤器与形状解耦（Tag / 距离 / 视线）
-
-**示例**
-
-| 文档 / 目录 | 内容 |
-|---|---|
-| [`Source/UAKDemo/`](Source/UAKDemo) | 工程自带的示例模块：ASC + 属性集 + 带冷却/消耗的技能 |
-| [`examples/01`](docs/examples/01-minimal-multiplayer-setup.md) | 最小多人接入（ASC 放哪、复制模式、NetMode 配对、常见坑） |
-| [`examples/02`](docs/examples/02-cooldown-cost-stacking.md) | 冷却 / 消耗 / 堆叠该怎么配（全是 GAS，UAK 不自建） |
-| [`examples/03`](docs/examples/03-sample-project.md) | 工程结构说明（对照 UnLua 的布局） |
-| [`examples/04`](docs/examples/04-scripting-with-unlua.md) | 脚本方案：UnLuaNova 以 git submodule 引入，核心 C++ / 扩展用 Lua |
-| [`docs/testing.md`](docs/testing.md) | 测试与自动化：用例分层、一键脚本、报告与素材生成 |
-
-> 克隆时请加 `--recursive`（UnLuaNova 自身还嵌套了 Lua / Luau 两个子模块），
-> 或之后执行 `git submodule update --init --recursive`。
-
-## 测试与自动化
-
-测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）：
+<details>
+<summary><b>③ 跑测试</b></summary>
 
 ```powershell
-./Scripts/run_tests.ps1                 # 编译 + 跑全部 UAK.* 用例 + 生成报告
+./Scripts/run_tests.ps1      # Windows：编译 + 跑用例 + 出报告
 ./Scripts/run_tests.ps1 -Filter UAK.Unit
-./Scripts/run_tests.ps1 -CaptureMedia   # 额外产出截图与录屏
 ```
 
 ```bash
-./Scripts/run_tests.sh                  # Linux / macOS 等价脚本
+./Scripts/run_tests.sh       # Linux / macOS
 ```
 
-一次运行会产生：
+</details>
+
+---
+
+## 🧪 测试与自动化
+
+测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）：
+
+| 层级 | 前缀 | 覆盖 |
+|---|---|---|
+| 单元 | `UAK.Unit.*` | Json 往返、校验规则、执行计划展开、编辑器元数据、查询过滤器 |
+| 实例 | `UAK.Instance.*` | 真跑一次 `UAKAbilityInstance`：时序、门控、中断顺序、保证执行、循环、引导、Branch、溯源 |
+| 集成 | `UAK.GAS.*` | 真的建 ASC 与属性集，验证 GE 落到属性、条件判定 |
+
+"实例测试"的原则是**不 mock**：需要世界就建临时 `EditorPreview` 世界，需要 GE 就用 C++ 定义的 GE 类，所以 CI 里没有内容资产也能跑出真实结论。
+
+一次运行自动产出：
 
 | 产物 | 路径 |
 |---|---|
@@ -137,105 +127,84 @@
 | 截图 / 录屏（ffmpeg 合成） | `docs/reports/media/**` |
 | Showcase（由素材自动生成） | `docs/showcase.md` |
 
-用例分三层：`UAK.Unit.*`（单元）、`UAK.Instance.*`（执行器实例）、`UAK.GAS.*`（真建 ASC 跑 GE）。
 详见 [docs/testing.md](docs/testing.md)。
 
-## 目录结构
+---
 
-> 本仓库**本身就是一个可打开的 UE 工程**，UAK 作为插件存在——布局参照 [UnLua](https://github.com/Tencent/UnLua)：
-> 项目即示例，库放 `Plugins`。
+## 📁 目录结构
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
 ├─ UAKDemo.uproject                 ← 示例工程
-├─ Source/
-│  ├─ UAKDemo/                      ← 示例游戏模块（属性集 / 角色 / 技能）
-│  └─ UAKDemo*.Target.cs
+├─ Source/UAKDemo/                  ← 示例游戏模块（属性集 / 角色 / 技能）
 ├─ Plugins/
 │  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
-│  │  ├─ UEAbilityKit.uplugin
-│  │  └─ Source/
-│  │     ├─ UEAbilityKit/           # Runtime（不依赖 Editor）
-│  │     ├─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
-│  │     └─ UEAbilityKitTests/      # Editor（自动化用例，随插件发布）
-│  └─ UnLuaNova/                    ← 脚本方案（git submodule，内含嵌套子模块）
+│  │  └─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}
+│  └─ UnLuaNova/                    ← 脚本方案（git submodule）
 ├─ Scripts/
-│  ├─ run_tests.ps1 / run_tests.sh  ← 测试启动脚本（编译 + 跑 + 出报告）
+│  ├─ run_tests.ps1 / run_tests.sh  ← 测试启动脚本
+│  ├─ build.ps1                     ← 命令行编译（绕过 Build.bat 锁）
 │  └─ report/generate_report.py     ← 报告 / Showcase 生成器
-├─ .github/workflows/               # Pages 部署 + 自托管 runner 跑测试
-├─ mkdocs.yml                       # GitHub Pages 站点配置
-├─ Config/                          # 工程配置（最小）
-├─ Content/                         # 内容目录（不提交二进制；Script/ 为 Lua 脚本）
-├─ docs/
-│  ├─ research/                     # Able / AbilityKit 调研与命名提案
-│  ├─ design/                       # 设计文档（canonical 入口见 00-index.md）
-│  ├─ examples/                     # 接入与配置示例
-│  ├─ reports/                      # 测试报告（自动生成）
-│  ├─ testing.md / showcase.md
-│  └─ roadmap.md
-├─ NOTICE
-└─ LICENSE                          # Apache-2.0
+├─ Content/
+│  ├─ AnimationAssets/              ← 角色与动画（来自 UnLuaNova 示例）
+│  └─ Demo/Abilities/*.json         ← 技能资产示例（Json，可 diff）
+├─ docs/                            ← 设计 / 示例 / 测试 / 报告 / Showcase
+├─ mkdocs.yml                       ← GitHub Pages 站点配置
+└─ LICENSE                          ← Apache-2.0
 ```
 
-## 快速开始
+---
 
-### 只想用插件
+## 🗺 路线图
 
-1. 把 `Plugins/UEAbilityKit` 整个目录拷贝到你的 UE 项目的 `Plugins/` 下。
-2. 在 `.uproject` 的 `Plugins` 数组或通过编辑器启用 **UE Ability Kit** 插件，并确保 **GameplayAbilities** 插件已启用。
-3. 重新生成工程文件并编译。
-4. 在内容浏览器右键 → Miscellaneous → **Ability Asset** 创建技能资产，往 `Tasks` 里添加 Task。
-5. 新建一个继承 `UAKGameplayAbility` 的蓝图，把 `AbilityAsset` 指向刚创建的资产，通过 ASC 授予并激活即可。
-
-### 想直接跑示例工程
-
-```bash
-git clone https://github.com/HUSTJJD/UEAbilityKit.git
-```
-
-用 UE 打开 `UAKDemo.uproject`（源码版引擎需把 `EngineAssociation` 改成 `""`），
-然后按 [`docs/examples/03-sample-project.md`](docs/examples/03-sample-project.md) 创建资产。
-
-### 开发与验证环境
-
-| 项 | 值 |
-|---|---|
-| 引擎 | Unreal Engine **5.8.3**（源码版，Branch `UE5`） |
-| 依赖插件 | `GameplayAbilities`、`GameplayTags`（引擎自带 Runtime 插件） |
-| 平台 | Win64 |
-
-代码只使用跨版本稳定 API（`UGameplayAbility` / `UGameplayEffect` / `FGameplayTagContainer` / `FAssetTypeActions_Base` 等），
-理论上可在其他 UE 5.x 上编译。若在某个版本上遇到问题，请提 Issue 并附上引擎版本。
-
-编译验证：
-
-```
-<Engine>\Engine\Build\BatchFiles\RunUAT.bat BuildPlugin ^
-  -Plugin="<Repo>\Plugins\UEAbilityKit\UEAbilityKit.uplugin" ^
-  -Package="<Repo>\Build\Package" -TargetPlatforms=Win64
-```
-
-## 路线图
-
-| 阶段 | 目标 |
-|---|---|
-| M0 | 仓库 + 插件骨架 + 最小资产模型（已完成） |
-| M1 | 时间轴执行器 + GAS 桥接（GE / Cue / Tag 三类 Task、目标选择、预测与复制） |
-| M2 | 编辑器可用：轨道拖拽、预览视口、Montage 长度对齐、单帧步进 |
-| M3 | 治理能力：Validator、Json 导入导出（进 Git）、CI 校验 |
-| M4 | 调试闭环：Runtime Debugger + Trace 导出 |
-| M5 | 高级编排：ECA / Trigger 轨道、分支、复合轨道、碰撞与位移 Task |
+| 阶段 | 目标 | 状态 |
+|---|---|---|
+| M0 | 插件骨架 + 最小资产模型 | ✅ |
+| M1 | 时间轴执行器 + GAS 桥接 | ✅ |
+| M2 | 编辑器三视图（Timeline / Inspector / Bloodline） | ✅ |
+| M3 | 治理：Validator + Json 双向 + CI 校验 | ✅ |
+| M4 | 溯源：`UAKTrace` 血缘树与记录器 | ✅ |
+| M5 | 高级编排：复合轨道 / 投射物与区域 / 打断传播 / 引导 | ✅ |
+| — | 编译验证 + 单元测试 | ✅ UE 5.8.3 源码构建 |
+| M6 | 运行时调试器 UI、更多内置 Task、编辑器打磨 | 🚧 |
 
 详见 [docs/roadmap.md](docs/roadmap.md)。
 
-## 致谢与合规声明
+> [!WARNING]
+> **已知问题**：示例工程依赖的 UnLuaNova（Luau 后端）在 UE 5.8 的 PIE 阶段崩溃，已定位为上游问题并跟踪中。
+> UAK 本体**不依赖任何脚本系统**，编译与单元测试均正常。
 
-- 本项目的**架构思想**参考了开源项目 [AbilityKit](https://github.com/HOBOBO/AbilityKit)（MIT，Unity / 纯 C#）中关于技能管线、事件触发、溯源与配置治理的设计；**本项目为独立实现，未复用其任何代码**（C# 实现亦无法用于 UE）。
-- 编辑器交互设计参考了商业插件 **Able** 的**公开可见的交互模式**（时间轴 UX、验证器、预览视口等通用做法）；**未复用其任何源码、资源与文档文案**，且本项目与其无隶属关系。
-- `Unreal®` 是 Epic Games, Inc. 在美国及其他地区的商标或注册商标。本项目为社区独立项目，**非 Epic 官方产品，未获 Epic 认可**；本项目不使用 Epic 官方 Logo、字体与配色。
+---
+
+## 📚 文档
+
+| 分类 | 入口 |
+|---|---|
+| 设计文档 | [设计总览](docs/design/00-index.md)（执行器 / 目标选取 / 溯源 / 网络 / 序列化 / 校验 / 复合编排 / 引导…） |
+| 接入示例 | [最小多人配置](docs/examples/01-minimal-multiplayer-setup.md) · [冷却消耗堆叠](docs/examples/02-cooldown-cost-stacking.md) · [示例工程](docs/examples/03-sample-project.md) · [UnLua 脚本](docs/examples/04-scripting-with-unlua.md) |
+| 测试 | [docs/testing.md](docs/testing.md) |
+| Showcase | [docs/showcase.md](docs/showcase.md)（由测试产物自动生成） |
+| 调研 | [Able 与 AbilityKit 调研](docs/research/Able与AbilityKit调研及命名提案.md) |
+
+**开发 / 验证环境**
+
+| 项 | 值 |
+|---|---|
+| 引擎 | Unreal Engine **5.8.3**（源码构建） |
+| 依赖插件 | `GameplayAbilities`（引擎自带） |
+| 平台 | Win64 |
+
+---
+
+## 🙏 致谢与合规声明
+
+- 架构思想参考开源项目 [AbilityKit](https://github.com/HOBOBO/AbilityKit)（MIT，Unity / 纯 C#）中关于技能管线、事件触发、溯源与配置治理的设计；**本项目为独立实现，未复用其任何代码**。
+- 编辑器交互设计参考商业插件 **Able** 的**公开可见的交互模式**（时间轴 UX、验证器、预览视口等通用做法）；**未复用其任何源码、资源与文档文案**，且与其无隶属关系。
+- `Content/AnimationAssets/` 来自 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 示例工程（MIT），其中 UE4 Mannequin 源自 Epic 示例内容。
+- `Unreal®` 是 Epic Games, Inc. 的商标。本项目为社区独立项目，**非 Epic 官方产品，未获 Epic 认可**。
 
 完整声明见 [NOTICE](NOTICE)。
 
-## License
+## 📄 License
 
 Apache License 2.0，见 [LICENSE](LICENSE)。

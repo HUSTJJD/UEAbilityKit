@@ -53,7 +53,7 @@ git clone https://github.com/HUSTJJD/UEAbilityKit.git
 
 1. 用 UE 打开 `UAKDemo.uproject`
    - 若使用**源码版引擎**，把 `EngineAssociation` 改成 `""`
-2. 按 [`../../Content/README.md`](../../Content/README.md) 的步骤创建资产
+2. 按 [Content/README.md](https://github.com/HUSTJJD/UEAbilityKit/blob/main/Content/README.md) 的步骤创建资产
 3. 两个客户端 + Listen Server 跑起来验证预测 / 冷却 / 消耗
 
 只想用插件、不要示例工程：把 `Plugins/UEAbilityKit` 整个目录拷进你自己的项目 `Plugins/` 即可，
