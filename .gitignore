@@ -48,3 +48,6 @@ desktop.ini
 
 # 插件本地临时文件
 *.autosave
+
+# MkDocs build output
+/_site/

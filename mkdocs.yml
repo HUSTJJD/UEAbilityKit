@@ -1,0 +1,76 @@
+site_name: UEAbilityKit
+site_description: 基于 UE5 与 GAS 的数据驱动技能编辑器与运行时工具集
+site_url: https://hustjjd.github.io/UEAbilityKit/
+repo_url: https://github.com/HUSTJJD/UEAbilityKit
+repo_name: HUSTJJD/UEAbilityKit
+edit_uri: blob/main/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切换到暗色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到亮色模式
+
+nav:
+  - 首页: index.md
+  - 路线图: roadmap.md
+  - 设计文档:
+      - 设计总览: design/00-index.md
+      - 设计原则: design/01-design-principles.md
+      - 资产模型: design/02-asset-model.md
+      - 编辑器设计: design/03-editor-design.md
+      - 执行器: design/10-executor.md
+      - 目标选取: design/11-targeting.md
+      - 追踪: design/12-trace.md
+      - 网络与预测: design/13-network.md
+      - 序列化: design/14-serialization.md
+      - 校验: design/15-validation.md
+      - 组合: design/16-composite.md
+      - 投射物与区域: design/17-projectile-and-area.md
+      - 中断: design/18-interrupt.md
+      - 引导与吟唱: design/19-channeling.md
+  - 示例:
+      - 最小多人配置: examples/01-minimal-multiplayer-setup.md
+      - 冷却/消耗/堆叠: examples/02-cooldown-cost-stacking.md
+      - 示例工程: examples/03-sample-project.md
+      - 使用 UnLua 脚本: examples/04-scripting-with-unlua.md
+  - 调研:
+      - Able 与 AbilityKit 调研: research/Able与AbilityKit调研及命名提案.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search
