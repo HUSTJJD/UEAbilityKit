@@ -10,6 +10,8 @@
 - **设计文档** —— 设计原则、资产模型、编辑器设计、执行器、目标选取、网络与预测、序列化、校验等
 - **示例** —— 最小多人配置、冷却/消耗/堆叠、示例工程
 - **调研** —— Able 与 AbilityKit 调研及命名提案
+- [测试与自动化](testing.md) —— 用例分层、一键脚本、报告与素材生成
+- [Showcase](showcase.md) —— 由测试产物自动生成的展示页
 
 ## 设计原则（摘录）
 
@@ -20,8 +22,20 @@
 5. **逻辑与表现分离**：逻辑走 GE / Tag / Task，表现一律走 `UGameplayCue`。
 6. **C++ 优先，蓝图可扩展**：核心 Task 用 C++ `UObject` 实现，允许项目派生蓝图 Task。
 
+## 快速开始
+
+```bash
+git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
+```
+
+仓库本身就是一个可打开的 UE 工程（`UAKDemo.uproject`），UAK 作为插件位于 `Plugins/UEAbilityKit`。
+
+```powershell
+./Scripts/run_tests.ps1    # 编译 + 跑测试 + 出报告
+```
+
 ## 仓库
 
 - GitHub：[HUSTJJD/UEAbilityKit](https://github.com/HUSTJJD/UEAbilityKit)
 
-> 当前进度：M0–M4 的主体代码已落地（尚未编译验证）。
+> 当前进度：M0–M4 的主体代码已落地，UE 5.8.3 编译验证进行中。

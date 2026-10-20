@@ -11,6 +11,9 @@ public:
 	virtual UClass* GetSupportedClass() const override;
 	virtual FColor GetTypeColor() const override;
 
+	// UE 5.8 的 FAssetTypeActions_Base 不再提供默认实现，子类必须自己给分类
+	virtual uint32 GetCategories() override { return EAssetTypeCategories::Misc; }
+
 	virtual void OpenAssetEditor(const TArray<UObject*>& InObjects,
 		TSharedPtr<IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
 };

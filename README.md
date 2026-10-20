@@ -110,10 +110,35 @@
 | [`examples/02`](docs/examples/02-cooldown-cost-stacking.md) | 冷却 / 消耗 / 堆叠该怎么配（全是 GAS，UAK 不自建） |
 | [`examples/03`](docs/examples/03-sample-project.md) | 工程结构说明（对照 UnLua 的布局） |
 | [`examples/04`](docs/examples/04-scripting-with-unlua.md) | 脚本方案：UnLuaNova 以 git submodule 引入，核心 C++ / 扩展用 Lua |
+| [`docs/testing.md`](docs/testing.md) | 测试与自动化：用例分层、一键脚本、报告与素材生成 |
 
-> 克隆时请加 `--recursive`，或之后执行 `git submodule update --init --recursive`。
+> 克隆时请加 `--recursive`（UnLuaNova 自身还嵌套了 Lua / Luau 两个子模块），
+> 或之后执行 `git submodule update --init --recursive`。
 
-> 待完成：**编译验证**。功能、文档、示例均已完整，只差一次编译把报错修干净。
+## 测试与自动化
+
+测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）：
+
+```powershell
+./Scripts/run_tests.ps1                 # 编译 + 跑全部 UAK.* 用例 + 生成报告
+./Scripts/run_tests.ps1 -Filter UAK.Unit
+./Scripts/run_tests.ps1 -CaptureMedia   # 额外产出截图与录屏
+```
+
+```bash
+./Scripts/run_tests.sh                  # Linux / macOS 等价脚本
+```
+
+一次运行会产生：
+
+| 产物 | 路径 |
+|---|---|
+| 结论（Markdown / HTML / JSON） | `docs/reports/latest.{md,html,json}` |
+| 截图 / 录屏（ffmpeg 合成） | `docs/reports/media/**` |
+| Showcase（由素材自动生成） | `docs/showcase.md` |
+
+用例分三层：`UAK.Unit.*`（单元）、`UAK.Instance.*`（执行器实例）、`UAK.GAS.*`（真建 ASC 跑 GE）。
+详见 [docs/testing.md](docs/testing.md)。
 
 ## 目录结构
 
@@ -131,14 +156,22 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 │  │  ├─ UEAbilityKit.uplugin
 │  │  └─ Source/
 │  │     ├─ UEAbilityKit/           # Runtime（不依赖 Editor）
-│  │     └─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
-│  └─ UnLuaNova/                    ← 脚本方案（git submodule）
+│  │     ├─ UEAbilityKitEditor/     # Editor（时间轴编辑器）
+│  │     └─ UEAbilityKitTests/      # Editor（自动化用例，随插件发布）
+│  └─ UnLuaNova/                    ← 脚本方案（git submodule，内含嵌套子模块）
+├─ Scripts/
+│  ├─ run_tests.ps1 / run_tests.sh  ← 测试启动脚本（编译 + 跑 + 出报告）
+│  └─ report/generate_report.py     ← 报告 / Showcase 生成器
+├─ .github/workflows/               # Pages 部署 + 自托管 runner 跑测试
+├─ mkdocs.yml                       # GitHub Pages 站点配置
 ├─ Config/                          # 工程配置（最小）
 ├─ Content/                         # 内容目录（不提交二进制；Script/ 为 Lua 脚本）
 ├─ docs/
 │  ├─ research/                     # Able / AbilityKit 调研与命名提案
 │  ├─ design/                       # 设计文档（canonical 入口见 00-index.md）
 │  ├─ examples/                     # 接入与配置示例
+│  ├─ reports/                      # 测试报告（自动生成）
+│  ├─ testing.md / showcase.md
 │  └─ roadmap.md
 ├─ NOTICE
 └─ LICENSE                          # Apache-2.0

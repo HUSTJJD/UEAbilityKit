@@ -1,3 +1,4 @@
 [submodule "Plugins/UnLuaNova"]
 	path = Plugins/UnLuaNova
 	url = https://github.com/HUSTJJD/UnLuaNova.git
+	branch = master

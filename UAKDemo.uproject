@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.8",
+	"EngineAssociation": "{12D1A55F-4B0B-6F15-0801-49AF79F4FD77}",
 	"Category": "Samples",
 	"Description": "UEAbilityKit 示例工程：项目本身即示例，UAK 作为插件使用，UnLuaNova 作为脚本方案",
 	"AdditionalPluginDirectories": [
@@ -30,8 +30,20 @@
 			"Enabled": true
 		},
 		{
-			"Name": "GameplayTags",
-			"Enabled": true
+			"Name": "LuaProtobuf",
+			"Enabled": false
+		},
+		{
+			"Name": "LuaRapidjson",
+			"Enabled": false
+		},
+		{
+			"Name": "LuaSocket",
+			"Enabled": false
+		},
+		{
+			"Name": "UnLuaNovaTestSuite",
+			"Enabled": false
 		}
 	]
 }

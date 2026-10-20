@@ -24,6 +24,8 @@
 #include "Modules/ModuleManager.h"
 #include "PropertyEditorModule.h"
 #include "IDetailsView.h"
+#include "WorkspaceMenuStructure.h"
+#include "WorkspaceMenuStructureModule.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Input/SButton.h"
@@ -200,30 +202,25 @@ bool FUEAbilityKitAssetEditor::TickPIELink(float DeltaTime)
 
 void FUEAbilityKitAssetEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
-	WorkspaceMenu::GetMenuStructure()->GetStructureBuilder()
-		->AddCategory(LOCTEXT("UAKCategory", "UE Ability Kit"), FSlateIcon(), 1000);
-
+	// UE 5.8 的 IWorkspaceMenuStructure 不再提供 GetAssetEditorCategory / GetStructureBuilder，
+	// 这里只注册 Tab，不再往工作区菜单里挂分组（分组是可选的能力，丢了不影响功能）。
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 
 	InTabManager->RegisterTabSpawner(TimelineTabId,
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Timeline))
-		.SetDisplayName(LOCTEXT("TimelineTab", "时间轴"))
-		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
+		.SetDisplayName(LOCTEXT("TimelineTab", "时间轴"));
 
 	InTabManager->RegisterTabSpawner(DetailsTabId,
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Details))
-		.SetDisplayName(LOCTEXT("DetailsTab", "Inspector"))
-		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
+		.SetDisplayName(LOCTEXT("DetailsTab", "Inspector"));
 
 	InTabManager->RegisterTabSpawner(BloodlineTabId,
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Bloodline))
-		.SetDisplayName(LOCTEXT("BloodlineTab", "血缘"))
-		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
+		.SetDisplayName(LOCTEXT("BloodlineTab", "血缘"));
 
 	InTabManager->RegisterTabSpawner(PreviewTabId,
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Preview))
-		.SetDisplayName(LOCTEXT("PreviewTab", "预览"))
-		.SetGroup(WorkspaceMenu::GetMenuStructure()->GetAssetEditorCategory());
+		.SetDisplayName(LOCTEXT("PreviewTab", "预览"));
 }
 
 void FUEAbilityKitAssetEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
@@ -261,7 +258,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 	TimelineWidget = Timeline;
 
-	TSharedRef<SUAKTimelineToolbar> Toolbar = SNew(SUAKTimelineToolbar)
+	TSharedRef<SUAKTimelineToolbar> TimelineToolbar = SNew(SUAKTimelineToolbar)
 		.Timeline(Timeline)
 		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 
@@ -280,7 +277,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 			.AutoHeight()
 			.Padding(2.f)
 			[
-				Toolbar
+				TimelineToolbar
 			]
 			+ SVerticalBox::Slot().FillHeight(1.f)
 			[

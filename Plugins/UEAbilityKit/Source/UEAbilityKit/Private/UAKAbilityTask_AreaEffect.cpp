@@ -22,7 +22,12 @@ UAKAbilityTask_AreaEffect::UAKAbilityTask_AreaEffect()
 
 UObject* UAKAbilityTask_AreaEffect::CreateScratchPad(const FAKAbilityContext& Context)
 {
-	return NewObject<UAKAreaEffectScratchPad>(Context.Owner.Get() ? Context.Owner.Get() : GetTransientPackage());
+	// 三元运算符两侧类型必须一致（AActor* / UPackage*），先统一成 UObject*
+	UObject* Outer = Context.Owner.Get()
+		? static_cast<UObject*>(Context.Owner.Get())
+		: static_cast<UObject*>(GetTransientPackage());
+
+	return NewObject<UAKAreaEffectScratchPad>(Outer);
 }
 
 FVector UAKAbilityTask_AreaEffect::GetCenter(const FAKAbilityContext& Context) const

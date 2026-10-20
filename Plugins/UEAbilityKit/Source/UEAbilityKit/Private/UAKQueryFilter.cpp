@@ -4,6 +4,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "CollisionQueryParams.h"
+#include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
@@ -86,7 +87,7 @@ bool UAKQueryFilter_Tag::Passes(const AActor* Candidate, const AActor* Source) c
 		return false;
 	}
 
-	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Candidate);
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(const_cast<AActor*>(Candidate));
 	if (!TargetASC)
 	{
 		return bKeepIfNoAbilitySystem;

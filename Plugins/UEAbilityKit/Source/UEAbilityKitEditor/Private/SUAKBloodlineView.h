@@ -39,13 +39,15 @@ public:
 	void SetRuntimeTrace(const UAKTrace* InTrace);
 
 private:
-	TSharedRef<ITableRow> GenerateRow(FAKBloodlineRow Item, const TSharedRef<STableViewBase>& OwnerTable);
+	TSharedRef<ITableRow> GenerateRow(TSharedPtr<FAKBloodlineRow> Item, const TSharedRef<STableViewBase>& OwnerTable);
 	void RebuildFromAsset();
 	void RebuildFromTrace(const UAKTrace* Trace);
 
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
-	TArray<FAKBloodlineRow> Rows;
-	TSharedPtr<SListView<FAKBloodlineRow>> ListView;
+	// UE 5.8 起 SListView 的 ItemType 必须是 UObject 指针 / TSharedPtr / TSharedRef / FName，
+	// 裸结构体不再被 TListTypeTraits 接受，因此这里统一用共享指针。
+	TArray<TSharedPtr<FAKBloodlineRow>> Rows;
+	TSharedPtr<SListView<TSharedPtr<FAKBloodlineRow>>> ListView;
 	TWeakObjectPtr<const UAKTrace> RuntimeTrace;
 
 	float RefreshTimer = 0.f;

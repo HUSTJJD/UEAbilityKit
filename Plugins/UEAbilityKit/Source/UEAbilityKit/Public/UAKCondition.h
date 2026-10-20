@@ -24,8 +24,10 @@ enum class EAKComparison : uint8
  *
  * 被 Branch（分支）与 WaitUntil（等待）共用，保证"条件"在两处语义完全一致。
  */
+// 注意：这个结构体的成员函数在 .cpp 里实现，跨模块使用时必须带 API 宏，
+// 否则其他模块（例如自动化测试模块）链接不到 Evaluate / IsEmpty。
 USTRUCT(BlueprintType)
-struct FAKCondition
+struct UEABILITYKIT_API FAKCondition
 {
 	GENERATED_BODY()
 

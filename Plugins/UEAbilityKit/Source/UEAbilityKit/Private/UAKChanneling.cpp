@@ -5,6 +5,7 @@
 
 #include "Dom/JsonObject.h"
 
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 

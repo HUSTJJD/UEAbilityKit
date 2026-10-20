@@ -30,20 +30,22 @@ public:
 	void Refresh();
 
 private:
-	TSharedRef<ITableRow> GenerateClassRow(TSubclassOf<UAKAbilityTaskBase> Item, const TSharedRef<STableViewBase>& OwnerTable);
+	TSharedRef<ITableRow> GenerateClassRow(UClass* Item, const TSharedRef<STableViewBase>& OwnerTable);
 	TSharedRef<SWidget> GenerateTrackComboItem(TSharedPtr<int32> Item);
 	void OnSearchChanged(const FText& Text);
 	void OnTrackSelectionChanged(TSharedPtr<int32> Item, ESelectInfo::Type SelectInfo);
 	FReply OnAddClicked();
-	void OnClassDoubleClicked(TSubclassOf<UAKAbilityTaskBase> Item);
+	void OnClassDoubleClicked(UClass* Item);
 	FText GetSelectedTrackText() const;
 
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	FOnAKAddTask OnAddTask;
 
-	TArray<TSubclassOf<UAKAbilityTaskBase>> AllClasses;
-	TArray<TSubclassOf<UAKAbilityTaskBase>> FilteredClasses;
-	TSharedPtr<SListView<TSubclassOf<UAKAbilityTaskBase>>> ClassListView;
+	// UE 5.8 起 SListView 的 ItemType 只能是 UObject 指针 / TSharedPtr / TSharedRef / FName，
+	// TSubclassOf 不再被接受，因此列表直接持有 UClass*。
+	TArray<UClass*> AllClasses;
+	TArray<UClass*> FilteredClasses;
+	TSharedPtr<SListView<UClass*>> ClassListView;
 
 	TArray<TSharedPtr<int32>> TrackOptions;
 	TSharedPtr<int32> SelectedTrack;

@@ -19,7 +19,7 @@ void SUAKBloodlineView::Construct(const FArguments& InArgs)
 
 	ChildSlot
 	[
-		SAssignNew(ListView, SListView<FAKBloodlineRow>)
+		SAssignNew(ListView, SListView<TSharedPtr<FAKBloodlineRow>>)
 		.ListItemsSource(&Rows)
 		.OnGenerateRow(this, &SUAKBloodlineView::GenerateRow)
 	];
@@ -77,7 +77,7 @@ void SUAKBloodlineView::RebuildFromAsset()
 	Root.Label = AssetPtr->DisplayName.IsEmpty() ? AssetPtr->GetName() : AssetPtr->DisplayName.ToString();
 	Root.Detail = FString::Printf(TEXT("长度 %.2fs"), AssetPtr->Length);
 	Root.Depth = 0;
-	Rows.Add(Root);
+	Rows.Add(MakeShared<FAKBloodlineRow>(Root));
 
 	for (const UAKAbilityTrack* Track : AssetPtr->Tracks)
 	{
@@ -90,7 +90,7 @@ void SUAKBloodlineView::RebuildFromAsset()
 		TrackRow.Label = Track->GetDisplayName().ToString();
 		TrackRow.Detail = Track->bEnabled ? TEXT("启用") : TEXT("已静音");
 		TrackRow.Depth = 1;
-		Rows.Add(TrackRow);
+		Rows.Add(MakeShared<FAKBloodlineRow>(TrackRow));
 
 		for (const UAKAbilityTaskBase* Task : Track->Tasks)
 		{
@@ -108,14 +108,14 @@ void SUAKBloodlineView::RebuildFromAsset()
 			TaskRow.Time = Task->StartTime;
 			TaskRow.Depth = 2;
 			TaskRow.bIsTask = true;
-			Rows.Add(TaskRow);
+			Rows.Add(MakeShared<FAKBloodlineRow>(TaskRow));
 
-			for (const FGameplayTag& Tag : Impact.Tags)
+			for (const FGameplayTag& ImpactTag : Impact.Tags)
 			{
 				FAKBloodlineRow TagRow;
-				TagRow.Label = FString::Printf(TEXT("Tag: %s"), *Tag.ToString());
+				TagRow.Label = FString::Printf(TEXT("Tag: %s"), *ImpactTag.ToString());
 				TagRow.Depth = 3;
-				Rows.Add(TagRow);
+				Rows.Add(MakeShared<FAKBloodlineRow>(TagRow));
 			}
 
 			for (const TSoftClassPtr<UGameplayEffect>& Effect : Impact.Effects)
@@ -123,7 +123,7 @@ void SUAKBloodlineView::RebuildFromAsset()
 				FAKBloodlineRow EffectRow;
 				EffectRow.Label = FString::Printf(TEXT("GE: %s"), *Effect.ToString());
 				EffectRow.Depth = 3;
-				Rows.Add(EffectRow);
+				Rows.Add(MakeShared<FAKBloodlineRow>(EffectRow));
 			}
 
 			for (const FGameplayTag& Cue : Impact.Cues)
@@ -131,7 +131,7 @@ void SUAKBloodlineView::RebuildFromAsset()
 				FAKBloodlineRow CueRow;
 				CueRow.Label = FString::Printf(TEXT("Cue: %s"), *Cue.ToString());
 				CueRow.Depth = 3;
-				Rows.Add(CueRow);
+				Rows.Add(MakeShared<FAKBloodlineRow>(CueRow));
 			}
 		}
 	}
@@ -172,21 +172,29 @@ void SUAKBloodlineView::RebuildFromTrace(const UAKTrace* Trace)
 			Row.Detail = FString::Join(Node.Details, TEXT(" · "));
 		}
 
-		Rows.Add(Row);
+		Rows.Add(MakeShared<FAKBloodlineRow>(Row));
 	}
 
 	if (ListView.IsValid()) { ListView->RequestListRefresh(); }
 }
 
-TSharedRef<ITableRow> SUAKBloodlineView::GenerateRow(FAKBloodlineRow Item, const TSharedRef<STableViewBase>& OwnerTable)
+TSharedRef<ITableRow> SUAKBloodlineView::GenerateRow(TSharedPtr<FAKBloodlineRow> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	const FString Indent = FString::ChrN(Item.Depth * 3, TEXT(' '));
-	const FText Label = FText::FromString(Indent + Item.Label);
-	const FText Detail = Item.Time > 0.f
-		? FText::Format(LOCTEXT("RowWithTime", "{0}  @ {1}s"), FText::FromString(Item.Detail), FText::AsNumber(Item.Time))
-		: FText::FromString(Item.Detail);
+	if (!Item.IsValid())
+	{
+		return SNew(STableRow<TSharedPtr<FAKBloodlineRow>>, OwnerTable)
+		[
+			SNew(STextBlock).Text(LOCTEXT("EmptyRow", ""))
+		];
+	}
 
-	return SNew(STableRow<FAKBloodlineRow>, OwnerTable)
+	const FString Indent = FString::ChrN(Item->Depth * 3, TEXT(' '));
+	const FText Label = FText::FromString(Indent + Item->Label);
+	const FText Detail = Item->Time > 0.f
+		? FText::Format(LOCTEXT("RowWithTime", "{0}  @ {1}s"), FText::FromString(Item->Detail), FText::AsNumber(Item->Time))
+		: FText::FromString(Item->Detail);
+
+	return SNew(STableRow<TSharedPtr<FAKBloodlineRow>>, OwnerTable)
 		[
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()

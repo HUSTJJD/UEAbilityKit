@@ -3,10 +3,10 @@
 #include "UAKAbilityAsset.h"
 
 #include "Animation/AnimMontage.h"
-#include "Animation/SkeletalMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "GameFramework/Actor.h"
+#include "Editor.h"           // GLevelEditorModeTools
 #include "SlateOptMacros.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/SBoxPanel.h"
@@ -17,7 +17,9 @@
 
 FAKPreviewViewportClient::FAKPreviewViewportClient(FPreviewScene& InPreviewScene,
 	const TSharedRef<SEditorViewport>& InViewportWidget)
-	: FEditorViewportClient(&InPreviewScene.GetEditorModeTools(), &InPreviewScene, InViewportWidget)
+	// UE 5.8 的 FPreviewScene 不再自带 FEditorModeTools，改用关卡编辑器的全局实例；
+	// 第三个参数也从 TSharedRef 变成了 TWeakPtr。
+	: FEditorViewportClient(&GLevelEditorModeTools(), &InPreviewScene, TWeakPtr<SEditorViewport>(InViewportWidget))
 	, PreviewScene(&InPreviewScene)
 {
 	SetViewMode(VMI_Lit);
@@ -81,10 +83,10 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 		return;
 	}
 
-	// 清理旧预览角色
+	// 清理旧预览角色（UE 5.8 的 FPreviewScene 不再托管 Actor，直接销毁即可）
 	if (AActor* OldActor = PreviewActor.Get())
 	{
-		PreviewScene->RemoveActor(OldActor);
+		PreviewScene->GetWorld()->DestroyActor(OldActor);
 		PreviewActor = nullptr;
 	}
 
@@ -103,7 +105,6 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 		return;
 	}
 
-	PreviewScene->AddActor(NewActor, /*bIsPreview=*/false);
 	PreviewActor = NewActor;
 	PreviewTime = 0.f;
 }

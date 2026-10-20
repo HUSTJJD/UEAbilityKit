@@ -2,7 +2,6 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "0.1.0",
-	"EngineVersion": "5.8.3",
 	"FriendlyName": "UE Ability Kit (UAK)",
 	"Description": "基于 GAS 的 UE5 技能编辑器：数据驱动的技能时间轴编排工具集",
 	"Category": "Gameplay",
@@ -20,15 +19,16 @@
 			"Name": "UEAbilityKitEditor",
 			"Type": "Editor",
 			"LoadingPhase": "PostEngineInit"
+		},
+		{
+			"Name": "UEAbilityKitTests",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"Plugins": [
 		{
 			"Name": "GameplayAbilities",
-			"Enabled": true
-		},
-		{
-			"Name": "GameplayTags",
 			"Enabled": true
 		}
 	]

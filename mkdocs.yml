@@ -57,6 +57,9 @@ nav:
       - 冷却/消耗/堆叠: examples/02-cooldown-cost-stacking.md
       - 示例工程: examples/03-sample-project.md
       - 使用 UnLua 脚本: examples/04-scripting-with-unlua.md
+  - 测试与自动化: testing.md
+  - 测试报告: reports/latest.md
+  - Showcase: showcase.md
   - 调研:
       - Able 与 AbilityKit 调研: research/Able与AbilityKit调研及命名提案.md
 

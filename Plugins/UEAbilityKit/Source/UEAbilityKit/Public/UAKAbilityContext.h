@@ -29,8 +29,13 @@ struct FAKAbilityContext
 	UPROPERTY(BlueprintReadWrite, Category = "Context")
 	TWeakObjectPtr<AActor> Instigator;
 
-	/** 目标集合（由目标选择 / AbilityTargetData 填充） */
-	UPROPERTY(BlueprintReadWrite, Category = "Context")
+	/**
+	 * 目标集合（由目标选择 / AbilityTargetData 填充）。
+	 *
+	 * 注意：故意不暴露给蓝图——UHT 不支持 TArray<TWeakObjectPtr<>> 的蓝图类型。
+	 * 蓝图侧如需读目标，用 UAKBlueprintLibrary 提供的访问器（返回强引用数组）。
+	 */
+	UPROPERTY()
 	TArray<TWeakObjectPtr<AActor>> Targets;
 
 	/** 施法者的 ASC，Task 通过它落地 GE / Cue */

@@ -37,9 +37,9 @@ void SUAKTaskPicker::Construct(const FArguments& InArgs)
 		}
 		AllClasses.Add(Class);
 	}
-	AllClasses.Sort([](const TSubclassOf<UAKAbilityTaskBase>& A, const TSubclassOf<UAKAbilityTaskBase>& B)
+	AllClasses.Sort([](const UClass& A, const UClass& B)
 	{
-		return A->GetName() < B->GetName();
+		return A.GetName() < B.GetName();
 	});
 	FilteredClasses = AllClasses;
 
@@ -69,7 +69,7 @@ void SUAKTaskPicker::Construct(const FArguments& InArgs)
 		.FillHeight(1.f)
 		.Padding(2.f)
 		[
-			SAssignNew(ClassListView, SListView<TSubclassOf<UAKAbilityTaskBase>>)
+			SAssignNew(ClassListView, SListView<UClass*>)
 			.ListItemsSource(&FilteredClasses)
 			.OnGenerateRow(this, &SUAKTaskPicker::GenerateClassRow)
 			.OnMouseButtonDoubleClick(this, &SUAKTaskPicker::OnClassDoubleClicked)
@@ -131,7 +131,7 @@ void SUAKTaskPicker::OnSearchChanged(const FText& Text)
 	SearchText = Text.ToString();
 
 	FilteredClasses.Reset();
-	for (const TSubclassOf<UAKAbilityTaskBase>& Class : AllClasses)
+	for (UClass* Class : AllClasses)
 	{
 		if (!Class)
 		{
@@ -149,8 +149,16 @@ void SUAKTaskPicker::OnSearchChanged(const FText& Text)
 	}
 }
 
-TSharedRef<ITableRow> SUAKTaskPicker::GenerateClassRow(TSubclassOf<UAKAbilityTaskBase> Item, const TSharedRef<STableViewBase>& OwnerTable)
+TSharedRef<ITableRow> SUAKTaskPicker::GenerateClassRow(UClass* Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
+	if (!Item)
+	{
+		return SNew(STableRow<UClass*>, OwnerTable)
+		[
+			SNew(STextBlock).Text(LOCTEXT("InvalidClass", "-"))
+		];
+	}
+
 	FText Label = FText::FromString(Item->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
 	FLinearColor Color = FLinearColor::White;
 
@@ -164,7 +172,7 @@ TSharedRef<ITableRow> SUAKTaskPicker::GenerateClassRow(TSubclassOf<UAKAbilityTas
 	}
 #endif
 
-	return SNew(STableRow<TSubclassOf<UAKAbilityTaskBase>>, OwnerTable)
+	return SNew(STableRow<UClass*>, OwnerTable)
 		[
 			SNew(STextBlock)
 			.Text(Label)
@@ -226,9 +234,9 @@ FText SUAKTaskPicker::GetSelectedTrackText() const
 
 FReply SUAKTaskPicker::OnAddClicked()
 {
-	TSubclassOf<UAKAbilityTaskBase> SelectedClass;
-	TArray<TSubclassOf<UAKAbilityTaskBase>> SelectedItems = ClassListView.IsValid()
-		? ClassListView->GetSelectedItems() : TArray<TSubclassOf<UAKAbilityTaskBase>>();
+	UClass* SelectedClass = nullptr;
+	TArray<UClass*> SelectedItems = ClassListView.IsValid()
+		? ClassListView->GetSelectedItems() : TArray<UClass*>();
 
 	if (SelectedItems.Num() > 0)
 	{
@@ -244,7 +252,7 @@ FReply SUAKTaskPicker::OnAddClicked()
 	return FReply::Handled();
 }
 
-void SUAKTaskPicker::OnClassDoubleClicked(TSubclassOf<UAKAbilityTaskBase> Item)
+void SUAKTaskPicker::OnClassDoubleClicked(UClass* Item)
 {
 	if (Item)
 	{

@@ -5,21 +5,7 @@
 #include "UAKQueryFilter.h"
 #include "UAKAbilityTask_CollisionQuery.generated.h"
 
-/**
- * 查询形状。
- *
- * 学自 AbleSP 的 Targeting：形状与过滤器分开，形状只回答"在哪查"，
- * 过滤器（UAKQueryFilter）回答"哪些算数"，两者可自由组合。
- */
-UENUM(BlueprintType)
-enum class EAKQueryShape : uint8
-{
-	Sphere	UMETA(DisplayName = "球"),
-	Box		UMETA(DisplayName = "盒"),
-	Capsule	UMETA(DisplayName = "胶囊"),
-	/** 锥形（近战最常见）：以 ConeDirection 为轴，半角 ConeAngle 度的扇形 */
-	Cone	UMETA(DisplayName = "锥")
-};
+// 查询形状 EAKQueryShape 定义在 UAKTypes.h（UAKQuery 也要用，属于公共类型）
 
 /**
  * 碰撞查询：把命中的 Actor 写进上下文的目标集合，供后续 ApplyGameplayEffect 等任务使用。

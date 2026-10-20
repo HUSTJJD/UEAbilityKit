@@ -99,6 +99,24 @@ enum class EAKTaskNetMode : uint8
 	ClientOnly	UMETA(DisplayName = "Client Only (表现)")
 };
 
+/**
+ * 查询形状。
+ *
+ * 学自 AbleSP 的 Targeting：形状与过滤器分开，形状只回答"在哪查"，
+ * 过滤器（UAKQueryFilter）回答"哪些算数"，两者可自由组合。
+ *
+ * 放在 UAKTypes 而不是某个任务头文件里，因为 UAKQuery（工具层）也要用它。
+ */
+UENUM(BlueprintType)
+enum class EAKQueryShape : uint8
+{
+	Sphere	UMETA(DisplayName = "球"),
+	Box		UMETA(DisplayName = "盒"),
+	Capsule	UMETA(DisplayName = "胶囊"),
+	/** 锥形（近战最常见）：以 ConeDirection 为轴，半角 ConeAngle 度的扇形 */
+	Cone	UMETA(DisplayName = "锥")
+};
+
 /** 命名时间点：Windup / Cast / Recover …，供规则与时间轴引用 */
 USTRUCT(BlueprintType)
 struct FAKTimeMarker

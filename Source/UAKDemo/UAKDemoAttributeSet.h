@@ -5,6 +5,10 @@
 #include "AbilitySystemComponent.h"
 #include "UAKDemoAttributeSet.generated.h"
 
+// 属性访问器直接用引擎的官方宏 ATTRIBUTE_ACCESSORS_BASIC（AttributeSet.h）。
+// 老名字 ATTRIBUTE_ACCESSORS 在 UE 5 已移除（现在只出现在引擎注释的文档示例里），
+// 不要再照着注释在项目里抄一份。
+
 /**
  * 示例属性集：Health / MaxHealth / Mana / MaxMana。
  *
@@ -36,10 +40,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_MaxMana)
 	FGameplayAttributeData MaxMana;
 
-	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, Health);
-	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, MaxHealth);
-	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, Mana);
-	ATTRIBUTE_ACCESSORS(UAKDemoAttributeSet, MaxMana);
+	ATTRIBUTE_ACCESSORS_BASIC(UAKDemoAttributeSet, Health);
+	ATTRIBUTE_ACCESSORS_BASIC(UAKDemoAttributeSet, MaxHealth);
+	ATTRIBUTE_ACCESSORS_BASIC(UAKDemoAttributeSet, Mana);
+	ATTRIBUTE_ACCESSORS_BASIC(UAKDemoAttributeSet, MaxMana);
 
 protected:
 	UFUNCTION()

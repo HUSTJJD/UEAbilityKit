@@ -28,6 +28,13 @@ jobs:
           python-version: "3.12"
       - name: Install MkDocs Material
         run: pip install mkdocs-material
+      - name: Ensure generated docs exist
+        # 测试报告与 Showcase 由 run_tests 生成后才存在；
+        # 没跑过测试时补占位文件，避免 mkdocs 因 nav 缺页而失败。
+        run: |
+          mkdir -p docs/reports
+          [ -f docs/reports/latest.md ] || printf '# 测试报告\n\n尚未运行测试。\n' > docs/reports/latest.md
+          [ -f docs/showcase.md ] || printf '# Showcase\n\n尚未运行测试。\n' > docs/showcase.md
       - name: Build docs
         run: mkdocs build --site-dir _site
       - name: Setup Pages

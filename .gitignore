@@ -51,3 +51,9 @@ desktop.ini
 
 # MkDocs build output
 /_site/
+
+# Visual Studio / Rider 生成物（GenerateProjectFiles 产出，不进仓库）
+*.sln
+*.slnx
+.vs/
+.idea/

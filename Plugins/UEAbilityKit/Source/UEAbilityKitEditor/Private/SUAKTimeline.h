@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "ScopedTransaction.h"
 #include "SUAKTimelineToolbar.h"
+#include "UAKTypes.h"   // FAKScheduledTask（执行计划缓存）
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 

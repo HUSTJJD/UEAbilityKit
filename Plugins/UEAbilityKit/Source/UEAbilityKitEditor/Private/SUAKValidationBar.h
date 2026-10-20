@@ -29,8 +29,8 @@ public:
 	int32 GetWarningCount() const { return WarningCount; }
 
 private:
-	TSharedRef<ITableRow> GenerateRow(FAKValidationIssue Item, const TSharedRef<STableViewBase>& OwnerTable);
-	void OnRowDoubleClicked(FAKValidationIssue Item);
+	TSharedRef<ITableRow> GenerateRow(TSharedPtr<FAKValidationIssue> Item, const TSharedRef<STableViewBase>& OwnerTable);
+	void OnRowDoubleClicked(TSharedPtr<FAKValidationIssue> Item);
 	FText GetHeaderText() const;
 
 	TSharedPtr<STextBlock> HeaderText;
@@ -38,8 +38,9 @@ private:
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	FSimpleDelegate OnIssueDoubleClicked;
 
-	TArray<FAKValidationIssue> Issues;
-	TSharedPtr<SListView<FAKValidationIssue>> ListView;
+	// UE 5.8 起 SListView 的 ItemType 只能是 UObject 指针 / TSharedPtr / TSharedRef / FName
+	TArray<TSharedPtr<FAKValidationIssue>> Issues;
+	TSharedPtr<SListView<TSharedPtr<FAKValidationIssue>>> ListView;
 
 	int32 ErrorCount = 0;
 	int32 WarningCount = 0;

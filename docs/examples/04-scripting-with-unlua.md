@@ -29,6 +29,18 @@ Plugins/UnLuaNova/                          ← submodule 根（UnLuaNova 工程
 "AdditionalPluginDirectories": [ "Plugins/UnLuaNova/Plugins" ]
 ```
 
+这一行把 submodule 内的**整个插件集合**映射到工程的 `Plugins/UnLuaNova` 挂载点下：
+
+| 映射进来的插件 | 示例工程 | 说明 |
+|---|---|---|
+| `UnLuaNova` | ✅ 启用 | 脚本方案本体 |
+| `LuaProtobuf` | ❌ 关闭 | UE 5.8 下编译失败（`ExpressionParserTypes.h` 宏冲突），等上游修复 |
+| `LuaRapidjson` / `LuaSocket` | ❌ 关闭 | 可选扩展；Lua 调试器依赖 LuaSocket，需要时把 `Enabled` 改成 `true` |
+| `UnLuaNovaTestSuite` | ❌ 关闭 | 上游自带的测试套件，不进示例工程 |
+
+> 这几个扩展插件的 `EnabledByDefault` 都是 `true`，映射整个集合时会被一并发现，
+> 所以在 `.uproject` 里逐个显式关掉。需要哪个就把对应项改成 `true`。
+
 若你的引擎版本不支持该字段，把内层 `Plugins/UnLuaNova` 复制到工程的 `Plugins/` 下即可（二选一，不要同时存在以免重复注册）。
 
 ## 3. 依赖声明

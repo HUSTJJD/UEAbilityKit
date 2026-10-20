@@ -7,7 +7,7 @@
 
 #include "Fonts/SlateFontInfo.h"
 #include "Framework/Application/SlateApplication.h"
-#include "Framework/MultiBox/MenuBuilder.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Rendering/DrawElements.h"
 #include "ScopedTransaction.h"
 #include "Styling/CoreStyle.h"
@@ -51,7 +51,6 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 	OnAction = InArgs._OnAction;
 
 	SetCanTick(true);
-	SetCanSupportFocus(true);
 	SetClipping(EWidgetClipping::ClipToBounds);
 
 	RebuildPlanIfNeeded();
@@ -382,7 +381,14 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 		LOCTEXT("Menu_DuplicateTaskTip", "复制当前选中的任务（Ctrl+D）"),
 		FSlateIcon(),
 		FUIAction(
-			FExecuteAction::CreateLambda([this]() { OnRequestDuplicateTask.ExecuteIfBound(); }),
+			FExecuteAction::CreateLambda([this]()
+			{
+				// 复制型委托带返回值：拿到副本后直接选中，省一次点击
+				if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
+				{
+					OnTaskSelected.ExecuteIfBound(Copy);
+				}
+			}),
 			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
 	MenuBuilder.AddMenuEntry(
 		LOCTEXT("Menu_DeleteTask", "删除任务"),
@@ -468,7 +474,10 @@ FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InK
 	// 复制（Ctrl+D）
 	if (Key == EKeys::D && InKeyEvent.IsControlDown())
 	{
-		OnRequestDuplicateTask.ExecuteIfBound();
+		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
+		{
+			OnTaskSelected.ExecuteIfBound(Copy);
+		}
 		return FReply::Handled();
 	}
 

@@ -29,7 +29,7 @@ void SUAKValidationBar::Construct(const FArguments& InArgs)
 		+ SVerticalBox::Slot()
 		.FillHeight(1.f)
 		[
-			SAssignNew(ListView, SListView<FAKValidationIssue>)
+			SAssignNew(ListView, SListView<TSharedPtr<FAKValidationIssue>>)
 			.ListItemsSource(&Issues)
 			.OnGenerateRow(this, &SUAKValidationBar::GenerateRow)
 			.OnMouseButtonDoubleClick(this, &SUAKValidationBar::OnRowDoubleClicked)
@@ -98,7 +98,13 @@ void SUAKValidationBar::Refresh()
 	FAKValidationResult Result;
 	AssetPtr->Validate(Result);
 
-	Issues = MoveTemp(Result.Issues);
+	Issues.Reset();
+	Issues.Reserve(Result.Issues.Num());
+	for (FAKValidationIssue& Issue : Result.Issues)
+	{
+		Issues.Add(MakeShared<FAKValidationIssue>(MoveTemp(Issue)));
+	}
+
 	ErrorCount = Result.NumErrors();
 	WarningCount = Result.NumWarnings();
 
@@ -108,25 +114,33 @@ void SUAKValidationBar::Refresh()
 	}
 }
 
-TSharedRef<ITableRow> SUAKValidationBar::GenerateRow(FAKValidationIssue Item, const TSharedRef<STableViewBase>& OwnerTable)
+TSharedRef<ITableRow> SUAKValidationBar::GenerateRow(TSharedPtr<FAKValidationIssue> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
+	if (!Item.IsValid())
+	{
+		return SNew(STableRow<TSharedPtr<FAKValidationIssue>>, OwnerTable)
+		[
+			SNew(STextBlock).Text(FText::GetEmpty())
+		];
+	}
+
 	const FLinearColor Color =
-		(Item.Severity == EAKValidationSeverity::Error) ? FLinearColor(0.95f, 0.35f, 0.35f) :
-		(Item.Severity == EAKValidationSeverity::Warning) ? FLinearColor(0.95f, 0.75f, 0.30f) :
+		(Item->Severity == EAKValidationSeverity::Error) ? FLinearColor(0.95f, 0.35f, 0.35f) :
+		(Item->Severity == EAKValidationSeverity::Warning) ? FLinearColor(0.95f, 0.75f, 0.30f) :
 		FLinearColor(0.65f, 0.65f, 0.65f);
 
-	return SNew(STableRow<FAKValidationIssue>, OwnerTable)
+	return SNew(STableRow<TSharedPtr<FAKValidationIssue>>, OwnerTable)
 		[
 			SNew(STextBlock)
-			.Text(Item.Message)
+			.Text(Item->Message)
 			.ColorAndOpacity(Color)
 		];
 }
 
-void SUAKValidationBar::OnRowDoubleClicked(FAKValidationIssue Item)
+void SUAKValidationBar::OnRowDoubleClicked(TSharedPtr<FAKValidationIssue> Item)
 {
 	// 选中对应任务，交回上层定位
-	if (Item.Task)
+	if (Item.IsValid() && Item->Task)
 	{
 		OnIssueDoubleClicked.ExecuteIfBound();
 	}
