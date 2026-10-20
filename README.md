@@ -1,5 +1,7 @@
 # UAK — UE5 技能编辑器
 
+📖 **在线文档**：<https://hustjjd.github.io/UEAbilityKit/>
+
 **UEAbilityKit（简称 UAK）**：基于 Unreal Engine 5 与 Gameplay Ability System（GAS）的数据驱动技能编辑器与运行时工具集。
 
 > 用时间轴编排技能：一段技能 = 一条时间轴 + 若干轨道（Montage / GameplayEffect / GameplayCue / 碰撞检测 / 位移 / 分支），
