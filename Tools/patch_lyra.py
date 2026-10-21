@@ -141,10 +141,21 @@ def patch_targets(spec: dict, check_only: bool) -> int:
         return 0
 
     pending = 0
-    for target in sorted((REPO_ROOT / "Source").glob("*.Target.cs")):
+    source = REPO_ROOT / "Source"
+    if not source.is_dir():
+        return 0
+
+    for target in sorted(source.glob("*.Target.cs")):
         text = read(target)
         missing = [m for m in add_modules if f'"{m}"' not in text]
         if not missing:
+            continue
+
+        lines = text.splitlines()
+        anchors = [i for i, line in enumerate(lines) if "ExtraModuleNames.Add" in line]
+        if not anchors:
+            # 这类 Target 是继承来的（LyraGameEOS → LyraGameTarget），自己不列模块，改基类就够了
+            print(f"[patch] 跳过：{target.name}（继承别的 Target，没有自己的 ExtraModuleNames）")
             continue
 
         pending += 1
@@ -153,7 +164,6 @@ def patch_targets(spec: dict, check_only: bool) -> int:
             continue
 
         backup(target)
-        lines = text.splitlines()
         out = []
         for line in lines:
             out.append(line)
@@ -165,6 +175,21 @@ def patch_targets(spec: dict, check_only: bool) -> int:
     return pending
 
 
+def decorate(block: str) -> str:
+    """给片段加上入口标记（片段自己带了就不重复加）"""
+    if MARKER in block:
+        return block
+    return f"; ---- {MARKER} ----\n" + block
+
+
+def has_content(block: str) -> bool:
+    """ini 片段里除注释与空行外是否还有真东西"""
+    return any(
+        line.strip() and not line.strip().startswith((";", "#", "//"))
+        for line in block.splitlines()
+    )
+
+
 def patch_config(spec: dict, check_only: bool) -> int:
     cfg = spec.get("config", {})
     appends = cfg.get("append", {})
@@ -173,6 +198,7 @@ def patch_config(spec: dict, check_only: bool) -> int:
 
     pending = 0
     config_dir = REPO_ROOT / "Config"
+    hint = "Lyra 没有这个 ini" if config_dir.is_dir() else "还没导入 Lyra 的 Config"
     config_dir.mkdir(parents=True, exist_ok=True)
 
     for ini_name, append_rel in appends.items():
@@ -181,15 +207,20 @@ def patch_config(spec: dict, check_only: bool) -> int:
         if not source.is_file():
             continue
 
+        block = read(source).rstrip()
+        if not has_content(block):
+            # 片段里全是注释（例如 GameplayTags 的占位说明）→ 不值得动这个 ini
+            print(f"[patch] 跳过：Config/{ini_name}（补丁片段无实际内容）")
+            continue
+
         # Lyra 有这个 ini：追加；Lyra 没有：直接由片段生成。
         # （Config/ 整体不进 git，来源只有两处：Lyra 的拷贝 + 这里的补丁片段）
         if not target.is_file():
             pending += 1
             if check_only:
-                hint = "Lyra 没有这个 ini" if config_dir.is_dir() else "还没导入 Lyra 的 Config"
                 print(f"[patch] 待建：Config/{ini_name}（{hint}，由补丁片段生成）")
                 continue
-            write(target, f"; ---- {MARKER} ----\n" + read(source).rstrip() + "\n")
+            write(target, decorate(block) + "\n")
             print(f"[patch] 新建 Config/{ini_name}（由片段生成）")
             continue
 
@@ -204,8 +235,8 @@ def patch_config(spec: dict, check_only: bool) -> int:
             continue
 
         backup(target)
-        block = read(source).rstrip()
-        write(target, text.rstrip() + f"\n\n; ---- {MARKER} ----\n" + block + "\n")
+        write(target, text.rstrip() + "\n\n" + decorate(block) + "\n")
+        print(f"[patch] Config/{ini_name} 已追加我们的段落")
     return pending
 
 

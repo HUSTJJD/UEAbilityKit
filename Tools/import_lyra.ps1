@@ -3,12 +3,20 @@
     把下载好的 Lyra 拷进本工程并打补丁——本工程由此变成"改造过后的 Lyra"。
 
 .DESCRIPTION
-    流程：
+    流程（每一步都可重跑，结果都一样）：
+      0. 先清：Tools/clean_lyra.ps1 —— 保证工程里没有任何上一次导入的残留与手改
       1. 校验 Lyra 路径与引擎版本
       2. 拷源码：Source/LyraGame（子集，完整可玩那套）+ Source/LyraEditor
-      3. 拷外围文件：.uproject / Target.cs / Config（以 Lyra 为基线，原文件留 .uak.bak）
-      4. 拷资产：Plugins/GameFeatures/* 等（约 1.4 GB，不进 git，已加 .gitignore）
-      5. 打补丁：ULyraGameplayAbility 改为继承 UAKGameplayAbility（Tools/patch_lyra.py）
+      3. 拷外围：.uproject / Target.cs / Config（以 Lyra 为基线，我们的东西靠补丁加回来）
+      4. 拷资产：Plugins/GameFeatures/* 等（约 1.4 GB，不进 git）
+      5. 打补丁：ULyraGameplayAbility 继承 UAKGameplayAbility 等（Tools/patch_lyra.py）
+      6. 记清单 + 校验：Tools/.lyra_paths.txt（清的时候照单全删）、
+         Tools/.lyra_state.json（快照，之后 verify_lyra.py 可离线比对）
+
+    铁律：**不改 Lyra 的内容**。
+    必须改的地方全部写在 Tools/lyra_patches.json 里，由第 5 步自动打；
+    手改过的 Lyra 文件会让测试"因为改过而通过"，把 bug 藏起来，
+    所以每次导入都从 clean 开始，导入完立刻 verify。
 
     改名策略：拷贝进来的 Lyra 代码**保持 Lyra 命名**（保留 Epic 版权头与来源），
     我们的东西用 AK 命名。NOTICE 里记录来源。
@@ -16,7 +24,8 @@
 .EXAMPLE
     ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame
     ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -SkipAssets   # 只拷源码，不拷 1.4GB 资产
-    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -Force        # 覆盖已存在的文件
+    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -KeepAssets   # 清源码/配置，资产沿用上次
+    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -NoClean      # 不预清（不推荐，只在调试时用）
 #>
 [CmdletBinding()]
 param(
@@ -24,7 +33,9 @@ param(
     [string] $EngineRoot = $env:UE_ENGINE_ROOT,
     [switch] $SkipAssets,
     [switch] $SkipPatch,
-    [switch] $Force,
+    [switch] $KeepAssets,   # 与 clean_lyra 同义：1.4 GB 资产不重新拷
+    [switch] $NoClean,      # 跳过预清理（不推荐）
+    [switch] $Force,        # 兼容旧用法：现在默认就是"清完重拷"，这个开关不再影响行为
     [string] $Python     = 'python'
 )
 
@@ -32,7 +43,23 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-# ── 1. 校验 ─────────────────────────────────────────────────────────────
+$script:Imported = New-Object System.Collections.Generic.List[string]
+$script:Manifest = New-Object System.Collections.Generic.List[string]   # 给人看的来源清单
+
+# ── 拷贝 + 记账（记下来，clean_lyra 才知道该删什么）────────────────────────
+function Copy-Lyra {
+    param(
+        [Parameter(Mandatory)][string] $Src,
+        [Parameter(Mandatory)][string] $Rel,   # 相对工程根的目标路径
+        [switch] $Dir
+    )
+    $dest = Join-Path $RepoRoot $Rel
+    New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent) | Out-Null
+    Copy-Item -LiteralPath $Src -Destination $dest -Recurse:$Dir -Force
+    $script:Imported.Add($Rel)
+}
+
+# ── 0. 校验 ─────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($LyraPath)) { throw "请用 -LyraPath 指定下载好的 Lyra 工程目录" }
 if (-not (Test-Path $LyraPath)) { throw "Lyra 目录不存在：$LyraPath" }
 $LyraPath = (Resolve-Path $LyraPath).Path
@@ -54,9 +81,17 @@ if ($engineVersion -and $engineVersion -notmatch '^5\.(4|6|8)') {
     Write-Warning "[import] UAK 验证过 5.4 / 5.6 / 5.8，当前版本 $engineVersion 建议先确认"
 }
 
-$manifest = @()
+# ── 0b. 先清干净：没有这一步，上一次的手改会留下来骗过测试 ────────────────
+if (-not $NoClean) {
+    Write-Host "[import] 预清理（保证这次导入是唯一的变量来源）…"
+    & (Join-Path $PSScriptRoot 'clean_lyra.ps1') -KeepAssets:$KeepAssets
+    if (-not $?) { throw "预清理失败" }   # 脚本内部没有 native 调用，$LASTEXITCODE 不可靠，看 $?
+}
+else {
+    Write-Warning "[import] -NoClean：跳过预清理，工程里可能残留上次的手改（只用于调试）"
+}
 
-# ── 2. 拷源码 ───────────────────────────────────────────────────────────
+# ── 1. 拷源码 ───────────────────────────────────────────────────────────
 # "完整可玩"需要的模块：能力 / 角色 / 玩家 / 输入 / 相机 / 武器 / 装备 / 库存 / 队伍 / UI 等。
 # 刻意排除：Settings、Hotfix、Performance、Replays、Development、Tests（与技能主线无关）。
 $LyraDirs = @(
@@ -65,95 +100,63 @@ $LyraDirs = @(
     'Inventory', 'Messages', 'Physics', 'Player', 'System', 'Teams', 'Weapons', 'UI'
 )
 
-$destRoot = Join-Path $RepoRoot 'Source\LyraGame'
-New-Item -ItemType Directory -Force -Path $destRoot | Out-Null
-
-# 模块根上的文件（Build.cs / Module.cpp / GameplayTags / LogChannels 等）
 foreach ($file in Get-ChildItem -Path (Join-Path $LyraPath 'Source\LyraGame') -File -ErrorAction SilentlyContinue) {
-    $target = Join-Path $destRoot $file.Name
-    if ((Test-Path $target) -and -not $Force) { continue }
-    Copy-Item $file.FullName $target -Force
-    $manifest += "Source/LyraGame/$($file.Name)"
+    Copy-Lyra -Src $file.FullName -Rel "Source\LyraGame\$($file.Name)"
 }
 
 foreach ($dir in $LyraDirs) {
     $src = Join-Path $LyraPath "Source\LyraGame\$dir"
     if (-not (Test-Path $src)) { Write-Warning "[import] Lyra 里没有 $dir，跳过"; continue }
-
-    $dest = Join-Path $destRoot $dir
-    if ((Test-Path $dest) -and -not $Force) {
-        Write-Host "[import] 已存在，跳过：$dir（-Force 可覆盖）"
-        continue
-    }
-    Copy-Item $src $dest -Recurse -Force
-    $manifest += "Source/LyraGame/$dir"
+    Copy-Lyra -Src $src -Rel "Source\LyraGame\$dir" -Dir
+    $script:Manifest.Add("Source/LyraGame/$dir")
     Write-Host "[import] 源码：$dir"
 }
 
 # LyraEditor（编辑器工具，小）
 $editorSrc = Join-Path $LyraPath 'Source\LyraEditor'
 if (Test-Path $editorSrc) {
-    $editorDest = Join-Path $RepoRoot 'Source\LyraEditor'
-    if (-not (Test-Path $editorDest) -or $Force) {
-        Copy-Item $editorSrc $editorDest -Recurse -Force
-        $manifest += 'Source/LyraEditor'
-        Write-Host '[import] 源码：LyraEditor'
-    }
+    Copy-Lyra -Src $editorSrc -Rel 'Source\LyraEditor' -Dir
+    $script:Manifest.Add('Source/LyraEditor')
+    Write-Host '[import] 源码：LyraEditor'
 }
 
-# ── 3. 外围文件：copy（Lyra 是基线，我们的东西靠后面的 patch 加回去）──
+# ── 2. 外围文件：copy（Lyra 是基线，我们的东西靠后面的 patch 加回去）──
 Write-Host "[import] 拷外围文件（以 Lyra 为基线）…"
 
-# 3a. .uproject：整个就是 Lyra 的（连名字一起），本工程 = 改造过后的 Lyra
-$ourUproject = Join-Path $RepoRoot (Split-Path $uproject -Leaf)
-if ((Test-Path $ourUproject) -and -not $Force) {
-    Copy-Item $ourUproject "$ourUproject.uak.bak" -Force
-}
-Copy-Item $uproject $ourUproject -Force
-Write-Host "[import] .uproject：$(Split-Path $uproject -Leaf) ← Lyra"
+# 2a. .uproject：整个就是 Lyra 的（连名字一起），本工程 = 改造过后的 Lyra
+$uprojectName = Split-Path $uproject -Leaf
+Copy-Lyra -Src $uproject -Rel $uprojectName
+Write-Host "[import] .uproject：$uprojectName ← Lyra"
 
 # 说明：UAKDemo 现在是**插件的一个模块**（Plugins/UEAbilityKit/Source/UAKDemo），
 # 不再是独立工程——所以这里不需要删任何东西。宿主是 Lyra，示例随插件走。
 
-# 3b. Config
-$cfgDest = Join-Path $RepoRoot 'Config'
-New-Item -ItemType Directory -Force -Path $cfgDest | Out-Null
-foreach ($ini in Get-ChildItem -Path (Join-Path $LyraPath 'Config') -Filter '*.ini' -File) {
-    $target = Join-Path $cfgDest $ini.Name
-    if ((Test-Path $target) -and -not $Force) { Copy-Item $target "$target.uak.bak" -Force }
-    Copy-Item $ini.FullName $target -Force
+# 2b. Config
+foreach ($ini in Get-ChildItem -Path (Join-Path $LyraPath 'Config') -Filter '*.ini' -File -ErrorAction SilentlyContinue) {
+    Copy-Lyra -Src $ini.FullName -Rel "Config\$($ini.Name)"
 }
 Write-Host '[import] Config ← Lyra'
 
-# 3c. Target.cs
-foreach ($t in Get-ChildItem -Path (Join-Path $LyraPath 'Source') -Filter '*.Target.cs' -File) {
-    $dest = Join-Path $RepoRoot "Source\$($t.Name)"
-    if ((Test-Path $dest) -and -not $Force) { Copy-Item $dest "$dest.uak.bak" -Force }
-    Copy-Item $t.FullName $dest -Force
+# 2c. Target.cs
+foreach ($t in Get-ChildItem -Path (Join-Path $LyraPath 'Source') -Filter '*.Target.cs' -File -ErrorAction SilentlyContinue) {
+    Copy-Lyra -Src $t.FullName -Rel "Source\$($t.Name)"
 }
 Write-Host '[import] Target.cs ← Lyra'
 
-# ── 4. 拷资产（大，不进 git）─────────────────────────────────────────────
+# ── 3. 拷资产（大，不进 git）─────────────────────────────────────────────
 if (-not $SkipAssets) {
     Write-Host "[import] 拷资产（约 1.4 GB，不进 git）…"
 
-    $pluginDest = Join-Path $RepoRoot 'Plugins'
-    New-Item -ItemType Directory -Force -Path $pluginDest | Out-Null
-
-    # 4a. GameFeature 插件：武器、关卡都在这（ShooterCore / ShooterMaps / ...）
+    # 3a. GameFeature 插件：武器、关卡都在这（ShooterCore / ShooterMaps / ...）
     $gfSrc = Join-Path $LyraPath 'Plugins\GameFeatures'
     if (Test-Path $gfSrc) {
-        $gfDest = Join-Path $pluginDest 'GameFeatures'
-        New-Item -ItemType Directory -Force -Path $gfDest | Out-Null
         foreach ($gf in Get-ChildItem -Path $gfSrc -Directory) {
-            $target = Join-Path $gfDest $gf.Name
-            if ((Test-Path $target) -and -not $Force) { continue }
-            Copy-Item $gf.FullName $target -Recurse -Force
+            Copy-Lyra -Src $gf.FullName -Rel "Plugins\GameFeatures\$($gf.Name)" -Dir
             Write-Host "[import] 资产插件：GameFeatures/$($gf.Name)"
         }
     }
 
-    # 4b. Lyra 自带的插件：5.8 引擎里已有的不拷，避免重名冲突
+    # 3b. Lyra 自带的插件：5.8 引擎里已有的不拷，避免重名冲突
     if ($EngineRoot -and (Test-Path (Join-Path $EngineRoot 'Engine\Plugins'))) {
         $enginePluginDir = Join-Path $EngineRoot 'Engine\Plugins'
         foreach ($p in Get-ChildItem -Path (Join-Path $LyraPath 'Plugins') -Directory) {
@@ -162,9 +165,7 @@ if (-not $SkipAssets) {
                 Write-Host "[import] 引擎自带，跳过：$($p.Name)"
                 continue
             }
-            $target = Join-Path $pluginDest $p.Name
-            if ((Test-Path $target) -and -not $Force) { continue }
-            Copy-Item $p.FullName $target -Recurse -Force
+            Copy-Lyra -Src $p.FullName -Rel "Plugins\$($p.Name)" -Dir
             Write-Host "[import] Lyra 插件：$($p.Name)"
         }
     }
@@ -172,15 +173,15 @@ if (-not $SkipAssets) {
         Write-Warning "[import] 未指定 -EngineRoot，跳过 Lyra 自带插件的筛选拷贝"
     }
 
-    # 4c. 平台配置（小）
+    # 3c. 平台配置（小）
     $platformSrc = Join-Path $LyraPath 'Platforms'
     if (Test-Path $platformSrc) {
-        Copy-Item $platformSrc (Join-Path $RepoRoot 'Platforms') -Recurse -Force
+        Copy-Lyra -Src $platformSrc -Rel 'Platforms' -Dir
         Write-Host '[import] 平台配置：Platforms/'
     }
 }
 
-# ── 5. 打补丁：Lyra 继承 UAK ────────────────────────────────────────────
+# ── 4. 打补丁：Lyra 继承 UAK（唯一允许改动 Lyra 的地方）──────────────────
 if (-not $SkipPatch) {
     if (Get-Command $Python -ErrorAction SilentlyContinue) {
         & $Python (Join-Path $PSScriptRoot 'patch_lyra.py')
@@ -191,13 +192,25 @@ if (-not $SkipPatch) {
     }
 }
 
-# ── 6. 记录来源 ─────────────────────────────────────────────────────────
+# ── 5. 记账：清的时候照单全删；记快照：之后可离线校验 ────────────────────
+$pathsFile = Join-Path $PSScriptRoot '.lyra_paths.txt'
+$script:Imported | Sort-Object -Unique | Out-File -FilePath $pathsFile -Encoding utf8
+Write-Host "[import] 导入清单（clean_lyra 按它删）：$pathsFile"
+
 $manifestPath = Join-Path $PSScriptRoot 'lyra_manifest.txt'
-$manifest | Out-File -FilePath $manifestPath -Encoding utf8
+$script:Manifest | Sort-Object -Unique | Out-File -FilePath $manifestPath -Encoding utf8
 Write-Host "[import] 来源清单：$manifestPath"
+
+# ── 6. 校验：确认工程 = Lyra 原版 + 声明过的补丁 ─────────────────────────
+if (Get-Command $Python -ErrorAction SilentlyContinue) {
+    & $Python (Join-Path $PSScriptRoot 'verify_lyra.py') -l $LyraPath --update-state
+    if ($LASTEXITCODE -ne 0) { Write-Warning "[import] 校验没通过：上面列出的文件与 Lyra 原版不一致" }
+}
 
 Write-Host ""
 Write-Host "[import] 完成。下一步："
-Write-Host "  1) 编译：Scripts\build.ps1（或 UnrealBuildTool 编 UAKDemoEditor）"
+Write-Host "  1) 编译：Scripts\build.ps1（或 UnrealBuildTool 编 LyraGameEditor）"
 Write-Host "  2) 打开工程，确认 ULyraGameplayAbility 已经能用 UAK 时间轴"
 Write-Host "  3) 把 Lyra 的 BP 技能按 UAK 资产重写（见 docs/examples/lyra-integration.md）"
+Write-Host ""
+Write-Host "[import] 随时回到干净状态：Tools\clean_lyra.ps1（然后重跑本脚本即可复现）"

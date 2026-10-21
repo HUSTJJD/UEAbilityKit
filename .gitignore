@@ -66,6 +66,18 @@ Content/ShooterMaps/
 *.uak.bak
 *.orig
 
+# ── 导入脚本的运行期状态（clean_lyra 会删，重新 import 会再生成）────────
+Tools/.patched_files.txt
+Tools/.lyra_paths.txt
+Tools/.lyra_state.json
+Tools/lyra_manifest.txt
+
+# ── 从 Lyra 拷来的外围文件：一律不进仓库，每次 import 重新生成 ───────────
+# （Source/LyraGame 源码是进仓库的，外围不是——这样 git status 在导入后仍然是干净的）
+/*.uproject
+Source/*.Target.cs
+Platforms/
+
 # MkDocs build output
 /_site/
 

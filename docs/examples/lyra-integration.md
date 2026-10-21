@@ -42,26 +42,83 @@ UGameplayAbility
 
 ## 两步走
 
-### 1. 导入
+### 0. 先清，再导（每次都从干净状态开始）
+
+拷进来的 Lyra **一个字都不许手改**：改过的 Lyra 会让编译/测试"因为改过而通过"，把 bug 藏起来。
+必须改的地方全部写在 `Tools/lyra_patches.json` 里，由 `patch_lyra.py` 自动打。
+所以导入脚本默认**先清一遍再拷**，保证工程永远等于：
+
+```
+Lyra 原版  +  Tools/lyra_patches.json 里声明过的补丁      （别的什么都没有）
+```
 
 ```powershell
 cd Tools
-./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame     # 先去 Epic 下载 Lyra 5.8
+./clean_lyra.ps1                       # 一键清除 Lyra（源码/外围/资产/补丁痕迹）
+./clean_lyra.ps1 -KeepAssets           # 只清源码与配置，1.4 GB 资产留着（迭代快）
+./clean_lyra.ps1 -Deep                 # 连 Binaries/Intermediate/Saved 一起清
+./clean_lyra.ps1 -DryRun               # 只列出来，不真删
 ```
 
 ```bash
-cd Tools
+./clean_lyra.sh            # 同上，Linux / macOS
+./clean_lyra.sh --deep
+```
+
+一键重来（= 清 + 拷 + 打补丁 + 校验，一条命令复现）：
+
+```powershell
+./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame
+./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -KeepAssets   # 资产沿用上次的
+```
+
+```bash
 ./import_lyra.sh -l ~/learning/LyraStarterGame
+```
+
+`import_lyra` 会顺手记两样东西：
+
+| 文件 | 用途 |
+| --- | --- |
+| `Tools/.lyra_paths.txt` | 这次拷了哪些路径，`clean_lyra` 照单全删 |
+| `Tools/.lyra_state.json` | 每个文件的 sha256 快照（Lyra 原版 / 打完补丁后各一份） |
+
+### 1. 导入（内部已经包含第 0 步的清理）
+
+```powershell
+./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame     # 先去 Epic 下载 Lyra 5.8
 ```
 
 | 步骤 | 内容 | 进 git？ |
 | --- | --- | --- |
+| 预清理 | `clean_lyra`：删掉上一次导入的残留与手改 | — |
 | 拷源码 | `Source/LyraGame`（20 个模块，完整可玩那套）+ `Source/LyraEditor` | ✅（约 2 MB） |
 | 拷外围 | `.uproject`（**整个就是 Lyra 的，连名字**）、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ❌ 不进（`Config/` 已加 `.gitignore`） |
 | 拷资产 | `Plugins/GameFeatures/*`（约 1.4 GB） | ❌（已加 `.gitignore`） |
 | 打补丁 | 见下（含把我们的配置**追加**进 Lyra 的 ini） | ✅ |
+| 记账 + 校验 | `.lyra_paths.txt`、`.lyra_state.json` | ❌（运行期状态） |
 
 排除没拷的 Lyra 模块：`Settings`、`Hotfix`、`Performance`、`Replays`、`Development`、`Tests`。
+
+### 1b. 校验（有没有人手改过 Lyra）
+
+```powershell
+python Tools/verify_lyra.py -l D:\learning\LyraStarterGame   # 与 Lyra 源逐文件比 sha256（权威）
+python Tools/verify_lyra.py                                  # 离线：只跟导入时的快照比（快）
+python Tools/verify_lyra.py --self-test                      # 脚本自检，不碰工程
+```
+
+判定规则：
+
+| 情况 | 结论 |
+| --- | --- |
+| 与 Lyra 原版字节一致 | ✅ |
+| 不一致，但 `lyra_patches.json` 声明过、且补丁内容确实生效 | ✅ 已声明的补丁 |
+| 不一致且没声明 | ❌ 手改 —— 清掉重来 |
+| 打完补丁后又改了一行 | ❌ 手改（靠 `.lyra_state.json` 的快照抓出来） |
+| 声明了却没打上 | ❌ 补丁缺失 |
+
+退出码 `0` 干净 / `1` 有问题 / `2` 用法错误。**测不过就别提交，先 `clean_lyra` 再 `import_lyra`。**
 
 ### 2. 打补丁
 
@@ -111,7 +168,15 @@ Lyra 全都有，按 copy → patch 原则：Lyra 的拷进去，我们真正需
 | `+DirectoriesToAlwaysStageAsUFS`（UnLuaNova 脚本） | **我们的** → `Tools/patches/config/DefaultGame.ini.append` |
 | 打包一堆样板设置 | Lyra 的 |
 
-追加是幂等的（带 `UAK-PATCH` 标记）；Lyra 没有的 ini 则由片段直接生成。
+追加是幂等的（带 `UAK-PATCH` 标记，重复跑不会叠加）；Lyra 没有的 ini 则由片段直接生成。
+片段里如果只剩注释（比如 `DefaultGameplayTags.ini.append` 现在只是占位说明），
+`patch_lyra.py` 会跳过它，不会去造一个空 ini。
+
+```bash
+python Tools/patch_lyra.py --check   # 只看状态
+python Tools/patch_lyra.py           # 真正打
+python Tools/patch_lyra.py --revert  # 按 .orig 还原到 Lyra 原版
+```
 
 > 一个已知冲突：示例模块用的是**旧式动作映射**，Lyra 用的是 **Enhanced Input**。
 > 两者在同一份 ini 里可以共存（重复 section 会被合并），但长期看示例模块应该迁到
@@ -175,6 +240,7 @@ Lyra 的跳跃、被动这些纯 GAS 技能没有时间轴可跑，不会被基�
 
 - 拷进来的 Lyra 代码**保持 Lyra 命名**，文件头 Epic 版权声明一个字都别删
 - 来源与改动记录在 `Tools/lyra_manifest.txt` + `THIRD_PARTY/Lyra-origin.md`
+- 拷进来哪些文件、每个文件的指纹：`Tools/.lyra_paths.txt` + `Tools/.lyra_state.json`（都不进仓库）
 - **Lyra 代码只放 `Source/` / `Config/`，绝不进 `Plugins/UEAbilityKit`**
 
 ## 常见问题
@@ -185,3 +251,5 @@ Lyra 的跳跃、被动这些纯 GAS 技能没有时间轴可跑，不会被基�
 | 所有 Lyra 技能一激活就被取消 | UAK 的"资产为空即 no-op"逻辑没生效，重跑补丁并确认代码 |
 | uproject 里我们自己的模块没了 | 补丁只做"补充"不做"删除"；用 `--check` 看，再 `--revert` 后重来 |
 | 资产没进工程 | 跑了 `-SkipAssets`；重跑一次不带这个参数 |
+| `verify_lyra.py` 报"手改" | 有人直接改了拷进来的 Lyra 文件。改法只有一种：把改动写进 `Tools/lyra_patches.json`，然后 `clean_lyra` → `import_lyra` |
+| `git status` 在导入后不干净 | 外围文件（`.uproject` / `*.Target.cs` / `Platforms/` / `Config/`）与运行期状态都已在 `.gitignore` 里；若仍有多余项，那就是真的手改残留 |
