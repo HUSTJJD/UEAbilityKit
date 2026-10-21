@@ -49,6 +49,12 @@ desktop.ini
 # 插件本地临时文件
 *.autosave
 
+# ── 从下载的 Lyra 拷进来的外围文件 ─────────────────────────────────────
+# Config/ 不进仓库：Lyra 有自己的 Config，按 copy → patch 的原则由
+# Tools/import_lyra 拷贝、Tools/patch_lyra.py 追加我们的段落。
+# 我们真正拥有的配置只有补丁片段，在 Tools/patches/config/。
+Config/
+
 # ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
 # 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 1.4 GB，不进仓库。
 # 注意：Source/LyraGame（源码）是**进仓库**的，只有资产不进。
@@ -68,4 +74,4 @@ Content/ShooterMaps/
 *.slnx
 .vs/
 .idea/
-__pycache__
+__pycache__/

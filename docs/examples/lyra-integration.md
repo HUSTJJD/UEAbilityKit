@@ -57,9 +57,9 @@ cd Tools
 | 步骤 | 内容 | 进 git？ |
 | --- | --- | --- |
 | 拷源码 | `Source/LyraGame`（20 个模块，完整可玩那套）+ `Source/LyraEditor` | ✅（约 2 MB） |
-| 拷外围 | `.uproject`（**整个就是 Lyra 的，连名字**）、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ✅（原文件留 `.uak.bak`） |
+| 拷外围 | `.uproject`（**整个就是 Lyra 的，连名字**）、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ❌ 不进（`Config/` 已加 `.gitignore`） |
 | 拷资产 | `Plugins/GameFeatures/*`（约 1.4 GB） | ❌（已加 `.gitignore`） |
-| 打补丁 | 见下 | ✅ |
+| 打补丁 | 见下（含把我们的配置**追加**进 Lyra 的 ini） | ✅ |
 
 排除没拷的 Lyra 模块：`Settings`、`Hotfix`、`Performance`、`Replays`、`Development`、`Tests`。
 
@@ -95,6 +95,27 @@ python Tools/patch_lyra.py --revert  # 撤销（按 .orig 还原）
 ```powershell
 Scripts\build.ps1
 ```
+
+---
+
+## 配置（`Config/`）怎么管
+
+**`Config/` 整个不进 git。** 我们那三个 ini（`DefaultEngine` / `DefaultGame` / `DefaultInput`）
+Lyra 全都有，按 copy → patch 原则：Lyra 的拷进去，我们真正需要的那几行**追加**在末尾。
+
+| 我们原本的 | 归属 |
+|---|---|
+| `GameDefaultMap` | 由 commandlet 写（且只在显式 `-SetDefaultMap` 时），不在这里维护 |
+| `ProjectID` / `ProjectName` | Lyra 的（宿主就是 Lyra） |
+| 旧式 `+ActionMappings`（UAK_Ability1/2） | **我们的** → `Tools/patches/config/DefaultInput.ini.append` |
+| `+DirectoriesToAlwaysStageAsUFS`（UnLuaNova 脚本） | **我们的** → `Tools/patches/config/DefaultGame.ini.append` |
+| 打包一堆样板设置 | Lyra 的 |
+
+追加是幂等的（带 `UAK-PATCH` 标记）；Lyra 没有的 ini 则由片段直接生成。
+
+> 一个已知冲突：示例模块用的是**旧式动作映射**，Lyra 用的是 **Enhanced Input**。
+> 两者在同一份 ini 里可以共存（重复 section 会被合并），但长期看示例模块应该迁到
+> Enhanced Input，见 `docs/examples/05-run-the-demo.md`。
 
 ---
 

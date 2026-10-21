@@ -172,13 +172,25 @@ def patch_config(spec: dict, check_only: bool) -> int:
         return 0
 
     pending = 0
+    config_dir = REPO_ROOT / "Config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
     for ini_name, append_rel in appends.items():
-        target = REPO_ROOT / "Config" / ini_name
+        target = config_dir / ini_name
         source = REPO_ROOT / append_rel
-        if not target.is_file():
-            print(f"[patch] 跳过（ini 不存在）：Config/{ini_name}")
-            continue
         if not source.is_file():
+            continue
+
+        # Lyra 有这个 ini：追加；Lyra 没有：直接由片段生成。
+        # （Config/ 整体不进 git，来源只有两处：Lyra 的拷贝 + 这里的补丁片段）
+        if not target.is_file():
+            pending += 1
+            if check_only:
+                hint = "Lyra 没有这个 ini" if config_dir.is_dir() else "还没导入 Lyra 的 Config"
+                print(f"[patch] 待建：Config/{ini_name}（{hint}，由补丁片段生成）")
+                continue
+            write(target, f"; ---- {MARKER} ----\n" + read(source).rstrip() + "\n")
+            print(f"[patch] 新建 Config/{ini_name}（由片段生成）")
             continue
 
         text = read(target)
