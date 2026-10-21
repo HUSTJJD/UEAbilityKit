@@ -170,7 +170,13 @@ if (-not $SkipAssets) {
         }
     }
     else {
-        Write-Warning "[import] 未指定 -EngineRoot，跳过 Lyra 自带插件的筛选拷贝"
+        # 没给引擎目录就别自作聪明地跳过：Lyra 的插件缺一个就编译不过，宁可全拷
+        Write-Warning "[import] 未指定 -EngineRoot：Lyra 自带插件不做筛选，全部拷进来（可能与引擎自带插件重名）"
+        foreach ($p in Get-ChildItem -Path (Join-Path $LyraPath 'Plugins') -Directory) {
+            if ($p.Name -eq 'GameFeatures') { continue }
+            Copy-Lyra -Src $p.FullName -Rel "Plugins\$($p.Name)" -Dir
+            Write-Host "[import] Lyra 插件：$($p.Name)"
+        }
     }
 
     # 3c. 平台配置（小）

@@ -153,7 +153,15 @@ if [[ "$SKIP_ASSETS" -eq 0 ]]; then
       echo "[import] Lyra 插件：$name"
     done
   else
-    echo "[import] 未指定引擎目录，跳过 Lyra 自带插件筛选" >&2
+    # 没给引擎目录就别自作聪明地跳过：Lyra 的插件缺一个就编译不过，宁可全拷
+    echo "[import] 未指定引擎目录：Lyra 自带插件不做筛选，全部拷进来（可能与引擎自带插件重名）" >&2
+    for p in "$LYRA_PATH"/Plugins/*; do
+      [[ -d "$p" ]] || continue
+      name="$(basename "$p")"
+      [[ "$name" == "GameFeatures" ]] && continue
+      copy_lyra "$p" "Plugins/$name"
+      echo "[import] Lyra 插件：$name"
+    done
   fi
 
   if [[ -d "$LYRA_PATH/Platforms" ]]; then

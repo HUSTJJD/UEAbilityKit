@@ -55,9 +55,13 @@ desktop.ini
 # 我们真正拥有的配置只有补丁片段，在 Tools/patches/config/。
 Config/
 
+# ── Plugins/ 下只有我们自己的插件进仓库，其余全是 Lyra 拷来的 ────────────
+Plugins/*
+!Plugins/UEAbilityKit/
+!Plugins/UnLuaNova/
+
 # ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
 # 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 1.4 GB，不进仓库。
-# 注意：Source/LyraGame（源码）是**进仓库**的，只有资产不进。
 Plugins/GameFeatures/
 Plugins/LyraExampleContent/
 Plugins/LyraExtTool/
@@ -72,11 +76,13 @@ Tools/.lyra_paths.txt
 Tools/.lyra_state.json
 Tools/lyra_manifest.txt
 
-# ── 从 Lyra 拷来的外围文件：一律不进仓库，每次 import 重新生成 ───────────
-# （Source/LyraGame 源码是进仓库的，外围不是——这样 git status 在导入后仍然是干净的）
+# ── 从 Lyra 拷来的东西：一律不进仓库，每次 import 重新生成 ───────────────
+# （源码也是拷来的，同样不进——这样 git status 在导入后仍然是干净的）
 /*.uproject
-Source/*.Target.cs
+Source/Lyra*.Target.cs
 Platforms/
+Source/LyraGame/
+Source/LyraEditor/
 
 # MkDocs build output
 /_site/

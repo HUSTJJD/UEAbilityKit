@@ -92,10 +92,10 @@ cd Tools
 | 步骤 | 内容 | 进 git？ |
 | --- | --- | --- |
 | 预清理 | `clean_lyra`：删掉上一次导入的残留与手改 | — |
-| 拷源码 | `Source/LyraGame`（20 个模块，完整可玩那套）+ `Source/LyraEditor` | ✅（约 2 MB） |
+| 拷源码 | `Source/LyraGame`（20 个模块，完整可玩那套）+ `Source/LyraEditor` | ❌ 不进（约 2 MB，拷来的，`clean_lyra` + `import_lyra` 随时复现） |
 | 拷外围 | `.uproject`（**整个就是 Lyra 的，连名字**）、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ❌ 不进（`Config/` 已加 `.gitignore`） |
 | 拷资产 | `Plugins/GameFeatures/*`（约 1.4 GB） | ❌（已加 `.gitignore`） |
-| 打补丁 | 见下（含把我们的配置**追加**进 Lyra 的 ini） | ✅ |
+| 打补丁 | 见下（含把我们的配置**追加**进 Lyra 的 ini） | ✅（补丁声明 `Tools/lyra_patches.json` 进仓库，被打进文件的内容不进） |
 | 记账 + 校验 | `.lyra_paths.txt`、`.lyra_state.json` | ❌（运行期状态） |
 
 排除没拷的 Lyra 模块：`Settings`、`Hotfix`、`Performance`、`Replays`、`Development`、`Tests`。
