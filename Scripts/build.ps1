@@ -12,8 +12,8 @@
     与 Build.bat 等价：产出同样的 Binaries/Intermediate，VS 里可直接调试。
 
 .EXAMPLE
-    ./Scripts/build.ps1                          # UAKDemoEditor / Win64 / Development
-    ./Scripts/build.ps1 -Target UAKDemo -Configuration Shipping
+    ./Scripts/build.ps1                          # LyraEditor / Win64 / Development（导入 Lyra 后）
+    ./Scripts/build.ps1 -Target LyraGame -Configuration Shipping
     ./Scripts/build.ps1 -Clean
 #>
 [CmdletBinding()]
@@ -32,9 +32,22 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($Project)) {
     $Project = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
-$Project  = (Resolve-Path $Project).Path
-$uproject = Join-Path $Project 'UAKDemo.uproject'
-if (-not (Test-Path $uproject)) { throw "找不到工程文件：$uproject" }
+$Project = (Resolve-Path $Project).Path
+
+# 工程文件：本工程 = 改造过后的 Lyra，所以就是 LyraStarterGame.uproject。
+# 没跑过 import_lyra 时仓库里没有工程文件，直接提示。
+$uproject = Join-Path $Project 'LyraStarterGame.uproject'
+if (-not (Test-Path $uproject)) {
+    $found = Get-ChildItem -Path $Project -Filter '*.uproject' -File | Select-Object -First 1
+    if (-not $found) { throw "$Project 下没有 .uproject，请先跑 Tools\import_lyra.ps1 导入 Lyra" }
+    $uproject = $found.FullName
+}
+
+# 目标同理：LyraEditor / <工程名>Editor
+$uprojectBase = [System.IO.Path]::GetFileNameWithoutExtension($uproject)
+if ($Target -eq 'UAKDemoEditor') {
+    $Target = if ($uprojectBase -eq 'LyraStarterGame') { 'LyraEditor' } else { $uprojectBase + 'Editor' }
+}
 
 # 引擎路径：显式指定 > 按 .uproject 的 EngineAssociation GUID 反查注册表
 if ([string]::IsNullOrWhiteSpace($EngineRoot)) {

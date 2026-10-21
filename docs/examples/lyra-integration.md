@@ -8,10 +8,16 @@
 凡是必须提到 Lyra 的代码，一律不进插件，放进独立的适配层 `Source/LyraAdapt/`。
 
 ```
-Plugins/UEAbilityKit/     ← 产品插件：零依赖，可服务任何游戏
-Source/LyraGame/          ← 拷进来的 Lyra（保持 Lyra 命名，保留 Epic 版权头）
-Source/LyraAdapt/         ← 适配层：唯一同时认识 Lyra 与 UAK 的地方
+Plugins/UEAbilityKit/              ← 产品插件：零依赖，可服务任何游戏
+   ├─ Source/UEAbilityKit/         ← 核心（时间轴、任务、GAS 桥接）
+   ├─ Source/UAKDemo/              ← 示例模块（随插件走，不单独成工程）
+   └─ Source/UEAbilityKitTests/    ← 测试
+Source/LyraGame/                   ← 拷进来的 Lyra（保持 Lyra 命名，保留 Epic 版权头）
+Source/LyraAdapt/                  ← 适配层：唯一同时认识 Lyra 与 UAK 的地方
 ```
+
+`UAKDemo` **不是独立工程**，它是插件里的一个模块（`UAKDemo.uproject` 与 `UAKDemo*.Target.cs` 都已删除）。
+任何项目装了这个插件就能用这套示例；本工程只是拿 Lyra 当宿主跑它。
 
 **2. 继承方向是 Lyra 继承 UAK**
 
@@ -24,9 +30,13 @@ UGameplayAbility
 
 **3. Lyra 有的文件，一律 copy → patch**
 
-`.uproject`、`Config/*.ini`、`Source/*.Target.cs`、`Source/LyraGame/**`——
-**以 Lyra 的版本为基线拷进来**，再靠补丁把我们的东西加回去。
+本工程就是 Lyra：`.uproject` **整个从 Lyra 拷来（连文件名一起是 `LyraStarterGame.uproject`）**，
+`Config/*.ini`、`Source/*.Target.cs`、`Source/LyraGame/**` 同理——
+**以 Lyra 的版本为基线**，再靠补丁把我们的东西加回去。
 不是"合并"，不是"我们为主"，是 Lyra 打底、我们往上叠。
+
+因此本工程不再有"自带的示例工程"：`UAKDemo` 降级成**插件的一个模块**，
+随插件分发、任何项目都能用。我们替换的是 Lyra 的**技能实现**，不是重新做一个游戏。
 
 ---
 
@@ -47,7 +57,7 @@ cd Tools
 | 步骤 | 内容 | 进 git？ |
 | --- | --- | --- |
 | 拷源码 | `Source/LyraGame`（20 个模块，完整可玩那套）+ `Source/LyraEditor` | ✅（约 2 MB） |
-| 拷外围 | `.uproject`、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ✅（原文件留 `.uak.bak`） |
+| 拷外围 | `.uproject`（**整个就是 Lyra 的，连名字**）、`Config/*.ini`、`Source/*.Target.cs`、`Platforms/` | ✅（原文件留 `.uak.bak`） |
 | 拷资产 | `Plugins/GameFeatures/*`（约 1.4 GB） | ❌（已加 `.gitignore`） |
 | 打补丁 | 见下 | ✅ |
 

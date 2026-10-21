@@ -8,7 +8,7 @@
 #   ./Scripts/run_tests.sh                       # 全部 stage（默认开采集）
 #   ./Scripts/run_tests.sh --stage editor --filter UAK.Unit
 #   ./Scripts/run_tests.sh --headless            # 没 GPU：只跑断言，不出素材
-#   ./Scripts/run_tests.sh --stage net --clients 3 --ability-class /Script/UAKDemo.UAKDemoAbility
+#   ./Scripts/run_tests.sh --stage net --clients 3 --ability-class /Script/LyraAdapt.XXX
 #   ./Scripts/run_tests.sh --commit              # 跑完把结论提交
 #
 set -uo pipefail
@@ -53,8 +53,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
-UPROJECT="$PROJECT_ROOT/UAKDemo.uproject"
-[[ -f "$UPROJECT" ]] || { echo "找不到工程文件：$UPROJECT" >&2; exit 1; }
+# 本工程 = 改造过后的 Lyra，所以就是 LyraStarterGame.uproject；
+# 没跑过 import_lyra 时仓库里没有工程文件，直接提示。
+UPROJECT="$PROJECT_ROOT/LyraStarterGame.uproject"
+[[ -f "$UPROJECT" ]] || UPROJECT="$(find "$PROJECT_ROOT" -maxdepth 1 -name '*.uproject' | head -n 1)"
+[[ -f "$UPROJECT" ]] || { echo "没有 .uproject，请先跑 Tools/import_lyra.sh 导入 Lyra" >&2; exit 1; }
+
+EDITOR_TARGET="$(basename "$UPROJECT" .uproject)Editor"
+[[ "$(basename "$UPROJECT" .uproject)" == "LyraStarterGame" ]] && EDITOR_TARGET="LyraEditor"
 [[ -n "$ENGINE_ROOT" ]] || { echo "请用 --engine-root 指定引擎目录，或设置 UE_ENGINE_ROOT" >&2; exit 1; }
 
 UBT="$ENGINE_ROOT/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll"
@@ -80,8 +86,8 @@ fi
 
 # ── 编译 ────────────────────────────────────────────────────────────────
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
-  echo "[UAK] 编译 UAKDemoEditor (Linux/Development)…"
-  (cd "$ENGINE_ROOT/Engine/Source" && dotnet "$UBT" UAKDemoEditor Linux Development "-Project=$UPROJECT" -WaitMutex) \
+  echo "[UAK] 编译 $EDITOR_TARGET (Linux/Development)…"
+  (cd "$ENGINE_ROOT/Engine/Source" && dotnet "$UBT" "$EDITOR_TARGET" Linux Development "-Project=$UPROJECT" -WaitMutex) \
     || { echo "编译失败" >&2; exit 1; }
 fi
 

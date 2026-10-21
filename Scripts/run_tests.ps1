@@ -18,7 +18,7 @@
     ./Scripts/run_tests.ps1                          # 全部 stage（默认开采集）
     ./Scripts/run_tests.ps1 -Stage Editor -Filter UAK.Unit
     ./Scripts/run_tests.ps1 -Headless                # 没 GPU：只跑断言，不出素材
-    ./Scripts/run_tests.ps1 -Stage Net -Clients 3 -AbilityClass /Script/UAKDemo.UAKDemoAbility
+    ./Scripts/run_tests.ps1 -Stage Net -Clients 3 -AbilityClass /Script/LyraAdapt.XXX
     ./Scripts/run_tests.ps1 -Commit                  # 跑完把结论提交（CI 负责发布）
 #>
 [CmdletBinding()]
@@ -33,7 +33,7 @@ param(
     [int]    $Clients        = 2,
     [int]    $Port           = 7777,
     [string] $Map            = '',       # 留空用工程的 GameDefaultMap
-    [string] $AbilityClass   = '',       # 例：/Script/UAKDemo.UAKDemoAbility
+    [string] $AbilityClass   = '',       # 例：/Script/LyraAdapt.XXX（导入 Lyra 后填 Lyra 侧的技能类）
     [int]    $GameSeconds    = 12,       # stage 2 让进程跑多久（秒）
     [int]    $NetSeconds     = 25,       # stage 3 客户端跑多久（秒）
     [int]    $ServerBootWait = 10,       # 等 DS 起来（秒）
@@ -50,8 +50,19 @@ if ([string]::IsNullOrWhiteSpace($Project)) {
     $Project = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
 $Project = (Resolve-Path $Project).Path
-$uproject = Join-Path $Project 'UAKDemo.uproject'
-if (-not (Test-Path $uproject)) { throw "找不到工程文件：$uproject" }
+
+# 工程文件：本工程 = 改造过后的 Lyra，所以就是 LyraStarterGame.uproject。
+# 没跑过 import_lyra 时仓库里没有工程文件，直接提示，不再有"自带示例工程"这回事。
+$uproject = Join-Path $Project 'LyraStarterGame.uproject'
+if (-not (Test-Path $uproject)) {
+    $found = Get-ChildItem -Path $Project -Filter '*.uproject' -File | Select-Object -First 1
+    if (-not $found) { throw "找不到工程文件：$Project 下没有 .uproject，请先跑 Tools\import_lyra.ps1 导入 Lyra" }
+    $uproject = $found.FullName
+}
+
+# 编译目标跟着工程走（PS 5.1 没有 -LeafBase，用 .NET 取主文件名）
+$uprojectBase = [System.IO.Path]::GetFileNameWithoutExtension($uproject)
+$editorTarget = if ($uprojectBase -eq 'LyraStarterGame') { 'LyraEditor' } else { $uprojectBase + 'Editor' }
 
 if ([string]::IsNullOrWhiteSpace($EngineRoot)) {
     $assoc = (Get-Content $uproject -Raw | ConvertFrom-Json).EngineAssociation
@@ -92,7 +103,7 @@ if (-not $SkipBuild) {
     Write-Host "[UAK] 编译 UAKDemoEditor (Win64/Development)…"
     Push-Location $srcDir
     try {
-        & dotnet $ubt UAKDemoEditor Win64 Development "-Project=$uproject" -WaitMutex
+        & dotnet $ubt $editorTarget Win64 Development "-Project=$uproject" -WaitMutex
         if ($LASTEXITCODE -ne 0) { throw "编译失败（exit=$LASTEXITCODE）" }
     }
     finally { Pop-Location }

@@ -120,6 +120,9 @@ cd Tools
 - **继承方向是 Lyra 继承 UAK**：`UGameplayAbility → UAKGameplayAbility → ULyraGameplayAbility`
   插件零依赖、可服务任何游戏；Lyra 只是其中一个宿主
 - 拷进来的 Lyra 源码保持 Lyra 命名（保留 Epic 版权头），**只放 `Source/`，不进插件目录**
+- `.uproject` 整个从 Lyra 拷来（本工程就是 Lyra）；`UAKDemo` 不再是独立工程，
+  它降级为**插件的一个模块**（`Plugins/UEAbilityKit/Source/UAKDemo`），随插件分发
+- 我们替换的是 Lyra 的技能实现，不是重新做一个游戏
 - 资产（约 1.4 GB）由脚本从你本地的 Lyra 拷贝，不进 git；进 git 的只有源码 + 配置 + 技能 Json
 
 详见 [docs/examples/lyra-integration.md](docs/examples/lyra-integration.md)。

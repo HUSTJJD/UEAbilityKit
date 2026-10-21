@@ -19,7 +19,6 @@ LYRA_PATH=""
 ENGINE_ROOT="${UE_ENGINE_ROOT:-}"
 SKIP_ASSETS=0
 SKIP_PATCH=0
-KEEP_OLD_DEMO=0
 FORCE=0
 PYTHON_BIN="${PYTHON:-python3}"
 
@@ -29,7 +28,6 @@ while [[ $# -gt 0 ]]; do
     -e|--engine-root) ENGINE_ROOT="$2"; shift 2 ;;
     --skip-assets)    SKIP_ASSETS=1; shift ;;
     --skip-patch)     SKIP_PATCH=1; shift ;;
-    --keep-old-demo)  KEEP_OLD_DEMO=1; shift ;;
     --force)          FORCE=1; shift ;;
     -h|--help)        sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "未知参数：$1" >&2; exit 2 ;;
@@ -95,15 +93,8 @@ if [[ -f "$OUR_UPROJECT" && "$FORCE" -eq 0 ]]; then cp "$OUR_UPROJECT" "$OUR_UPR
 cp "$UPROJECT" "$OUR_UPROJECT"
 echo "[import] .uproject：$(basename "$UPROJECT") ← Lyra"
 
-# 旧的 UAKDemo 工程文件不再需要
-if [[ "$KEEP_OLD_DEMO" -eq 0 ]]; then
-  [[ -f "$REPO_ROOT/UAKDemo.uproject" ]] && { rm -f "$REPO_ROOT/UAKDemo.uproject"; echo "[import] 删除 UAKDemo.uproject"; }
-  [[ -d "$REPO_ROOT/Source/UAKDemo" ]] && { rm -rf "$REPO_ROOT/Source/UAKDemo"; echo "[import] 删除 Source/UAKDemo"; }
-  for t in "$REPO_ROOT"/Source/UAKDemo*.Target.cs; do
-    [[ -f "$t" ]] || continue
-    rm -f "$t"; echo "[import] 删除 $(basename "$t")"
-  done
-fi
+# 说明：UAKDemo 现在是**插件的一个模块**（Plugins/UEAbilityKit/Source/UAKDemo），
+# 不再是独立工程，所以这里不需要删任何东西。
 
 mkdir -p "$REPO_ROOT/Config"
 for ini in "$LYRA_PATH"/Config/*.ini; do

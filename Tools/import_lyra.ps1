@@ -24,7 +24,6 @@ param(
     [string] $EngineRoot = $env:UE_ENGINE_ROOT,
     [switch] $SkipAssets,
     [switch] $SkipPatch,
-    [switch] $KeepOldDemo,   # 保留旧的 UAKDemo 工程文件（默认删：宿主已经是 Lyra）
     [switch] $Force,
     [string] $Python     = 'python'
 )
@@ -113,22 +112,8 @@ if ((Test-Path $ourUproject) -and -not $Force) {
 Copy-Item $uproject $ourUproject -Force
 Write-Host "[import] .uproject：$(Split-Path $uproject -Leaf) ← Lyra"
 
-#    旧的 UAKDemo 工程文件不再需要（技能体系换成 UAK，宿主就是 Lyra）
-if (-not $KeepOldDemo) {
-    $oldUproject = Join-Path $RepoRoot 'UAKDemo.uproject'
-    if ((Test-Path $oldUproject) -and ($oldUproject -ne $ourUproject)) {
-        Remove-Item $oldUproject -Force
-        Write-Host "[import] 删除旧的 UAKDemo.uproject"
-    }
-    if (Test-Path (Join-Path $RepoRoot 'Source\UAKDemo')) {
-        Remove-Item (Join-Path $RepoRoot 'Source\UAKDemo') -Recurse -Force
-        Write-Host "[import] 删除 Source\UAKDemo（宿主已经是 Lyra，不再需要自带示例工程）"
-    }
-    foreach ($t in Get-ChildItem -Path (Join-Path $RepoRoot 'Source') -Filter 'UAKDemo*.Target.cs' -File) {
-        Remove-Item $t.FullName -Force
-        Write-Host "[import] 删除 $($t.Name)"
-    }
-}
+# 说明：UAKDemo 现在是**插件的一个模块**（Plugins/UEAbilityKit/Source/UAKDemo），
+# 不再是独立工程——所以这里不需要删任何东西。宿主是 Lyra，示例随插件走。
 
 # 3b. Config
 $cfgDest = Join-Path $RepoRoot 'Config'
