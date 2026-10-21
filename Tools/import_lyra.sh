@@ -8,10 +8,10 @@
 # 资产（约 1.4 GB）拷到本地但不进 git；源码与配置进 git。
 #
 # 用法：
-#   ./import_lyra.sh -l ~/learning/LyraStarterGame
-#   ./import_lyra.sh -l ~/learning/LyraStarterGame --skip-assets
-#   ./import_lyra.sh -l ~/learning/LyraStarterGame --keep-assets   # 资产沿用上次，只重拷源码
-#   ./import_lyra.sh -l ~/learning/LyraStarterGame --no-clean      # 不预清（不推荐，只调试用）
+#   ./import_lyra.sh -l <你的 Lyra 目录>
+#   ./import_lyra.sh -l <你的 Lyra 目录> --skip-assets
+#   ./import_lyra.sh -l <你的 Lyra 目录> --keep-assets   # 资产沿用上次，只重拷源码
+#   ./import_lyra.sh -l <你的 Lyra 目录> --no-clean      # 不预清（不推荐，只调试用）
 #
 set -uo pipefail
 
@@ -55,6 +55,18 @@ done
 [[ -n "$UPROJECT" ]] || { echo "$LYRA_PATH 下找不到 .uproject" >&2; exit 1; }
 
 echo "[import] Lyra：$UPROJECT"
+
+# 引擎关联：本机源码引擎的 GUID 写进"本机覆盖"，绝不写进仓库里的 lyra_patches.json
+# （Linux / macOS 没有注册表，用环境变量 UE_ENGINE_GUID 指定）
+if [[ -n "$ENGINE_ROOT" && -n "${UE_ENGINE_GUID:-}" ]]; then
+  cat > "$SCRIPT_DIR/lyra_patches.local.json" <<EOF
+{
+  "comment": "由 import_lyra 自动生成：本机引擎的 GUID。不进仓库。",
+  "uproject": { "set_engine_association": "$UE_ENGINE_GUID" }
+}
+EOF
+  echo "[import] 引擎关联：$UE_ENGINE_GUID（写进 lyra_patches.local.json，不进仓库）"
+fi
 
 # 拷 + 记账（clean_lyra 按这份清单删）
 copy_lyra() {
@@ -163,11 +175,12 @@ if [[ "$SKIP_ASSETS" -eq 0 ]]; then
       echo "[import] Lyra 插件：$name"
     done
   fi
+fi
 
-  if [[ -d "$LYRA_PATH/Platforms" ]]; then
-    copy_lyra "$LYRA_PATH/Platforms" "Platforms"
-    echo "[import] 平台配置：Platforms/"
-  fi
+# 平台配置（小，属于外围文件，跟 --skip-assets 无关）
+if [[ -d "$LYRA_PATH/Platforms" ]]; then
+  copy_lyra "$LYRA_PATH/Platforms" "Platforms"
+  echo "[import] 平台配置：Platforms/"
 fi
 
 # ── 4. 打补丁：唯一允许改动 Lyra 的地方 ────────────────────────────────────

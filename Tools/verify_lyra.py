@@ -10,7 +10,7 @@
 
 两种校验方式：
     1) 在线（权威，需要 Lyra 源目录）：把工程里每个 Lyra 文件与 Lyra 源逐字节比 sha256
-       python Tools/verify_lyra.py -l D:/learning/LyraStarterGame
+       python Tools/verify_lyra.py -l <你的 Lyra 目录>
     2) 离线（快，不需要 Lyra 源）：与上次导入时记录的快照比
        python Tools/verify_lyra.py
 

@@ -114,7 +114,7 @@ UAK 是**技能模块**，Lyra 是被改造进来当示例的游戏：
 
 ```powershell
 cd Tools
-./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame    # 下载好 Lyra 5.8 后跑这一条
+./import_lyra.ps1 -LyraPath <你的 Lyra 目录>               # 下载好 Lyra 5.8 后跑这一条
 ```
 
 - **继承方向是 Lyra 继承 UAK**：`UGameplayAbility → UAKGameplayAbility → ULyraGameplayAbility`

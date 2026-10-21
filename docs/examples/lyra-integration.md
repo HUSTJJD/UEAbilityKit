@@ -68,12 +68,12 @@ cd Tools
 一键重来（= 清 + 拷 + 打补丁 + 校验，一条命令复现）：
 
 ```powershell
-./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame
-./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -KeepAssets   # 资产沿用上次的
+./import_lyra.ps1 -LyraPath <你的 Lyra 目录>
+./import_lyra.ps1 -LyraPath <你的 Lyra 目录> -KeepAssets   # 资产沿用上次的
 ```
 
 ```bash
-./import_lyra.sh -l ~/learning/LyraStarterGame
+./import_lyra.sh -l <你的 Lyra 目录>
 ```
 
 `import_lyra` 会顺手记两样东西：
@@ -86,7 +86,7 @@ cd Tools
 ### 1. 导入（内部已经包含第 0 步的清理）
 
 ```powershell
-./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame     # 先去 Epic 下载 Lyra 5.8
+./import_lyra.ps1 -LyraPath <你的 Lyra 目录>     # 先去 Epic 下载 Lyra 5.8
 ```
 
 | 步骤 | 内容 | 进 git？ |
@@ -103,7 +103,7 @@ cd Tools
 ### 1b. 校验（有没有人手改过 Lyra）
 
 ```powershell
-python Tools/verify_lyra.py -l D:\learning\LyraStarterGame   # 与 Lyra 源逐文件比 sha256（权威）
+python Tools/verify_lyra.py -l <你的 Lyra 目录>   # 与 Lyra 源逐文件比 sha256（权威）
 python Tools/verify_lyra.py                                  # 离线：只跟导入时的快照比（快）
 python Tools/verify_lyra.py --self-test                      # 脚本自检，不碰工程
 ```
@@ -148,11 +148,18 @@ python Tools/patch_lyra.py --revert  # 撤销（按 .orig 还原）
 幂等：已打过的自动跳过；每处改动先备份 `<file>.orig`。
 
 **机器相关的改动**单独放 `Tools/lyra_patches.local.json`（不进仓库，已加 `.gitignore`），
-它会合并到上面那份基线之上——比如本机用的是源码引擎，需要把 `EngineAssociation`
-从 `"5.8"` 换成注册表里的 GUID：
+它会合并到上面那份基线之上。典型用途：本机用的是**源码引擎**，需要把 `EngineAssociation`
+从 `"5.8"` 换成这台机器注册表里的 GUID——**仓库里不许出现任何本机路径或 GUID**，
+所以这个值由导入脚本自己查出来写进去：
+
+```powershell
+./import_lyra.ps1 -LyraPath <你的 Lyra 目录> -EngineRoot <你的引擎目录>
+# → 自动查 HKCU:\SOFTWARE\Epic Games\Unreal Engine\Builds，把这个引擎的 GUID 写进
+#   Tools/lyra_patches.local.json；查不到就设环境变量 UE_ENGINE_GUID
+```
 
 ```json
-{ "uproject": { "set_engine_association": "{12D1A55F-...}" } }
+{ "uproject": { "set_engine_association": "{本机引擎的 GUID}" } }
 ```
 
 基线归基线、本机归本机：换台机器不会互相污染，`clean_lyra` → `import_lyra` 之后两边都能复现。

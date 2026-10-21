@@ -22,10 +22,10 @@
     我们的东西用 AK 命名。NOTICE 里记录来源。
 
 .EXAMPLE
-    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame
-    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -SkipAssets   # 只拷源码，不拷 1.4GB 资产
-    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -KeepAssets   # 清源码/配置，资产沿用上次
-    ./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame -NoClean      # 不预清（不推荐，只在调试时用）
+    ./import_lyra.ps1 -LyraPath <你的 Lyra 目录>
+    ./import_lyra.ps1 -LyraPath <你的 Lyra 目录> -SkipAssets   # 只拷源码，不拷 1.4GB 资产
+    ./import_lyra.ps1 -LyraPath <你的 Lyra 目录> -KeepAssets   # 清源码/配置，资产沿用上次
+    ./import_lyra.ps1 -LyraPath <你的 Lyra 目录> -NoClean      # 不预清（不推荐，只在调试时用）
 #>
 [CmdletBinding()]
 param(
@@ -79,6 +79,35 @@ $engineVersion = (Get-Content $uproject -Raw | ConvertFrom-Json).EngineAssociati
 Write-Host "[import] Lyra：$uproject（引擎 $engineVersion）"
 if ($engineVersion -and $engineVersion -notmatch '^5\.(4|6|8)') {
     Write-Warning "[import] UAK 验证过 5.4 / 5.6 / 5.8，当前版本 $engineVersion 建议先确认"
+}
+
+# ── 0a. 引擎关联：给了 -EngineRoot 就自动把它的 GUID 写进"本机覆盖" ──────
+# 绝不把本机路径/GUID 写进仓库里的 lyra_patches.json，也绝不手改拷来的 .uproject。
+if ($EngineRoot -and (Test-Path $EngineRoot)) {
+    $guid = $env:UE_ENGINE_GUID
+    if (-not $guid) {
+        $buildsKey = 'HKCU:\SOFTWARE\Epic Games\Unreal Engine\Builds'
+        if (Test-Path $buildsKey) {
+            $want = (($EngineRoot -replace '/', '\').TrimEnd('\'))
+            foreach ($prop in (Get-ItemProperty -Path $buildsKey).PSObject.Properties) {
+                if ($prop.Name -notmatch '^\{') { continue }
+                if ((($prop.Value -replace '/', '\').TrimEnd('\')) -ieq $want) { $guid = $prop.Name; break }
+            }
+        }
+    }
+    if ($guid) {
+        $localSpec = Join-Path $PSScriptRoot 'lyra_patches.local.json'
+        @"
+{
+	"comment": "由 import_lyra 自动生成：本机引擎的 GUID。不进仓库。",
+	"uproject": { "set_engine_association": "$guid" }
+}
+"@ | Set-Content -Path $localSpec -Encoding utf8
+        Write-Host "[import] 引擎关联：$guid ← $EngineRoot（写进 lyra_patches.local.json，不进仓库）"
+    }
+    else {
+        Write-Warning "[import] 没查到 -EngineRoot 对应的引擎 GUID，跳过引擎关联补丁（可设环境变量 UE_ENGINE_GUID）"
+    }
 }
 
 # ── 0b. 先清干净：没有这一步，上一次的手改会留下来骗过测试 ────────────────
@@ -178,13 +207,13 @@ if (-not $SkipAssets) {
             Write-Host "[import] Lyra 插件：$($p.Name)"
         }
     }
+}
 
-    # 3c. 平台配置（小）
-    $platformSrc = Join-Path $LyraPath 'Platforms'
-    if (Test-Path $platformSrc) {
-        Copy-Lyra -Src $platformSrc -Rel 'Platforms' -Dir
-        Write-Host '[import] 平台配置：Platforms/'
-    }
+# 3c. 平台配置（小，属于外围文件，与 -SkipAssets 无关）
+$platformSrc = Join-Path $LyraPath 'Platforms'
+if (Test-Path $platformSrc) {
+    Copy-Lyra -Src $platformSrc -Rel 'Platforms' -Dir
+    Write-Host '[import] 平台配置：Platforms/'
 }
 
 # ── 4. 打补丁：Lyra 继承 UAK（唯一允许改动 Lyra 的地方）──────────────────
