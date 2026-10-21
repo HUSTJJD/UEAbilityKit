@@ -34,6 +34,8 @@ PATTERNS = [
 ]
 
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".uasset", ".umap", ".pdf", ".zip"}
+# 规则自己就是这些pattern，别把自己报出来
+SKIP_FILES = {"Tools/check_no_local_paths.py"}
 NOQA = "noqa: local-path"
 MAX_BYTES = 2 * 1024 * 1024
 
@@ -53,6 +55,8 @@ def main() -> int:
     hits: list[tuple[str, int, str, str]] = []
 
     for rel in tracked_files():
+        if rel.replace("\\", "/") in SKIP_FILES:
+            continue
         path = REPO_ROOT / rel
         if path.suffix.lower() in SKIP_SUFFIXES or not path.is_file():
             continue
