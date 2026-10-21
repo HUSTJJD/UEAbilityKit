@@ -8,6 +8,7 @@
 #include "SUAKTimelineToolbar.h"
 #include "SUAKValidationBar.h"
 #include "UAKAbilityAsset.h"
+#include "UAKAbilityJsonSerializer.h"
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTask_PlayMontage.h"
 #include "UAKAbilityTrack.h"
@@ -15,8 +16,10 @@
 #include "UAKTypes.h"
 
 #include "Animation/AnimMontage.h"
+#include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "ScopedTransaction.h"
+#include "Serialization/JsonSerializer.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/World.h"
@@ -255,6 +258,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged)
 		.OnRequestDeleteTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DeleteSelectedTask))
 		.OnRequestDuplicateTask(FOnAKDuplicateTask::CreateRaw(this, &FUEAbilityKitAssetEditor::DuplicateSelectedTask))
+		.OnRequestPasteTask(FOnAKPasteTask::CreateRaw(this, &FUEAbilityKitAssetEditor::PasteTaskFromJson))
 		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 	TimelineWidget = Timeline;
 
@@ -428,6 +432,75 @@ void FUEAbilityKitAssetEditor::DeleteSelectedTask()
 	{
 		DetailsView->SetObject(nullptr);
 	}
+}
+
+UAKAbilityTaskBase* FUEAbilityKitAssetEditor::PasteTaskFromJson(const FString& TaskJson)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || TaskJson.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	TSharedPtr<FJsonObject> Parsed;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(TaskJson);
+	if (!FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid())
+	{
+		return nullptr;
+	}
+
+	FString TypeName;
+	if (!Parsed->TryGetStringField(TEXT("$type"), TypeName))
+	{
+		return nullptr;
+	}
+
+	// 落点：优先当前选中轨道，其次选中任务所在轨道，最后新建一条
+	UAKAbilityTrack* Track = AssetPtr->Tracks.IsValidIndex(SelectedTrackIndex)
+		? AssetPtr->Tracks[SelectedTrackIndex] : nullptr;
+
+	if (!Track && SelectedTask.IsValid())
+	{
+		Track = Cast<UAKAbilityTrack>(SelectedTask->GetOuter());
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("PasteTask", "粘贴任务"));
+
+	if (!Track)
+	{
+		AssetPtr->Modify();
+		Track = NewObject<UAKAbilityTrack>(AssetPtr);
+		Track->TrackName = FName(*FString::Printf(TEXT("Track_%d"), AssetPtr->Tracks.Num()));
+		AssetPtr->Tracks.Add(Track);
+		SelectedTrackIndex = AssetPtr->Tracks.Num() - 1;
+	}
+
+	Track->Modify();
+	UAKAbilityTaskBase* Pasted = UAKAbilityJsonSerializer::CreateTaskByTypeName(Track, TypeName);
+	if (!Pasted)
+	{
+		return nullptr;
+	}
+
+	Pasted->ImportJson(*Parsed);
+
+	// 从光标处开始，并留一份可区分的 TaskId（同一任务粘多次也认得出）
+	Pasted->StartTime = FMath::Max(0.f, CursorTime);
+	if (!Pasted->TaskId.IsNone())
+	{
+		Pasted->TaskId = FName(*FString::Printf(TEXT("%s_Copy"), *Pasted->TaskId.ToString()));
+	}
+
+	Track->Tasks.Add(Pasted);
+	AssetPtr->MarkPackageDirty();
+
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+
+	OnTaskSelected(Pasted);
+	return Pasted;
 }
 
 UAKAbilityTaskBase* FUEAbilityKitAssetEditor::DuplicateSelectedTask()

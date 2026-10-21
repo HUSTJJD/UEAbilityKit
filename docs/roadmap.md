@@ -21,8 +21,8 @@
 - [x] **执行端过滤**：`EAKTaskNetMode`（Both / ServerOnly / ClientOnly），避免在错误的一端空跑
 - [x] 内置 Task：`PlayMontage`、`SendGameplayCue`、`CollisionQuery`、`Dash`、`ApplyGameplayEffect`
 - [x] 目标选择接入 `FGameplayAbilityTargetDataHandle`（`UAKTargeting`，只做适配不自建目标选择系统）
-- [ ] 冷却 / 消耗 / 堆叠示例（GAS 原生能力，UAK 不自建，只需示例展示如何配 → 见「剩余工作」）
-- [ ] **编译验证**（当前被另一实例的 UBT 互斥锁阻塞 → 见「剩余工作」）
+- [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
+- [x] **编译验证**：UE 5.8.3 源码构建，全目标通过（UAK / Editor / Tests / UAKDemo / UnLuaNova）
 
 ## M2 — 编辑器 ✅
 
@@ -51,13 +51,17 @@
 - [x] 校验 UI 与指纹增量重算
 - [x] `UAKValidateCommandlet`：`-run=UAKValidate -path=... -strict -json`，可在 CI 中作为门禁
 
-## M4 — 调试闭环 ✅（数据结构与视图，实况联调待做）
+## M4 — 调试闭环 ✅（数据结构与视图；实况联调清单已就绪，PIE 走查待人工确认）
 
 - [x] `FAKTraceNode` / `UAKTrace`：血缘树（ParentIndex 构树，可下钻）
 - [x] `UAKTraceSubsystem`：世界级记录器，可开关（关闭时零开销）
 - [x] 血缘视图支持运行时实况数据源（`SetRuntimeTrace`）
 - [x] 执行器把每次施放写入 Trace（`UAKAbilityInstance::SetTrace`，任务进入时建节点）
 - [x] PIE 联动：光标跟随最晚节点时间 + 血缘视图自动切实况 + PIE 期间自动开启记录
+- [x] **实况查询接口**：`UAKAbilityInstance::GetCurrentTime / GetLength / GetActiveTasks / GetTrace`
+- [x] **溯源控制台命令**：`UAK.Trace.Enable / Disable / Dump [N] / Clear`（血缘树文本导出）
+- [x] **实况联调清单**：[examples/06-live-trace-checklist.md](examples/06-live-trace-checklist.md)
+      （10 条验收标准 + 常见问题，照着走完即"实况通过"）
 
 ## M5 — 高级编排（部分）
 
@@ -96,6 +100,21 @@
       UAK 插件本身不依赖任何脚本系统（核心 C++，扩展用 Lua）
 - [x] **工程化改造**：仓库本身成为可打开的 UE 工程（对照 UnLua 布局），
       UAK 作为 `Plugins/UEAbilityKit`；示例插件用 `git mv` 迁为工程模块 `Source/UAKDemo`
+- [x] **内置任务扩展**：`UAKAbilityTask_ApplyLooseTags`（限时 Tag：霸体 / 无敌 / 蓄力中）
+      与 `UAKAbilityTask_FaceTarget`（转向目标 / 移动方向 / 控制器 / 固定方向）
+
+## M6 — 运行时调试器 + 示例闭环（进行中）
+
+- [x] **`UAKDebugSubsystem`**：世界级实例登记表 + 快照（`FAKDebugEntry`）
+- [x] **控制台命令**：`UAK.Debug.Enable / Disable / Summary / Help`（Enable 顺带打开溯源记录）
+- [x] **世界内标注**：角色头顶浮字（技能名 / 进度 / 第几轮 / 是否冻结 / 当前任务剩余时间）
+- [x] **编辑器调试面板**：`SUAKDebuggerPanel`（窗口 → 开发者工具 → 调试 → UAK Debugger，每 0.1s 刷新）
+- [x] **示例工程一键搭建**：`UAKDemoSetupCommandlet`（`-run=UAKDemoSetup`）→
+      技能资产（Json）+ 蓝图 + 关卡 + 默认地图，见 [examples/05-run-the-demo.md](examples/05-run-the-demo.md)
+- [x] **输入链路打通**：`DefaultInput.ini` 键位 → C++ 转发 → Lua 决定做什么 → GAS → UAK 时间轴
+- [x] **编辑器打磨**：任务复制 / 粘贴（Ctrl+C / Ctrl+V，剪贴板存 Json）、拖动吸附到 Marker
+- [ ] **PIE 走查**：按 06 清单逐条打勾（需人工在编辑器里跑一次）
+- [ ] **更多内置 Task**：按项目反馈继续加（候选：RootMotion / 属性快照回滚 / 子技能调用）
 
 ## 剩余工作
 
@@ -104,4 +123,6 @@
 
 | 事项 | 状态 | 说明 |
 |---|---|---|
-| **编译验证** | ❌ 阻塞中 | 唯一的功能性阻塞：另一实例的 UBT 互斥锁 |
+| **PIE 实况走查** | ⏳ 待人工 | 按 [examples/06-live-trace-checklist.md](examples/06-live-trace-checklist.md) 的 10 条验收标准逐条打勾；需要人在编辑器里跑一次 |
+| **调试面板实机试用** | ⏳ 待人工 | 面板与 `UAK.Debug.*` 已可用，尚未在真实 PIE 里走一遍 |
+| **内置任务继续扩展** | 📋 规划中 | 候选：RootMotion 任务、属性快照 / 回滚、子技能调用（按项目反馈排优先级） |

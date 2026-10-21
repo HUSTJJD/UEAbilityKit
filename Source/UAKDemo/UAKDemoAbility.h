@@ -32,9 +32,28 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sample")
 	TSubclassOf<UGameplayEffect> SampleCostEffect;
 
+	/**
+	 * 用示例字段接管 GAS 内置的冷却 / 消耗。
+	 * 这样蓝图里只需填 SampleCooldownEffect / SampleCostEffect 两个字段，
+	 * 不必再去找 GAS 那两个同名内置字段（它们本就是给 C++ 覆写用的）。
+	 */
+	virtual UGameplayEffect* GetCooldownGameplayEffect() const override;
+	virtual UGameplayEffect* GetCostGameplayEffect() const override;
+
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData) override;
+
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled) override;
+
+private:
+	/** 把开始 / 结束通知转发给角色（供 Lua 做 UI 联动） */
+	void NotifyCharacterStarted(const FGameplayAbilityActorInfo* ActorInfo);
+	void NotifyCharacterEnded(const FGameplayAbilityActorInfo* ActorInfo, bool bWasCancelled);
 };

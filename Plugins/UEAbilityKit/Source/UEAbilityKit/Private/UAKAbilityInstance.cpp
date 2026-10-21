@@ -66,6 +66,11 @@ void UAKAbilityInstance::Initialize(UAKAbilityAsset* InAsset, const FAKAbilityCo
 	}
 }
 
+float UAKAbilityInstance::GetLength() const
+{
+	return Asset ? Asset->Length : 0.f;
+}
+
 bool UAKAbilityInstance::IsGated() const
 {
 	for (const FAKActiveTask& Active : ActiveTasks)

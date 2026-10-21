@@ -99,17 +99,44 @@ namespace
 				{ LOCTEXT("Cat_Rule", "Rule"), LOCTEXT("Name_Wait", "等待条件"),
 				  LOCTEXT("Desc_Wait", "条件满足即继续，可冻结时间轴推进"),
 				  FLinearColor(0.75f, 0.50f, 0.95f) }
+			},
+			{
+				FName(TEXT("UAKAbilityTask_ApplyLooseTags")),
+				{ LOCTEXT("Cat_Effect", "Effect"), LOCTEXT("Name_LooseTags", "限时 Tag"),
+				  LOCTEXT("Desc_LooseTags", "任务存活期间给 ASC 挂上 Loose Tag，结束时自动摘掉（霸体 / 无敌 / 蓄力中）"),
+				  FLinearColor(0.95f, 0.55f, 0.25f) }
+			},
+			{
+				FName(TEXT("UAKAbilityTask_FaceTarget")),
+				{ LOCTEXT("Cat_Motion", "Motion"), LOCTEXT("Name_Face", "转向"),
+				  LOCTEXT("Desc_Face", "面向目标 / 移动方向 / 控制器 / 固定方向，可瞬时或按角速度平滑"),
+				  FLinearColor(0.95f, 0.75f, 0.30f) }
 			}
 		};
 		return Table;
 	}
 
+	/**
+	 * 按类名查元数据表。
+	 *
+	 * 注意一个容易踩的坑：UClass::GetFName() 给的是**去掉 UObject 命名前缀**的名字
+	 * （"AKAbilityTask_Dash"），而表里按 UE 的书写习惯登记的是带前缀的名字
+	 * （"UAKAbilityTask_Dash"）。两种都试一次，免得以后加任务时在这里反复栽跟头。
+	 */
 	const FAKTaskMeta* FindTaskMeta(const UClass* Class)
 	{
+		const TMap<FName, FAKTaskMeta>& Table = GetTaskMetaTable();
+
 		// 沿继承链向上找，这样蓝图派生任务也能继承内置元数据
 		for (const UClass* Current = Class; Current; Current = Current->GetSuperClass())
 		{
-			if (const FAKTaskMeta* Found = GetTaskMetaTable().Find(Current->GetFName()))
+			if (const FAKTaskMeta* Found = Table.Find(Current->GetFName()))
+			{
+				return Found;
+			}
+
+			const FName PrefixedName(*FString::Printf(TEXT("U%s"), *Current->GetName()));
+			if (const FAKTaskMeta* Found = Table.Find(PrefixedName))
 			{
 				return Found;
 			}
@@ -133,7 +160,10 @@ FText UAKAbilityTaskBase::GetTaskDisplayName() const
 	{
 		return Meta->DisplayName;
 	}
-	return FText::FromString(GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
+	// 类名去掉前缀即可读（GetName() 不带 UObject 命名前缀，但保险起见两种都去掉）
+	return FText::FromString(GetClass()->GetName()
+		.Replace(TEXT("UAKAbilityTask_"), TEXT(""))
+		.Replace(TEXT("AKAbilityTask_"), TEXT("")));
 }
 
 FText UAKAbilityTaskBase::GetTaskDescription() const

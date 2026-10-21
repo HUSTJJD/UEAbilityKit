@@ -1,0 +1,225 @@
+{
+  "stamp": "2026-10-21 00:15:21",
+  "total": 33,
+  "passed": 33,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "ToSelfWhenNoTarget",
+      "state": "Success",
+      "duration": 0.017461802810430527,
+      "errors": [
+        "LogAbilitySystem: No GameplayCueNotifyPaths were specified in DefaultGame.ini under [/Script/GameplayAbilities.AbilitySystemGlobals]. Falling back to using all of /Game/. This may be slow on large projects. Consider specifying which paths are to be searched."
+      ]
+    },
+    {
+      "name": "ToTarget",
+      "state": "Success",
+      "duration": 0.009739801287651062,
+      "errors": []
+    },
+    {
+      "name": "EvaluateOnAttribute",
+      "state": "Success",
+      "duration": 0.008254200220108032,
+      "errors": []
+    },
+    {
+      "name": "DisabledTrackSkipped",
+      "state": "Success",
+      "duration": 0.008611299097537994,
+      "errors": []
+    },
+    {
+      "name": "CancelsOnFailedCondition",
+      "state": "Success",
+      "duration": 0.007587898522615433,
+      "errors": []
+    },
+    {
+      "name": "FreezesTimeline",
+      "state": "Success",
+      "duration": 0.008429300040006638,
+      "errors": []
+    },
+    {
+      "name": "AlwaysExecuteStillRuns",
+      "state": "Success",
+      "duration": 0.007815700024366379,
+      "errors": []
+    },
+    {
+      "name": "ReverseStartOrder",
+      "state": "Success",
+      "duration": 0.008675999939441681,
+      "errors": []
+    },
+    {
+      "name": "Restarts",
+      "state": "Success",
+      "duration": 0.008178099989891052,
+      "errors": []
+    },
+    {
+      "name": "Lifecycle",
+      "state": "Success",
+      "duration": 0.009065702557563782,
+      "errors": []
+    },
+    {
+      "name": "RemovedOnInterrupt",
+      "state": "Success",
+      "duration": 0.00875900313258171,
+      "errors": []
+    },
+    {
+      "name": "RunsToEnd",
+      "state": "Success",
+      "duration": 0.008177898824214935,
+      "errors": []
+    },
+    {
+      "name": "RecordsTaskNodes",
+      "state": "Success",
+      "duration": 0.008216999471187592,
+      "errors": []
+    },
+    {
+      "name": "Distance",
+      "state": "Success",
+      "duration": 0.008801799267530441,
+      "errors": []
+    },
+    {
+      "name": "BuiltinTasksAreAnnotated",
+      "state": "Success",
+      "duration": 0.008218802511692047,
+      "errors": []
+    },
+    {
+      "name": "FallbackToClassName",
+      "state": "Success",
+      "duration": 0.0081401988863945,
+      "errors": []
+    },
+    {
+      "name": "GasImpactIsStatic",
+      "state": "Success",
+      "duration": 0.008495699614286423,
+      "errors": []
+    },
+    {
+      "name": "DisabledTrackIsSkipped",
+      "state": "Success",
+      "duration": 0.008027799427509308,
+      "errors": []
+    },
+    {
+      "name": "ParallelStartsTogether",
+      "state": "Success",
+      "duration": 0.008414000272750854,
+      "errors": []
+    },
+    {
+      "name": "RepeatExpandsTrack",
+      "state": "Success",
+      "duration": 0.007881298661231995,
+      "errors": []
+    },
+    {
+      "name": "SequenceChainsTasks",
+      "state": "Success",
+      "duration": 0.008488398045301437,
+      "errors": []
+    },
+    {
+      "name": "StartDelayShiftsTrack",
+      "state": "Success",
+      "duration": 0.007882099598646164,
+      "errors": []
+    },
+    {
+      "name": "TimelineUsesAbsoluteTime",
+      "state": "Success",
+      "duration": 0.00805559754371643,
+      "errors": []
+    },
+    {
+      "name": "RoundTrip",
+      "state": "Success",
+      "duration": 0.008212797343730927,
+      "errors": [
+        "LogUObjectGlobals: Failed to find object 'Class AKChanneling_MovementCondition'",
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_CollisionQuery'",
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_ApplyGameplayEffect'"
+      ]
+    },
+    {
+      "name": "TaskIdPreserved",
+      "state": "Success",
+      "duration": 0.0077520981431007385,
+      "errors": [
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_TestProbe'",
+        "LogUObjectGlobals: Failed to find object 'Class /Script/UEAbilityKit.AKAbilityTask_TestProbe'"
+      ]
+    },
+    {
+      "name": "TrackCompositePreserved",
+      "state": "Success",
+      "duration": 0.008225597441196442,
+      "errors": [
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_TestProbe'"
+      ]
+    },
+    {
+      "name": "JsonRoundTrip",
+      "state": "Success",
+      "duration": 0.00828700140118599,
+      "errors": [
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_ApplyLooseTags'",
+        "LogUObjectGlobals: Failed to find object 'Class AKAbilityTask_FaceTarget'"
+      ]
+    },
+    {
+      "name": "ValidationRules",
+      "state": "Success",
+      "duration": 0.00739780068397522,
+      "errors": []
+    },
+    {
+      "name": "ChannelingWindowIsChecked",
+      "state": "Success",
+      "duration": 0.008764997124671936,
+      "errors": []
+    },
+    {
+      "name": "CleanAssetHasNoError",
+      "state": "Success",
+      "duration": 0.007862702012062073,
+      "errors": []
+    },
+    {
+      "name": "InvalidLengthIsError",
+      "state": "Success",
+      "duration": 0.008378099650144577,
+      "errors": []
+    },
+    {
+      "name": "MissingEffectClassIsError",
+      "state": "Success",
+      "duration": 0.008507601916790009,
+      "errors": []
+    },
+    {
+      "name": "TaskOverflowIsReported",
+      "state": "Success",
+      "duration": 0.008922301232814789,
+      "errors": []
+    }
+  ],
+  "media": {
+    "screenshots": [],
+    "videos": [],
+    "traces": []
+  }
+}

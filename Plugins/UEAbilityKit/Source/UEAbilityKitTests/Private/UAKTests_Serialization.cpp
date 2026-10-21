@@ -10,6 +10,7 @@
 #include "UAKAbilityTask_CollisionQuery.h"
 #include "UAKChanneling.h"
 #include "UAKQueryFilter.h"
+#include "UEAbilityKitModule.h"
 
 #define LOCTEXT_NAMESPACE "UAKTests.Serialization"
 
@@ -41,7 +42,9 @@ bool FUAKSerializationRoundTripTest::RunTest(const FString& Parameters)
 	Query->Filters.Add(DistanceFilter);
 
 	UAKQueryFilter_Tag* TagFilter = NewObject<UAKQueryFilter_Tag>(Query);
-	TagFilter->BlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName(TEXT("State.Dead"))));
+	// 用运行时模块注册的原生 Tag：工程里没有配任何 .ini 的 GameplayTag，
+	// 直接 RequestGameplayTag("State.Dead") 会触发 ensure（Tag 必须来自配置或原生注册）
+	TagFilter->BlockedTags.AddTag(GetUAKTestTag());
 	Query->Filters.Add(TagFilter);
 
 	UAKAbilityTask_ApplyGameplayEffect* ApplyEffect =
@@ -69,7 +72,9 @@ bool FUAKSerializationRoundTripTest::RunTest(const FString& Parameters)
 	FString JsonB;
 	TestTrue(TEXT("二次导出应成功"), UAKAbilityJsonSerializer::ExportToJson(Imported, JsonB));
 
-	TestEqual(TEXT("往返后再次导出必须与原文完全一致"), JsonA, JsonB);
+	// 资产名由 NewAsset() 随机（AKAbilityAsset_24 / _25 ...），比较时摘掉它
+	TestEqual(TEXT("往返后再次导出必须与原文完全一致（资产名除外）"),
+		UAKTest::StripJsonAssetName(JsonA), UAKTest::StripJsonAssetName(JsonB));
 
 	// ── 字段级断言：光看字符串相等不够，还要确认值真的回来了 ──────────────
 	TestEqual(TEXT("Version"), Imported->Version, 7);

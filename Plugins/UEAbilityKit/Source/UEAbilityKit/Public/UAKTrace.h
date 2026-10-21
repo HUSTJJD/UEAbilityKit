@@ -60,6 +60,9 @@ public:
 	const TArray<FAKTraceNode>& GetNodes() const { return Nodes; }
 	int32 GetRootIndex() const { return RootIndex; }
 
+	/** 把血缘树格式化成可读文本（带层级缩进），供控制台命令与调试面板使用 */
+	FString ToDebugString() const;
+
 private:
 	UPROPERTY()
 	TArray<FAKTraceNode> Nodes;
@@ -83,6 +86,9 @@ public:
 
 	const TArray<UAKTrace*>& GetActiveTraces() const { return ActiveTraces; }
 	const TArray<UAKTrace*>& GetFinishedTraces() const { return FinishedTraces; }
+
+	/** 清空已完成的记录（供 UAK.Trace.Clear 使用；进行中的记录不受影响） */
+	void ClearFinished();
 
 private:
 	UPROPERTY()

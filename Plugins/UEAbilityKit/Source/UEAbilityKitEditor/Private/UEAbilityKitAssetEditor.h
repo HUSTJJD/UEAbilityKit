@@ -55,6 +55,9 @@ private:
 	void DeleteSelectedTask();
 	UAKAbilityTaskBase* DuplicateSelectedTask();
 
+	/** 粘贴：把时间轴剪贴板里的 Json 还原成任务，落在当前轨道的光标处 */
+	UAKAbilityTaskBase* PasteTaskFromJson(const FString& TaskJson);
+
 	// FEditorUndoClient
 	virtual void PostUndo(bool bSuccess) override;
 	virtual void PostRedo(bool bSuccess) override;

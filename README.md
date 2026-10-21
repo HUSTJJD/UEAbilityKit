@@ -11,6 +11,7 @@ _技能是一条时间轴，逻辑全部落到 GAS，配置是可 diff 的纯数
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
 [![Docs](https://img.shields.io/badge/Docs-MkDocs%20Material-526CFE?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
 [![中文](https://img.shields.io/badge/语言-中文-2496ed?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
+[![脚本方案](https://img.shields.io/badge/脚本方案-UnLuaNova-0052cc?style=for-the-badge)](https://github.com/HUSTJJD/UnLuaNova)
 
 📖 **在线文档**：<https://hustjjd.github.io/UEAbilityKit/>
 
@@ -87,7 +88,7 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 
 仓库本身就是一个可打开的 UE 工程（`UAKDemo.uproject`），布局参照 [UnLua](https://github.com/Tencent/UnLua)：**项目即示例，库放 Plugins**。
 
-> 必须加 `--recursive`：UnLuaNova 自身还嵌套了 Lua / Luau 两个子模块。忘了就补 `git submodule update --init --recursive`。
+> 必须加 `--recursive`：脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 自身还嵌套了 Lua / Luau 两个子模块。忘了就补 `git submodule update --init --recursive`。
 
 </details>
 
@@ -155,6 +156,32 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 
 ---
 
+## 🔌 脚本层：UnLuaNova
+
+示例工程的 Lua 脚本由 **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)** 提供——它是 [Tencent/UnLua](https://github.com/Tencent/UnLua) 的**社区续作**，也是本仓库的兄弟项目（以 git submodule 引入）。
+
+UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零星修复、没有版本号也没有维护者。UnLuaNova 把这些散落的社区成果收敛成一条有人维护的发行线，并在此基础上做三件事：
+
+| | 亮点 | 说明 |
+|---|---|---|
+| ⚡ | **静态绑定** | 构建期为声明类型生成绑定表，绕开反射热路径与运行时查找开销；类型选择是 **opt-out**（默认全导出，不想要的加 `meta=(UnLuaNovaNoExport)`） |
+| 🔁 | **双 Lua 后端** | [Lua 5.5](https://www.lua.org/) 与 [Luau](https://luau.org)（默认），均以子模块引入，共用一套后端抽象层 |
+| 🔍 | **Lua 可观测性** | CPU Profiler 写入 Unreal Insights、`lua.dbg` headless 调试服务、`lua.sandbox` 沙盒、死循环看门狗 |
+
+**为什么值得试**
+
+- 引擎支持 UE **5.4 / 5.6 / 5.8**；本示例工程即以 5.8.3 源码版编译通过
+- 零胶水代码：直接访问 UCLASS / UPROPERTY / UFUNCTION / USTRUCT / UENUM，可替换蓝图里的 Event / Function
+- 事件覆盖 Replication / Animation / Input，把"项目特有"的那部分逻辑留在脚本里迭代
+- 从 UnLua 迁移只需把全局名 `UnLua` 批量换成 `UnLuaNova`
+
+📖 在线文档：<https://hustjjd.github.io/UnLuaNova/>　·　⭐ 仓库：<https://github.com/HUSTJJD/UnLuaNova>
+
+> UAK **不依赖**任何脚本系统：插件里没有 UnLuaNova 的一行依赖，只有示例模块用它。
+> 关掉它照样编译、跑测试、用插件；两者怎么分工见 [UnLua 脚本](docs/examples/04-scripting-with-unlua.md)。
+
+---
+
 ## 🗺 路线图
 
 | 阶段 | 目标 | 状态 |
@@ -166,13 +193,24 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 | M4 | 溯源：`UAKTrace` 血缘树与记录器 | ✅ |
 | M5 | 高级编排：复合轨道 / 投射物与区域 / 打断传播 / 引导 | ✅ |
 | — | 编译验证 + 单元测试 | ✅ UE 5.8.3 源码构建 |
-| M6 | 运行时调试器 UI、更多内置 Task、编辑器打磨 | 🚧 |
+| M6 | 运行时调试器 UI、更多内置 Task、编辑器打磨 | ✅（剩 PIE 人工走查） |
 
 详见 [docs/roadmap.md](docs/roadmap.md)。
 
-> [!WARNING]
-> **已知问题**：示例工程依赖的 UnLuaNova（Luau 后端）在 UE 5.8 的 PIE 阶段崩溃，已定位为上游问题并跟踪中。
-> UAK 本体**不依赖任何脚本系统**，编译与单元测试均正常。
+### M6 这一轮新增
+
+| 能力 | 怎么用 |
+|---|---|
+| **运行时调试器** | 控制台 `UAK.Debug.Enable`（角色头顶浮字）/ `UAK.Debug.Summary`（打到日志）/ `UAK.Debug.Help` |
+| **编辑器调试面板** | 窗口 → 开发者工具 → 调试 → **UAK Debugger**，每 0.1 秒刷新活跃技能与任务 |
+| **溯源命令** | `UAK.Trace.Enable / Dump [N] / Clear / Disable`，血缘树直接打到日志 |
+| **一键搭示例** | `UnrealEditor-Cmd.exe UAKDemo.uproject -run=UAKDemoSetup`：技能资产 + 蓝图 + 关卡 + 默认地图 |
+| **新内置任务** | `ApplyLooseTags`（限时 Tag：霸体 / 无敌）、`FaceTarget`（转向目标 / 方向） |
+| **编辑器打磨** | 任务复制 / 粘贴（Ctrl+C / V，剪贴板存 Json）、拖动吸附到 Marker |
+
+> [!NOTE]
+> 示例工程依赖的 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)（Luau 后端）此前在 UE 5.8 的 PIE 阶段崩溃，现已随上游修复恢复可用。
+> UAK 本体**不依赖任何脚本系统**——把 UnLuaNova 关掉也能编译、跑测试、用插件。
 
 ---
 
@@ -181,7 +219,7 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 | 分类 | 入口 |
 |---|---|
 | 设计文档 | [设计总览](docs/design/00-index.md)（执行器 / 目标选取 / 溯源 / 网络 / 序列化 / 校验 / 复合编排 / 引导…） |
-| 接入示例 | [最小多人配置](docs/examples/01-minimal-multiplayer-setup.md) · [冷却消耗堆叠](docs/examples/02-cooldown-cost-stacking.md) · [示例工程](docs/examples/03-sample-project.md) · [UnLua 脚本](docs/examples/04-scripting-with-unlua.md) |
+| 接入示例 | [最小多人配置](docs/examples/01-minimal-multiplayer-setup.md) · [冷却消耗堆叠](docs/examples/02-cooldown-cost-stacking.md) · [示例工程](docs/examples/03-sample-project.md) · [UnLua 脚本](docs/examples/04-scripting-with-unlua.md) · [跑通示例](docs/examples/05-run-the-demo.md) · [实况联调清单](docs/examples/06-live-trace-checklist.md) |
 | 测试 | [docs/testing.md](docs/testing.md) |
 | Showcase | [docs/showcase.md](docs/showcase.md)（由测试产物自动生成） |
 | 调研 | [Able 与 AbilityKit 调研](docs/research/Able与AbilityKit调研及命名提案.md) |
@@ -200,7 +238,7 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 
 - 架构思想参考开源项目 [AbilityKit](https://github.com/HOBOBO/AbilityKit)（MIT，Unity / 纯 C#）中关于技能管线、事件触发、溯源与配置治理的设计；**本项目为独立实现，未复用其任何代码**。
 - 编辑器交互设计参考商业插件 **Able** 的**公开可见的交互模式**（时间轴 UX、验证器、预览视口等通用做法）；**未复用其任何源码、资源与文档文案**，且与其无隶属关系。
-- `Content/AnimationAssets/` 来自 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 示例工程（MIT），其中 UE4 Mannequin 源自 Epic 示例内容。
+- 示例工程的脚本层由兄弟项目 **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)**（MIT）提供——Tencent/UnLua 的社区续作，支持静态绑定、Lua 5.5 / Luau 双后端与 Lua 可观测性；`Content/AnimationAssets/` 中的 UE4 Mannequin 源自 Epic 示例内容。
 - `Unreal®` 是 Epic Games, Inc. 的商标。本项目为社区独立项目，**非 Epic 官方产品，未获 Epic 认可**。
 
 完整声明见 [NOTICE](NOTICE)。

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     UAK 测试启动脚本：编译 → 跑 UE Automation → 生成报告 / 截图 / 录屏 → 更新 docs。
 

@@ -5,10 +5,12 @@
 #include "UAKAbilityTrack.h"
 #include "UAKTypes.h"
 
+#include "Dom/JsonObject.h"
 #include "Fonts/SlateFontInfo.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Rendering/DrawElements.h"
+#include "Serialization/JsonSerializer.h"
 #include "ScopedTransaction.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Input/SButton.h"
@@ -178,8 +180,28 @@ float SUAKTimeline::SnapTime(float Time) const
 	{
 		return Time;
 	}
+
 	const float Frame = 1.f / static_cast<float>(FMath::Max(1, AssetPtr->FrameRate));
-	return FMath::RoundToFloat(Time / Frame) * Frame;
+	const float FrameSnapped = FMath::RoundToFloat(Time / Frame) * Frame;
+
+	// Marker 吸附：在 6px 范围内优先吸附到 Marker。
+	// Marker 是语义锚点（起手 / 命中 / 收招），比等距网格更值得对齐——
+	// 这一条让"把 GE 挪到出招那一帧"变成一次拖动就能完成的事。
+	const float Threshold = 6.f / FMath::Max(1.f, PixelsPerSecond);
+	float Best = FrameSnapped;
+	float BestDelta = Threshold;
+
+	for (const FAKTimeMarker& Marker : AssetPtr->Markers)
+	{
+		const float Delta = FMath::Abs(Marker.Time - FrameSnapped);
+		if (Delta <= BestDelta)
+		{
+			Best = Marker.Time;
+			BestDelta = Delta;
+		}
+	}
+
+	return Best;
 }
 
 float SUAKTimeline::TimeToX(float Time) const
@@ -391,6 +413,20 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 			}),
 			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
 	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_CopyTask", "复制任务"),
+		LOCTEXT("Menu_CopyTaskTip", "把任务复制进剪贴板（Ctrl+C）"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateLambda([this]() { CopySelectedTask(); }),
+			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_PasteTask", "粘贴任务"),
+		LOCTEXT("Menu_PasteTaskTip", "把剪贴板里的任务粘到光标处（Ctrl+V）"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateLambda([this]() { PasteTask(); }),
+			FCanExecuteAction::CreateLambda([this]() { return HasCopiedTask(); })));
+	MenuBuilder.AddMenuEntry(
 		LOCTEXT("Menu_DeleteTask", "删除任务"),
 		LOCTEXT("Menu_DeleteTaskTip", "删除当前选中的任务（Delete）"),
 		FSlateIcon(),
@@ -481,6 +517,20 @@ FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InK
 		return FReply::Handled();
 	}
 
+	// 复制（Ctrl+C）：存成 Json，跨撤销/重做依然有效
+	if (Key == EKeys::C && InKeyEvent.IsControlDown())
+	{
+		CopySelectedTask();
+		return FReply::Handled();
+	}
+
+	// 粘贴（Ctrl+V）：粘到当前轨道的光标处
+	if (Key == EKeys::V && InKeyEvent.IsControlDown())
+	{
+		PasteTask();
+		return FReply::Handled();
+	}
+
 	// 删除（Delete / Backspace）
 	if (Key == EKeys::Delete || Key == EKeys::BackSpace)
 	{
@@ -489,6 +539,41 @@ FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InK
 	}
 
 	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
+}
+
+void SUAKTimeline::CopySelectedTask()
+{
+	UAKAbilityTaskBase* Task = SelectedTask.Get();
+	if (!Task)
+	{
+		return;
+	}
+
+	// 用任务自己的 ExportJson：与文件序列化同一套字段，粘贴端无需另写解析
+	TSharedRef<FJsonObject> Json = MakeShared<FJsonObject>();
+	Task->ExportJson(Json);
+
+	FString OutString;
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutString);
+	if (FJsonSerializer::Serialize(Json, Writer))
+	{
+		TaskClipboard = MoveTemp(OutString);
+	}
+}
+
+void SUAKTimeline::PasteTask()
+{
+	if (TaskClipboard.IsEmpty() || !OnRequestPasteTask.IsBound())
+	{
+		return;
+	}
+
+	if (UAKAbilityTaskBase* Pasted = OnRequestPasteTask.Execute(TaskClipboard))
+	{
+		SelectedTask = Pasted;
+		OnTaskSelected.ExecuteIfBound(Pasted);
+		ForceRefresh();
+	}
 }
 
 int32 SUAKTimeline::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,

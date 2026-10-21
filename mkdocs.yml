@@ -57,6 +57,8 @@ nav:
       - 冷却/消耗/堆叠: examples/02-cooldown-cost-stacking.md
       - 示例工程: examples/03-sample-project.md
       - 使用 UnLua 脚本: examples/04-scripting-with-unlua.md
+      - 跑通示例工程: examples/05-run-the-demo.md
+      - 实况联调清单: examples/06-live-trace-checklist.md
   - 测试与自动化: testing.md
   - 测试报告: reports/latest.md
   - Showcase: showcase.md

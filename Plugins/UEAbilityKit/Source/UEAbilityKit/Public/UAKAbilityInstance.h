@@ -70,6 +70,19 @@ public:
 	bool IsGated() const;
 
 	UAKAbilityAsset* GetAsset() const { return Asset; }
+
+	// ── 实况查询（M4 联调 / M6 调试器用）─────────────────────────────────
+	/** 当前时间轴时间（秒，已按 PlayRate 缩放） */
+	float GetCurrentTime() const { return Context.CurrentTime; }
+
+	/** 本次运行的时长（秒）：资产长度（循环时乘以循环次数由调用方决定） */
+	float GetLength() const;
+
+	/** 当前存活的任务列表（含结束时间、是否门控） */
+	const TArray<FAKActiveTask>& GetActiveTasks() const { return ActiveTasks; }
+
+	/** 本次运行的溯源记录（未开启记录时为 nullptr） */
+	UAKTrace* GetTrace() const { return Trace; }
 	FAKAbilityContext& GetContext() { return Context; }
 	const FAKAbilityContext& GetContext() const { return Context; }
 

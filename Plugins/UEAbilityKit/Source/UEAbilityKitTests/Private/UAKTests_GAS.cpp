@@ -195,6 +195,11 @@ bool FUAKGASDistanceFilterTest::RunTest(const FString& Parameters)
 	UAKQueryFilter_Distance* Filter = NewObject<UAKQueryFilter_Distance>(GetTransientPackage());
 	Filter->MaxDistance = 300.f;
 
+	// 位置没生效是这类用例最常见的坑（世界类型 / 组件未注册），先把实际坐标写进报告
+	AddInfo(FString::Printf(TEXT("Source=%s Near=%s Far=%s"),
+		*Source->GetActorLocation().ToString(), *Near->GetActorLocation().ToString(),
+		*Far->GetActorLocation().ToString()));
+
 	TestTrue(TEXT("200cm 应通过"), Filter->Passes(Near, Source));
 	TestFalse(TEXT("900cm 应被过滤"), Filter->Passes(Far, Source));
 	TestFalse(TEXT("nullptr 候选应被过滤"), Filter->Passes(nullptr, Source));

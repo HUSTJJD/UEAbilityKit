@@ -1,5 +1,16 @@
 # 脚本方案：UnLuaNova（git submodule）
 
+> **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)** —— 面向 Unreal Engine 的 Lua 脚本方案，[Tencent/UnLua](https://github.com/Tencent/UnLua) 的社区续作。
+> UnLua 官方发布线冻结在 v2.3.6（2023-11）后无人维护，UnLuaNova 把散落的社区成果收敛成一条有人维护的发行线，
+> 并补上三件事：**静态绑定**（构建期生成绑定表，绕开反射热路径）、**双 Lua 后端**（Lua 5.5 / Luau，默认 Luau）、
+> **Lua 可观测性**（CPU Profiler 写入 Unreal Insights、`lua.dbg` 调试服务、`lua.sandbox` 沙盒、死循环看门狗）。
+> 引擎支持 UE 5.4 / 5.6 / 5.8；从 UnLua 迁移只需把全局名 `UnLua` 批量换成 `UnLuaNova`。
+>
+> 📖 在线文档：<https://hustjjd.github.io/UnLuaNova/>　·　⭐ 仓库：<https://github.com/HUSTJJD/UnLuaNova>
+
+**本文只讲 UAK 与它的集成方式**：为什么用 submodule、目录怎么摆、依赖怎么声明、C++ 与 Lua 怎么分工。
+UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNova/)。
+
 ## 1. 为什么是 submodule
 
 UnLuaNova 有自己的仓库与版本节奏，不应该被复制进 UAK：
@@ -102,3 +113,12 @@ FString AAKDemoCharacter::GetModuleName_Implementation() const
 - `UAKDemo.uproject` 里把 `UnLuaNova` 设为 `false`
 
 UAK 插件本身不受任何影响。
+
+## 7. 延伸阅读
+
+| 内容 | 入口 |
+|---|---|
+| UnLuaNova 在线文档 | <https://hustjjd.github.io/UnLuaNova/> |
+| UnLuaNova 仓库 | <https://github.com/HUSTJJD/UnLuaNova> |
+| 编程指南 / 设置 / 调试 / 智能提示 | 见其仓库 `Docs/CN/`（UnLuaNova 侧） |
+| 从 UnLua 迁移 | 全局名 `UnLua` → `UnLuaNova`，UCLASS 改名需 resave 资产并迁移 ini section |

@@ -80,7 +80,11 @@ bool FUAKPlanParallelTest::RunTest(const FString& Parameters)
 	if (Plan.Num() == 2)
 	{
 		TestTrue(TEXT("两个任务同时开始"), NearlyEqual(Plan[0].StartTime, Plan[1].StartTime));
-		TestTrue(TEXT("终点各自按自己的时长"), NearlyEqual(Plan[1].EndTime, 0.4f));
+
+		// 两条同时开始 → 计划里的先后顺序没有保证，断言"两个终点都存在"而不是"第 1 条是 0.4"
+		const bool bHasShort = NearlyEqual(Plan[0].EndTime, 0.2f) || NearlyEqual(Plan[1].EndTime, 0.2f);
+		const bool bHasLong = NearlyEqual(Plan[0].EndTime, 0.4f) || NearlyEqual(Plan[1].EndTime, 0.4f);
+		TestTrue(TEXT("终点各自按自己的时长（0.2 与 0.4 都应在计划里）"), bHasShort && bHasLong);
 	}
 
 	return true;

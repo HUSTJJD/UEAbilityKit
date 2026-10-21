@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     UAK 命令行编译脚本：直接调用 UnrealBuildTool，不经过 Build.bat。
 

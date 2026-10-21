@@ -3,6 +3,7 @@
 #include "UAKDemoAttributeSet.h"
 
 #include "AbilitySystemComponent.h"
+#include "Components/InputComponent.h"
 #include "GameplayEffect.h"
 
 AAKDemoCharacter::AAKDemoCharacter()
@@ -90,4 +91,65 @@ void AAKDemoCharacter::GrantDefaultAbilities()
 		AbilitySystemComponent->GiveAbility(
 			FGameplayAbilitySpec(AbilityClass, /*Level=*/1, /*InputID=*/INDEX_NONE, this));
 	}
+}
+
+// ── 输入 ────────────────────────────────────────────────────────────
+void AAKDemoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (!PlayerInputComponent)
+	{
+		return;
+	}
+
+	// 旧式动作映射：UAK_Ability1 / UAK_Ability2（键位见 Config/DefaultInput.ini）。
+	// 只负责"转发按下/松开"，按下之后干什么由 Lua 的 OnAbilityInput 决定。
+	PlayerInputComponent->BindAction(TEXT("UAK_Ability1"), IE_Pressed, this, &AAKDemoCharacter::HandleAbility1Pressed);
+	PlayerInputComponent->BindAction(TEXT("UAK_Ability1"), IE_Released, this, &AAKDemoCharacter::HandleAbility1Released);
+	PlayerInputComponent->BindAction(TEXT("UAK_Ability2"), IE_Pressed, this, &AAKDemoCharacter::HandleAbility2Pressed);
+	PlayerInputComponent->BindAction(TEXT("UAK_Ability2"), IE_Released, this, &AAKDemoCharacter::HandleAbility2Released);
+}
+
+void AAKDemoCharacter::HandleAbility1Pressed() { NotifyAbilityInput(0, true); }
+void AAKDemoCharacter::HandleAbility1Released() { NotifyAbilityInput(0, false); }
+void AAKDemoCharacter::HandleAbility2Pressed() { NotifyAbilityInput(1, true); }
+void AAKDemoCharacter::HandleAbility2Released() { NotifyAbilityInput(1, false); }
+
+void AAKDemoCharacter::NotifyAbilityInput(int32 SlotIndex, bool bPressed)
+{
+	// 具体行为（激活哪个技能、UI 怎么反馈）交给脚本
+	K2_OnAbilityInput(SlotIndex, bPressed);
+}
+
+bool AAKDemoCharacter::TryActivateAbilityByIndex(int32 Index)
+{
+	if (!AbilitySystemComponent)
+	{
+		return false;
+	}
+
+	if (!DefaultAbilities.IsValidIndex(Index) || !DefaultAbilities[Index])
+	{
+		return false;
+	}
+
+	return AbilitySystemComponent->TryActivateAbilityByClass(DefaultAbilities[Index]);
+}
+
+void AAKDemoCharacter::SetChannelingInputHeld(int32 SlotIndex, bool bHeld)
+{
+	if (bHeld)
+	{
+		ReleasedInputSlots.Remove(SlotIndex);
+	}
+	else
+	{
+		ReleasedInputSlots.Add(SlotIndex);
+	}
+}
+
+bool AAKDemoCharacter::IsChannelingInputHeld(int32 SlotIndex) const
+{
+	return !ReleasedInputSlots.Contains(SlotIndex);
 }

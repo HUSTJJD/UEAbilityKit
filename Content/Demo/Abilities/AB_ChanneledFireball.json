@@ -31,6 +31,10 @@
 		{
 			"$type": "UAKChanneling_MovementCondition",
 			"speedThreshold": 30.0
+		},
+		{
+			"$type": "UAKDemoChanneling_InputHeld",
+			"slotIndex": 1
 		}
 	],
 
@@ -49,7 +53,7 @@
 					"taskId": "Fireball01",
 					"startTime": 0.0,
 					"duration": 0.0,
-					"effectClass": "/Game/Demo/GE_FireballDamage",
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
 					"level": 1.0,
 					"applyToSelfIfNoTarget": false,
 					"setByCaller": {
@@ -62,7 +66,7 @@
 					"taskId": "Fireball02",
 					"startTime": 0.0,
 					"duration": 0.0,
-					"effectClass": "/Game/Demo/GE_FireballDamage",
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
 					"level": 1.0,
 					"applyToSelfIfNoTarget": false,
 					"setByCaller": {
@@ -74,7 +78,7 @@
 					"taskId": "Fireball03",
 					"startTime": 0.0,
 					"duration": 0.0,
-					"effectClass": "/Game/Demo/GE_FireballDamage",
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
 					"level": 1.0,
 					"applyToSelfIfNoTarget": false,
 					"setByCaller": {

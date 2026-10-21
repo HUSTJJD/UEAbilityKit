@@ -85,7 +85,9 @@ def parse_json_reports(report_dir: Path) -> list[dict]:
     seen = set()
     for path in candidates:
         try:
-            data = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
+            # 注意 utf-8-sig：UE 导出的 index.json 带 BOM，用 utf-8 读会直接抛异常，
+            # 被下面的 except 静默吞掉，表现为"报告里 0 个用例"。
+            data = json.loads(path.read_text(encoding="utf-8-sig", errors="ignore"))
         except Exception:
             continue
 

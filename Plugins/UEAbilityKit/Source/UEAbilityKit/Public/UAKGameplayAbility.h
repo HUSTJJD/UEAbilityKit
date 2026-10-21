@@ -6,6 +6,7 @@
 
 class UAKAbilityAsset;
 class UAKAbilityInstance;
+class UAKDebugSubsystem;
 class UAKTrace;
 
 /**
@@ -53,4 +54,8 @@ private:
 
 	UPROPERTY()
 	UAKTrace* ActiveTrace = nullptr;
+
+	/** 本次施放登记到的调试器（结束技能时据此注销） */
+	UPROPERTY()
+	UAKDebugSubsystem* ActiveDebugSubsystem = nullptr;
 };

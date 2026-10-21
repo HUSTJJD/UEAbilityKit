@@ -56,7 +56,7 @@
 					"taskId": "Damage",
 					"startTime": 0.3,
 					"duration": 0.0,
-					"effectClass": "/Game/Demo/GE_MeleeDamage",
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_MeleeDamage",
 					"level": 1.0,
 					"applyToSelfIfNoTarget": false,
 					"setByCaller": {

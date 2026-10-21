@@ -4,6 +4,7 @@
 #include "UAKAbilityContext.h"
 #include "UAKAbilityInstance.h"
 #include "UAKAbilityTickTask.h"
+#include "UAKDebugSubsystem.h"
 #include "UAKTargeting.h"
 #include "UAKTrace.h"
 #include "UEAbilityKitModule.h"
@@ -46,17 +47,18 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		UAKTargeting::AppendTargetDataToContext(TriggerEventData->TargetData, Context);
 	}
 
-	// 溯源：由世界级记录器决定是否需要记录（关闭时为零开销）
-	UAKTrace* Trace = nullptr;
+	// 本次施放所在的世界：溯源记录器与调试器都挂在它上面
+	UWorld* World = nullptr;
 	if (AActor* Avatar = ActorInfo->AvatarActor.Get())
 	{
-		if (UWorld* World = Avatar->GetWorld())
-		{
-			if (UAKTraceSubsystem* TraceSubsystem = World->GetSubsystem<UAKTraceSubsystem>())
-			{
-				Trace = TraceSubsystem->BeginTrace(AbilityAsset->GetName());
-			}
-		}
+		World = Avatar->GetWorld();
+	}
+
+	// 溯源：由世界级记录器决定是否需要记录（关闭时为零开销）
+	UAKTrace* Trace = nullptr;
+	if (UAKTraceSubsystem* TraceSubsystem = World ? World->GetSubsystem<UAKTraceSubsystem>() : nullptr)
+	{
+		Trace = TraceSubsystem->BeginTrace(AbilityAsset->GetName());
 	}
 
 	ActiveTrace = Trace;
@@ -66,6 +68,13 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	Instance->Initialize(AbilityAsset, Context);
 	Instance->OnFinished.BindUObject(this, &UAKGameplayAbility::HandleTimelineFinished);
 	ActiveInstance = Instance;
+
+	// 登记到调试器（UAK.Debug.Summary / 世界内标注 / 编辑器面板的数据源）
+	if (UAKDebugSubsystem* DebugSubsystem = World ? World->GetSubsystem<UAKDebugSubsystem>() : nullptr)
+	{
+		DebugSubsystem->RegisterInstance(Instance);
+		ActiveDebugSubsystem = DebugSubsystem;
+	}
 
 	if (Instance->IsFinished())
 	{
@@ -91,6 +100,13 @@ void UAKGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		// 先解绑，避免 Finish() 回调再次触发 EndAbility 造成递归
 		ActiveInstance->OnFinished.Unbind();
 		ActiveInstance->Finish(bWasCancelled);
+
+		if (ActiveDebugSubsystem)
+		{
+			ActiveDebugSubsystem->UnregisterInstance(ActiveInstance);
+			ActiveDebugSubsystem = nullptr;
+		}
+
 		ActiveInstance = nullptr;
 	}
 

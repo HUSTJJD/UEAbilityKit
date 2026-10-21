@@ -59,5 +59,19 @@ public class UAKDemo : ModuleRules
 		{
 			string.Equals(backend, "Lua", StringComparison.OrdinalIgnoreCase) ? "Lua" : "Luau"
 		});
+
+		// UAKDemoSetupCommandlet：一键生成示例资产 / 蓝图 / 关卡。
+		// 只在编辑器目标里编译（WITH_EDITOR），不进打包产物。
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[]
+			{
+				"UnrealEd",       // FEditorFileUtils（关卡创建与保存）
+				"Kismet",         // FKismetEditorUtilities（建蓝图）
+				"AssetRegistry",  // FAssetRegistryModule::AssetCreated
+				"Json",
+				"JsonUtilities"
+			});
+		}
 	}
 }

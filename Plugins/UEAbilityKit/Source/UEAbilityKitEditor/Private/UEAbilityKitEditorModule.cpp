@@ -1,12 +1,20 @@
 #include "UEAbilityKitEditorModule.h"
 
+#include "SUAKDebuggerPanel.h"
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityAssetTypeActions.h"
 #include "UAKAbilityThumbnailRenderer.h"
 
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
+#include "Framework/Docking/TabManager.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
+#include "WorkspaceMenuStructure.h"
+#include "WorkspaceMenuStructureModule.h"
+
+#define LOCTEXT_NAMESPACE "FUEAbilityKitEditorModule"
+
+const FName FUEAbilityKitEditorModule::DebuggerTabName = TEXT("UAKDebugger");
 
 void FUEAbilityKitEditorModule::StartupModule()
 {
@@ -22,10 +30,20 @@ void FUEAbilityKitEditorModule::StartupModule()
 	// 技能资产缩略图：画"技能结构示意图"
 	UThumbnailManager::Get().RegisterCustomRenderer(
 		UAKAbilityAsset::StaticClass(), UAKAbilityThumbnailRenderer::StaticClass());
+
+	// 调试面板：窗口 → 开发者工具 → 调试 → UAK Debugger
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DebuggerTabName,
+		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitEditorModule::SpawnDebuggerTab))
+		.SetDisplayName(LOCTEXT("DebuggerTabTitle", "UAK Debugger"))
+		.SetTooltipText(LOCTEXT("DebuggerTabTooltip", "实时列出 PIE 中正在运行的 UAK 技能与任务"))
+		.SetMenuType(ETabSpawnerMenuType::Enabled)
+		.SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
 }
 
 void FUEAbilityKitEditorModule::ShutdownModule()
 {
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(DebuggerTabName);
+
 	if (FModuleManager::Get().IsModuleLoaded("AssetTools"))
 	{
 		IAssetTools& AssetTools = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools").Get();
@@ -41,5 +59,16 @@ void FUEAbilityKitEditorModule::ShutdownModule()
 		UThumbnailManager::Get().UnregisterCustomRenderer(UAKAbilityAsset::StaticClass());
 	}
 }
+
+TSharedRef<SDockTab> FUEAbilityKitEditorModule::SpawnDebuggerTab(const FSpawnTabArgs& Args)
+{
+	return SNew(SDockTab)
+		.TabRole(ETabRole::NomadTab)
+		[
+			SNew(SUAKDebuggerPanel)
+		];
+}
+
+#undef LOCTEXT_NAMESPACE
 
 IMPLEMENT_MODULE(FUEAbilityKitEditorModule, UEAbilityKitEditor)

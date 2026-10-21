@@ -4,10 +4,12 @@
 
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTask_ApplyGameplayEffect.h"
+#include "UAKAbilityTask_ApplyLooseTags.h"
 #include "UAKAbilityTask_AreaEffect.h"
 #include "UAKAbilityTask_Branch.h"
 #include "UAKAbilityTask_CollisionQuery.h"
 #include "UAKAbilityTask_Dash.h"
+#include "UAKAbilityTask_FaceTarget.h"
 #include "UAKAbilityTask_PlayMontage.h"
 #include "UAKAbilityTask_SendGameplayCue.h"
 #include "UAKAbilityTask_SpawnProjectile.h"
@@ -31,10 +33,12 @@ bool FUAKMetadataBuiltinTasksTest::RunTest(const FString& Parameters)
 	const UClass* Probes[] =
 	{
 		UAKAbilityTask_ApplyGameplayEffect::StaticClass(),
+		UAKAbilityTask_ApplyLooseTags::StaticClass(),
 		UAKAbilityTask_AreaEffect::StaticClass(),
 		UAKAbilityTask_Branch::StaticClass(),
 		UAKAbilityTask_CollisionQuery::StaticClass(),
 		UAKAbilityTask_Dash::StaticClass(),
+		UAKAbilityTask_FaceTarget::StaticClass(),
 		UAKAbilityTask_PlayMontage::StaticClass(),
 		UAKAbilityTask_SendGameplayCue::StaticClass(),
 		UAKAbilityTask_SpawnProjectile::StaticClass(),
@@ -59,6 +63,12 @@ bool FUAKMetadataBuiltinTasksTest::RunTest(const FString& Parameters)
 
 		const FString ClassName = Class->GetName();
 
+		// 把解析结果写进报告：元数据表没命中时，显示名会回落到"去前缀类名"，
+		// 一眼就能看出是"表没找到"还是"文案没填"。
+		AddInfo(FString::Printf(TEXT("%s → 分类=%s | 显示名=%s | 说明=%s"),
+			*ClassName, *DefaultTask->GetTaskCategory().ToString(),
+			*DefaultTask->GetTaskDisplayName().ToString(), *DefaultTask->GetTaskDescription().ToString()));
+
 		TestFalse(FString::Printf(TEXT("%s 的显示名不应为空"), *ClassName),
 			DefaultTask->GetTaskDisplayName().IsEmpty());
 		TestFalse(FString::Printf(TEXT("%s 的分类不应为空"), *ClassName),
@@ -71,7 +81,7 @@ bool FUAKMetadataBuiltinTasksTest::RunTest(const FString& Parameters)
 		++Checked;
 	}
 
-	TestTrue(TEXT("应至少检查 9 个内置任务"), Checked >= 9);
+	TestTrue(TEXT("应至少检查 11 个内置任务"), Checked >= 11);
 	return true;
 }
 

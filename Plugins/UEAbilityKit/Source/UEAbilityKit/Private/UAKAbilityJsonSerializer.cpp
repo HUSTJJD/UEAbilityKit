@@ -10,10 +10,85 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Misc/FileHelper.h"
+#include "UObject/UObjectIterator.h"
 
 namespace
 {
 	constexpr int32 CurrentSchemaVersion = 1;
+
+	/**
+	 * 按 Json 里的 $type 解析出 UClass。
+	 *
+	 * 三条路依次尝试，覆盖所有写法：
+	 *   1) 全路径：蓝图派生类，或 "/Script/模块.类名"（项目自己写的任务 / 条件）
+	 *   2) 本模块的原生类：UClass 的 FName 不带 UObject 命名前缀，路径里带不带 U 都试一次
+	 *   3) 兜底遍历：其它模块（例如测试模块）里的原生类，同样兼容两种前缀
+	 *
+	 * 为什么需要兜底：UE 里 UClass::GetFName() 给的是去掉前缀的名字
+	 * （"AKAbilityTask_Dash"），而按路径 LoadClass 又要带前缀，
+	 * 只认一种写法迟早会漏——这里一次性把两种都覆盖掉。
+	 */
+	UClass* ResolveJsonClass(const FString& TypeName, const UClass* RequiredBase)
+	{
+		if (TypeName.IsEmpty() || !RequiredBase)
+		{
+			return nullptr;
+		}
+
+		auto TryLoad = [RequiredBase](const FString& Path) -> UClass*
+		{
+			if (UClass* Found = LoadClass<UObject>(nullptr, *Path))
+			{
+				return Found->IsChildOf(RequiredBase) ? Found : nullptr;
+			}
+			return nullptr;
+		};
+
+		if (UClass* Found = TryLoad(TypeName))
+		{
+			return Found;
+		}
+
+		// UE_MODULE_NAME 是 ANSI 字面量，进 Printf 要先转成 TCHAR
+		const FString ModuleName(ANSI_TO_TCHAR(UE_MODULE_NAME));
+		const TArray<FString> ModulePaths =
+		{
+			FString::Printf(TEXT("/Script/%s.%s"), *ModuleName, *TypeName),
+			FString::Printf(TEXT("/Script/%s.U%s"), *ModuleName, *TypeName),
+		};
+
+		for (const FString& Path : ModulePaths)
+		{
+			if (UClass* Found = TryLoad(Path))
+			{
+				return Found;
+			}
+		}
+
+		const TArray<FString> Candidates =
+		{
+			TypeName,
+			TypeName.StartsWith(TEXT("U")) ? TypeName.RightChop(1) : (TEXT("U") + TypeName),
+		};
+
+		for (TObjectIterator<UClass> It; It; ++It)
+		{
+			if (!It->IsChildOf(RequiredBase))
+			{
+				continue;
+			}
+
+			for (const FString& Candidate : Candidates)
+			{
+				if (It->GetName() == Candidate || It->GetPathName() == Candidate)
+				{
+					return *It;
+				}
+			}
+		}
+
+		return nullptr;
+	}
 
 	TSharedRef<FJsonObject> ExportTrack(const UAKAbilityTrack* Track)
 	{
@@ -296,12 +371,7 @@ bool UAKAbilityJsonSerializer::ImportFromJson(UAKAbilityAsset* Asset, const FStr
 			FString TypeName;
 			(*ConditionObject)->TryGetStringField(TEXT("$type"), TypeName);
 
-			UClass* ConditionClass = LoadClass<UAKChannelingCondition>(nullptr,
-				*FString::Printf(TEXT("/Script/UEAbilityKit.%s"), *TypeName));
-			if (!ConditionClass)
-			{
-				ConditionClass = LoadClass<UAKChannelingCondition>(nullptr, *TypeName); // 蓝图派生
-			}
+			UClass* ConditionClass = ResolveJsonClass(TypeName, UAKChannelingCondition::StaticClass());
 			if (!ConditionClass || ConditionClass->HasAnyClassFlags(CLASS_Abstract))
 			{
 				continue;
@@ -368,15 +438,7 @@ UAKAbilityTaskBase* UAKAbilityJsonSerializer::CreateTaskByTypeName(UObject* Oute
 		return nullptr;
 	}
 
-	// 1) 本模块的原生类：/Script/UEAbilityKit.<Name>
-	UClass* NativeClass = LoadClass<UAKAbilityTaskBase>(nullptr,
-		*FString::Printf(TEXT("/Script/UEAbilityKit.%s"), *TypeName));
-
-	if (!NativeClass)
-	{
-		// 2) 蓝图派生类：按路径加载
-		NativeClass = LoadClass<UAKAbilityTaskBase>(nullptr, *TypeName);
-	}
+	UClass* NativeClass = ResolveJsonClass(TypeName, UAKAbilityTaskBase::StaticClass());
 
 	if (!NativeClass || NativeClass->HasAnyClassFlags(CLASS_Abstract))
 	{

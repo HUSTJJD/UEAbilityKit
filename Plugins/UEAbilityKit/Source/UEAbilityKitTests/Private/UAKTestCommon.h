@@ -60,6 +60,10 @@ public:
 
 	UPROPERTY()
 	UAKTestAttributeSet* Attributes = nullptr;
+
+	/** 根组件：有了它 SetActorLocation / GetActorLocation 才有意义 */
+	UPROPERTY()
+	USceneComponent* Root = nullptr;
 };
 
 /**
@@ -146,6 +150,15 @@ namespace UAKTest
 {
 	/** 新建一条技能资产（默认长度 1s，非循环） */
 	UAKAbilityAsset* NewAsset(float Length = 1.f);
+
+	/**
+	 * 去掉 Json 里的资产名（"asset": "AKAbilityAsset_24"）。
+	 *
+	 * NewAsset() 每次都会拿到一个不重名的资产，而导出文本里带着它的名字。
+	 * 比较"往返是否一致"时它属于噪声；这里只摘掉这一项，
+	 * 不去 Rename 资产——改名会撞上已存在的对象，直接 Fatal。
+	 */
+	FString StripJsonAssetName(const FString& Json);
 
 	/** 给资产加一条轨道 */
 	UAKAbilityTrack* AddTrack(

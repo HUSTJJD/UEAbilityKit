@@ -50,21 +50,26 @@ AnimationAssets/
 
 ## 还需要在编辑器里创建的资产
 
-Json 示例之外，下面这些必须手动建（都是 GAS 原生物件，无法用文本表达）：
+**不用了。** 一条命令就能全部生成（技能资产 / 蓝图 / 关卡 / 默认地图）：
 
-1. **Content/Demo/** 新建 GameplayEffect：
-   - `GE_MeleeDamage`：Instant，Modifiers: Health Additive -30（用 SetByCaller `Damage` 覆盖更好）
-   - `GE_FireballDamage`：Instant，Modifiers: Health Additive -25
-   - `GE_Cooldown_Sample`：Has Duration 5s，Granted Tags = `Cooldown.Sample`
-   - `GE_Cost_Sample`：Instant，Modifiers: Mana Additive -20
-2. **GameplayCue**：在 `DefaultGameplayTags.ini` 或项目设置里加
-   `GameplayCue.Ability.Melee.Swing` / `.Impact` / `GameplayCue.Ability.Fireball.Channel`，
-   再按需建 `GC_` 蓝图（没有对应 GC 时 Cue 只是空转，不影响逻辑）
-3. **Content/Abilities/** 新建 `BP_SampleAbility` 继承 `UAKDemoAbility`，
-   填 `AbilityAsset` / `SampleCooldownEffect` / `SampleCostEffect`
-4. 新建 `BP_DemoCharacter` 继承 `AAKDemoCharacter`，Mesh 用 `SK_Mannequin`，
-   把 `BP_SampleAbility` 填进 `Default Abilities`
-5. 新建一个关卡，把 `BP_DemoCharacter` 放进去并设为 `GameDefaultMap`
+```powershell
+UnrealEditor-Cmd.exe UAKDemo.uproject -run=UAKDemoSetup -unattended -nosplash
+```
+
+详见 [../docs/examples/05-run-the-demo.md](../docs/examples/05-run-the-demo.md)。
+
+下面列出命令会生成什么，以及**不再需要**手工建的东西：
+
+| 以前要手工建 | 现在 |
+|---|---|
+| `GE_MeleeDamage` / `GE_FireballDamage` / `GE_Cooldown_Sample` / `GE_Cost_Sample` | C++ 类 `Source/UAKDemo/UAKDemoEffects.h`（不进仓库二进制，冷却 Tag 用原生 Tag 注册） |
+| `BP_SampleAbility` | 命令生成，CDO 自动填好 `AbilityAsset` / 冷却 / 消耗 |
+| `BP_DemoCharacter` | 命令生成，自动挂 `SK_Mannequin` 与默认技能 |
+| 关卡 + `GameDefaultMap` | `/Game/Demo/Maps/L_Demo`，并写进 `Config/DefaultEngine.ini` |
+
+只有 **GameplayCue** 仍建议按需建（没有对应 GC 蓝图时 Cue 只是空转，不影响逻辑）：
+在项目设置或 `DefaultGameplayTags.ini` 里加
+`GameplayCue.Ability.Melee.Swing` / `.Impact` / `GameplayCue.Ability.Fireball.Channel`。
 
 ## 更多
 

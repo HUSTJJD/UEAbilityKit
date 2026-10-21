@@ -13,6 +13,7 @@ class UAKAbilityTaskBase;
 class UAKAbilityTrack;
 
 DECLARE_DELEGATE_OneParam(FOnAKTaskSelected, UAKAbilityTaskBase* /*Task*/);
+DECLARE_DELEGATE_RetVal_OneParam(UAKAbilityTaskBase*, FOnAKPasteTask, const FString& /*TaskJson*/);
 DECLARE_DELEGATE_TwoParams(FOnAKTrackSelected, UAKAbilityTrack* /*Track*/, int32 /*TrackIndex*/);
 DECLARE_DELEGATE_OneParam(FOnAKCursorTimeChanged, float /*Time*/);
 DECLARE_DELEGATE(FOnAKTimelineRequest);
@@ -38,6 +39,7 @@ public:
 		SLATE_EVENT(FOnAKCursorTimeChanged, OnCursorTimeChanged)
 		SLATE_EVENT(FOnAKTimelineRequest, OnRequestDeleteTask)
 		SLATE_EVENT(FOnAKDuplicateTask, OnRequestDuplicateTask)
+		SLATE_EVENT(FOnAKPasteTask, OnRequestPasteTask)
 		SLATE_EVENT(FOnAKToolbarAction, OnAction)
 	SLATE_END_ARGS()
 
@@ -79,6 +81,11 @@ public:
 	/** 外部改动资产后强制重建执行计划（撤销/重做用） */
 	void ForceRefresh();
 
+	/** 复制 / 粘贴：Ctrl+C 把选中任务存成 Json，Ctrl+V 粘到光标处 */
+	void CopySelectedTask();
+	void PasteTask();
+	bool HasCopiedTask() const { return !TaskClipboard.IsEmpty(); }
+
 private:
 	/** 右键菜单 */
 	TSharedRef<SWidget> GenerateContextMenu(UAKAbilityTaskBase* HitTask, int32 Row);
@@ -104,7 +111,11 @@ private:
 	FOnAKCursorTimeChanged OnCursorTimeChanged;
 	FOnAKTimelineRequest OnRequestDeleteTask;
 	FOnAKDuplicateTask OnRequestDuplicateTask;
+	FOnAKPasteTask OnRequestPasteTask;
 	FOnAKToolbarAction OnAction;
+
+	/** 任务剪贴板：存 Json 文本而不是 UObject 指针，撤销/重做后依然有效 */
+	FString TaskClipboard;
 
 	/**
 	 * 缓存的执行计划：复合轨道（Sequence / Parallel / Repeat）展开后的真实时间。
