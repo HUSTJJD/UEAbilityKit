@@ -29,6 +29,7 @@ from pathlib import Path
 TOOLS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TOOLS_DIR.parent
 SPEC_FILE = TOOLS_DIR / "lyra_patches.json"
+LOCAL_SPEC_FILE = TOOLS_DIR / "lyra_patches.local.json"   # 本机覆盖（不进仓库）
 PATCHED_LIST = TOOLS_DIR / ".patched_files.txt"
 
 MARKER = "UAK-PATCH"
@@ -57,6 +58,25 @@ def record(path: Path) -> None:
         known = set(PATCHED_LIST.read_text(encoding="utf-8").splitlines())
     known.add(rel)
     PATCHED_LIST.write_text("\n".join(sorted(x for x in known if x)) + "\n", encoding="utf-8")
+
+
+def deep_merge(base: dict, extra: dict) -> dict:
+    for key, value in extra.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def load_spec() -> dict:
+    """仓库里的补丁清单 + 本机覆盖（lyra_patches.local.json，不进仓库）。
+    机器相关的东西（比如本机源码引擎的 GUID）只写本地那份，别污染仓库里的基线。"""
+    spec = json.loads(read(SPEC_FILE))
+    if LOCAL_SPEC_FILE.is_file():
+        spec = deep_merge(spec, json.loads(read(LOCAL_SPEC_FILE)))
+        print(f"[patch] 已并入本机覆盖：{LOCAL_SPEC_FILE.name}")
+    return spec
 
 
 def patch_source(spec: dict, check_only: bool) -> int:
@@ -119,19 +139,33 @@ def patch_uproject(spec: dict, check_only: bool) -> int:
     add_modules = [m for m in cfg.get("modules", []) if m not in have_modules]
     add_plugins = [p for p in cfg.get("plugins", []) if p not in have_plugins]
 
-    if not add_modules and not add_plugins:
+    # 引擎关联：Lyra 写的是 "5.8"（要求装了 5.8 二进制版），本机用源码引擎时
+    # 要换成注册表里的 GUID（见 lyra_patches.local.json，不进仓库）
+    want_assoc = cfg.get("set_engine_association")
+    add_assoc = bool(want_assoc) and data.get("EngineAssociation") != want_assoc
+
+    if not add_modules and not add_plugins and not add_assoc:
         print("[patch] 已打：uproject（我们的模块与插件都在）")
         return 0
 
-    print(f"[patch] uproject 待补：模块 {add_modules} 插件 {add_plugins}")
+    todo = []
+    if add_modules:
+        todo.append(f"模块 {add_modules}")
+    if add_plugins:
+        todo.append(f"插件 {add_plugins}")
+    if add_assoc:
+        todo.append(f"引擎关联 → {want_assoc}")
+    print(f"[patch] uproject 待补：" + "、".join(todo))
     if check_only:
-        return len(add_modules) + len(add_plugins)
+        return len(add_modules) + len(add_plugins) + int(add_assoc)
 
     backup(target)
     data.setdefault("Modules", []).extend({"Name": m, "Type": "Runtime", "LoadingPhase": "Default"} for m in add_modules)
     data.setdefault("Plugins", []).extend({"Name": p, "Enabled": True} for p in add_plugins)
+    if add_assoc:
+        data["EngineAssociation"] = want_assoc
     write(target, json.dumps(data, indent="\t", ensure_ascii=False) + "\n")
-    return len(add_modules) + len(add_plugins)
+    return len(add_modules) + len(add_plugins) + int(add_assoc)
 
 
 def patch_targets(spec: dict, check_only: bool) -> int:
@@ -272,7 +306,7 @@ def main() -> int:
         print(f"[patch] 缺少补丁清单：{SPEC_FILE}", file=sys.stderr)
         return 2
 
-    spec = json.loads(read(SPEC_FILE))
+    spec = load_spec()
 
     pending = 0
     pending += patch_source(spec, args.check)

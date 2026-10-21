@@ -75,6 +75,8 @@ Tools/.patched_files.txt
 Tools/.lyra_paths.txt
 Tools/.lyra_state.json
 Tools/lyra_manifest.txt
+# 本机专属覆盖（引擎 GUID 之类），不进仓库
+Tools/lyra_patches.local.json
 
 # ── 从 Lyra 拷来的东西：一律不进仓库，每次 import 重新生成 ───────────────
 # （源码也是拷来的，同样不进——这样 git status 在导入后仍然是干净的）

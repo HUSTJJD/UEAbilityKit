@@ -55,10 +55,23 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def deep_merge(base: dict, extra: dict) -> dict:
+    for key, value in extra.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
 def load_spec(spec_file: Path) -> dict:
     if not spec_file.is_file():
         return {}
-    return json.loads(spec_file.read_text(encoding="utf-8-sig", errors="ignore"))
+    spec = json.loads(spec_file.read_text(encoding="utf-8-sig", errors="ignore"))
+    local = spec_file.with_name("lyra_patches.local.json")   # 本机覆盖，不进仓库
+    if local.is_file():
+        spec = deep_merge(spec, json.loads(local.read_text(encoding="utf-8-sig", errors="ignore")))
+    return spec
 
 
 def is_declared(rel: str, spec: dict) -> bool:

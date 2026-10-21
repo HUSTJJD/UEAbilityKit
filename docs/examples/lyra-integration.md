@@ -147,6 +147,16 @@ python Tools/patch_lyra.py --revert  # 撤销（按 .orig 还原）
 
 幂等：已打过的自动跳过；每处改动先备份 `<file>.orig`。
 
+**机器相关的改动**单独放 `Tools/lyra_patches.local.json`（不进仓库，已加 `.gitignore`），
+它会合并到上面那份基线之上——比如本机用的是源码引擎，需要把 `EngineAssociation`
+从 `"5.8"` 换成注册表里的 GUID：
+
+```json
+{ "uproject": { "set_engine_association": "{12D1A55F-...}" } }
+```
+
+基线归基线、本机归本机：换台机器不会互相污染，`clean_lyra` → `import_lyra` 之后两边都能复现。
+
 ### 3. 编译
 
 ```powershell
