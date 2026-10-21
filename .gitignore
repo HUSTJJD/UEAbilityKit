@@ -49,6 +49,17 @@ desktop.ini
 # 插件本地临时文件
 *.autosave
 
+# ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
+# 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 1.4 GB，不进仓库。
+# 注意：Source/LyraGame（源码）是**进仓库**的，只有资产不进。
+Plugins/GameFeatures/
+Plugins/LyraExampleContent/
+Plugins/LyraExtTool/
+Content/ShooterCore/
+Content/ShooterMaps/
+*.uak.bak
+*.orig
+
 # MkDocs build output
 /_site/
 
@@ -57,3 +68,4 @@ desktop.ini
 *.slnx
 .vs/
 .idea/
+__pycache__

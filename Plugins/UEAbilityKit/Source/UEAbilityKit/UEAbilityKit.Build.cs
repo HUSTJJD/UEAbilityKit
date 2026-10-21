@@ -20,7 +20,8 @@ public class UEAbilityKit : ModuleRules
 		{
 			"PhysicsCore",    // FCollisionShape（碰撞查询任务）
 			"Json",           // Json 双向序列化
-			"JsonUtilities"
+			"JsonUtilities",
+			"UnrealClient"    // FScreenshotRequest：UAK.Auto.Record / Screenshot（进程外 e2e 的录屏）
 		});
 	}
 }

@@ -10,6 +10,7 @@
 #include "UEAbilityKitModule.h"
 
 #include "AbilitySystemComponent.h"
+#include "Engine/World.h"
 
 UAKGameplayAbility::UAKGameplayAbility()
 {
@@ -27,8 +28,11 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 
 	if (!AbilityAsset)
 	{
-		UE_LOG(LogUAK, Warning, TEXT("UAKGameplayAbility '%s' 未指定 AbilityAsset。"), *GetName());
-		EndAbility(Handle, ActorInfo, ActivationInfo, /*bReplicateEndAbility=*/true, /*bWasCancelled=*/true);
+		// 没有资产是**合法**的：本类是给别人当基类的。
+		// 宿主工程（例如被改造进来的 Lyra）让自己的能力基类继承本类后，
+		// 那些纯 GAS 技能（跳跃、被动）没有时间轴可跑，UAK 就该什么都不做，
+		// 而不是把技能取消掉。
+		UE_LOG(LogUAK, Verbose, TEXT("UAKGameplayAbility '%s' 未指定 AbilityAsset，按纯 GAS 技能运行。"), *GetName());
 		return;
 	}
 
@@ -47,36 +51,25 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		UAKTargeting::AppendTargetDataToContext(TriggerEventData->TargetData, Context);
 	}
 
-	// 本次施放所在的世界：溯源记录器与调试器都挂在它上面
-	UWorld* World = nullptr;
-	if (AActor* Avatar = ActorInfo->AvatarActor.Get())
-	{
-		World = Avatar->GetWorld();
-	}
-
 	// 溯源：由世界级记录器决定是否需要记录（关闭时为零开销）
-	UAKTrace* Trace = nullptr;
-	if (UAKTraceSubsystem* TraceSubsystem = World ? World->GetSubsystem<UAKTraceSubsystem>() : nullptr)
+	if (UAKTraceSubsystem* TraceSubsystem = UWorld::GetSubsystem<UAKTraceSubsystem>(ActorInfo->AvatarActor->GetWorld()))
 	{
-		Trace = TraceSubsystem->BeginTrace(AbilityAsset->GetName());
+		ActiveTrace = TraceSubsystem->BeginTrace(AbilityAsset->GetName());
 	}
 
-	ActiveTrace = Trace;
-
-	UAKAbilityInstance* Instance = NewObject<UAKAbilityInstance>(this);
-	Instance->SetTrace(Trace);
-	Instance->Initialize(AbilityAsset, Context);
-	Instance->OnFinished.BindUObject(this, &UAKGameplayAbility::HandleTimelineFinished);
-	ActiveInstance = Instance;
+	ActiveInstance = NewObject<UAKAbilityInstance>(this);
+	ActiveInstance->SetTrace(ActiveTrace);
+	ActiveInstance->Initialize(AbilityAsset, Context);
+	ActiveInstance->OnFinished.BindUObject(this, &UAKGameplayAbility::HandleTimelineFinished);
 
 	// 登记到调试器（UAK.Debug.Summary / 世界内标注 / 编辑器面板的数据源）
-	if (UAKDebugSubsystem* DebugSubsystem = World ? World->GetSubsystem<UAKDebugSubsystem>() : nullptr)
+	if (UAKDebugSubsystem* Debug = UWorld::GetSubsystem<UAKDebugSubsystem>(ActorInfo->AvatarActor->GetWorld()))
 	{
-		DebugSubsystem->RegisterInstance(Instance);
-		ActiveDebugSubsystem = DebugSubsystem;
+		Debug->RegisterInstance(ActiveInstance);
+		ActiveDebugSubsystem = Debug;
 	}
 
-	if (Instance->IsFinished())
+	if (ActiveInstance->IsFinished())
 	{
 		// 空技能（没有任务且长度为 0）：立即结束
 		HandleTimelineFinished(/*bInterrupted=*/false);
@@ -85,7 +78,7 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 
 	// 由 AbilityTask 驱动时间轴：技能结束 → 任务自动结束 → 时间轴自动收尾
 	UAKAbilityTickTask* TickTask = UAbilityTask::NewAbilityTask<UAKAbilityTickTask>(this, TEXT("UAKTimeline"));
-	TickTask->SetInstance(Instance);
+	TickTask->SetInstance(ActiveInstance);
 	TickTask->ReadyForActivation();
 }
 
@@ -99,7 +92,6 @@ void UAKGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	{
 		// 先解绑，避免 Finish() 回调再次触发 EndAbility 造成递归
 		ActiveInstance->OnFinished.Unbind();
-		ActiveInstance->Finish(bWasCancelled);
 
 		if (ActiveDebugSubsystem)
 		{
@@ -107,12 +99,25 @@ void UAKGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 			ActiveDebugSubsystem = nullptr;
 		}
 
+		ActiveInstance->Finish(bWasCancelled);
 		ActiveInstance = nullptr;
 	}
 
 	EndTrace();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UAKGameplayAbility::HandleTimelineFinished(bool bInterrupted)
+{
+	ActiveInstance = nullptr;
+	EndTrace();
+
+	if (IsActive())
+	{
+		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(),
+			/*bReplicateEndAbility=*/true, bInterrupted);
+	}
 }
 
 void UAKGameplayAbility::EndTrace()
@@ -122,27 +127,12 @@ void UAKGameplayAbility::EndTrace()
 		return;
 	}
 
-	if (AActor* Avatar = GetCurrentActorInfo() ? GetCurrentActorInfo()->AvatarActor.Get() : nullptr)
+	if (const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo())
 	{
-		if (UWorld* World = Avatar->GetWorld())
+		if (UAKTraceSubsystem* TraceSubsystem = UWorld::GetSubsystem<UAKTraceSubsystem>(ActorInfo->AvatarActor->GetWorld()))
 		{
-			if (UAKTraceSubsystem* TraceSubsystem = World->GetSubsystem<UAKTraceSubsystem>())
-			{
-				TraceSubsystem->EndTrace(ActiveTrace);
-			}
+			TraceSubsystem->EndTrace(ActiveTrace);
 		}
 	}
-
 	ActiveTrace = nullptr;
-}
-
-void UAKGameplayAbility::HandleTimelineFinished(bool bInterrupted)
-{
-	ActiveInstance = nullptr;
-
-	if (IsActive())
-	{
-		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(),
-			/*bReplicateEndAbility=*/true, bInterrupted);
-	}
 }

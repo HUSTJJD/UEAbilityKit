@@ -10,14 +10,26 @@ class UAKDebugSubsystem;
 class UAKTrace;
 
 /**
- * UAK 与 GAS 的桥接点。
+ * UAK 与 GAS 的桥接点，也是**宿主工程能力类的基类**。
  *
  * 职责划分：
  * - GAS 负责：激活、目标数据、预测、复制、冷却（CooldownGE）、消耗（CostGE）、Tag 互斥。
- * - 本类负责：把 UAKAbilityAsset 这条时间轴跑起来（创建 UAKAbilityInstance，由 UAKAbilityTickTask 驱动）。
+ * - 本类负责：把 UAKAbilityAsset 这条时间轴跑起来。
  *
  * 资产与技能解耦（N:M）：一个资产可被多个技能以不同冷却/消耗引用，
  * 一个技能也可按条件选择不同资产。
+ *
+ * ── 继承方向（重要）────────────────────────────────────────────
+ * 是**宿主继承 UAK**，不是 UAK 去适配宿主：
+ *
+ *   class UMyGameGameplayAbility : public UAKGameplayAbility { ... }
+ *
+ * 这样插件保持完整、零依赖，能服务任何游戏；具体游戏（例如被改造进来的 Lyra）
+ * 只是其中一个宿主。宿主侧只需要在自己的基类里加一句继承即可，
+ * 已有的 ActivationPolicy / Cost / Camera 等机制原样保留。
+ *
+ * AbilityAsset 为空时本类什么都不做——纯 GAS 技能（跳跃、被动）照常工作，
+ * 不会因为继承了这个基类就被取消。
  */
 UCLASS()
 class UEABILITYKIT_API UAKGameplayAbility : public UGameplayAbility

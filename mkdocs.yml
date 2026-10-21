@@ -59,6 +59,7 @@ nav:
       - 使用 UnLua 脚本: examples/04-scripting-with-unlua.md
       - 跑通示例工程: examples/05-run-the-demo.md
       - 实况联调清单: examples/06-live-trace-checklist.md
+      - Lyra 上一键体验: examples/lyra-integration.md
   - 测试与自动化: testing.md
   - 测试报告: reports/latest.md
   - Showcase: showcase.md

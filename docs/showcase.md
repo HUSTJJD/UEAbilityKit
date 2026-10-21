@@ -8,5 +8,5 @@
 ## 截图与录屏
 
 本次运行没有开启媒体采集（headless 默认关闭）。
-在本机执行 `Scripts/run_tests.ps1 -CaptureMedia` 即可产出截图与录屏。
+在本机执行 `Scripts/run_tests.ps1`（默认开采集）即可产出截图与录屏。
 

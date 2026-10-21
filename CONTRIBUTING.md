@@ -45,12 +45,13 @@
 ```powershell
 ./Scripts/build.ps1                        # UAKDemoEditor / Win64 / Development
 ./Scripts/build.ps1 -Target UAKDemo -Configuration Shipping
-./Scripts/run_tests.ps1                    # 编译 + UE Automation + 生成报告
-./Scripts/run_tests.ps1 -Filter UAK.Unit   # 仅单元测试
-./Scripts/run_tests.ps1 -CaptureMedia      # 带截图/录屏（需真实 RHI）
+./Scripts/run_tests.ps1                    # 全量：Editor + Game + DS/多客户端，默认带截图/录屏
+./Scripts/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
+./Scripts/run_tests.ps1 -Headless          # 没 GPU：只跑断言，不出素材
+./Scripts/run_tests.ps1 -Commit            # 跑完把结论提交（CI 再发布到 Pages）
 ```
 
-Linux / CI 使用 `Scripts/run_tests.sh`。报告产物落在 `docs/reports/`。
+Linux / macOS 使用 `Scripts/run_tests.sh`（参数同义）。报告产物落在 `docs/reports/` 与 `docs/showcase.md`。
 
 **PR 要求**：编译零新增警告；新增逻辑必须有对应的 UE Automation 测试；报告与文档需一并更新。
 

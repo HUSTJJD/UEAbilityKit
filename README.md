@@ -108,17 +108,46 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 
 ---
 
+## 🎮 示例宿主：改造后的 Lyra
+
+UAK 是**技能模块**，Lyra 是被改造进来当示例的游戏：
+
+```powershell
+cd Tools
+./import_lyra.ps1 -LyraPath D:\learning\LyraStarterGame    # 下载好 Lyra 5.8 后跑这一条
+```
+
+- **继承方向是 Lyra 继承 UAK**：`UGameplayAbility → UAKGameplayAbility → ULyraGameplayAbility`
+  插件零依赖、可服务任何游戏；Lyra 只是其中一个宿主
+- 拷进来的 Lyra 源码保持 Lyra 命名（保留 Epic 版权头），**只放 `Source/`，不进插件目录**
+- 资产（约 1.4 GB）由脚本从你本地的 Lyra 拷贝，不进 git；进 git 的只有源码 + 配置 + 技能 Json
+
+详见 [docs/examples/lyra-integration.md](docs/examples/lyra-integration.md)。
+
+---
+
 ## 🧪 测试与自动化
 
-测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）：
+测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）。
+
+**测试在本地一键跑，CI 只负责把结论发布到 Pages**（云端装 UE 跑测试不现实）。
+`./Scripts/run_tests.ps1` 一次跑完三个 stage：
+
+| Stage | 进程 | 覆盖 |
+|---|---|---|
+| Editor | `UnrealEditor-Cmd` | `UAK.Unit.*` / `UAK.Instance.*` / `UAK.GAS.*` / `UAK.Media.*`（逐帧截图） |
+| Game | `UnrealEditor-Cmd -game` | 真实游戏世界里的技能表现，逐帧录屏 |
+| Net | 1 个 `-server` + N 个 `-game` | 各端导出 GAS 快照，比对**属性是否收敛到同一个值** |
 
 | 层级 | 前缀 | 覆盖 |
 |---|---|---|
 | 单元 | `UAK.Unit.*` | Json 往返、校验规则、执行计划展开、编辑器元数据、查询过滤器 |
 | 实例 | `UAK.Instance.*` | 真跑一次 `UAKAbilityInstance`：时序、门控、中断顺序、保证执行、循环、引导、Branch、溯源 |
 | 集成 | `UAK.GAS.*` | 真的建 ASC 与属性集，验证 GE 落到属性、条件判定 |
+| 表现 | `UAK.Media.*` | 逐帧截图 + 血缘树文本（没开采集时自动跳过） |
+| 进程外 | `UAK.E2E.*` / `UAK.Net.Converge.*` | `UAK.Auto.*` 命令在 Game / DS 进程里的结论 |
 
-"实例测试"的原则是**不 mock**：需要世界就建临时 `EditorPreview` 世界，需要 GE 就用 C++ 定义的 GE 类，所以 CI 里没有内容资产也能跑出真实结论。
+"实例测试"的原则是**不 mock**：需要世界就建临时 `EditorPreview` 世界，需要 GE 就用 C++ 定义的 GE 类，所以没有内容资产也能跑出真实结论。
 
 一次运行自动产出：
 
@@ -126,6 +155,7 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 |---|---|
 | 结论（Markdown / HTML / JSON） | `docs/reports/latest.{md,html,json}` |
 | 截图 / 录屏（ffmpeg 合成） | `docs/reports/media/**` |
+| 多端一致性表 | `docs/reports/latest.md` 的「多端一致性」章节 |
 | Showcase（由素材自动生成） | `docs/showcase.md` |
 
 详见 [docs/testing.md](docs/testing.md)。

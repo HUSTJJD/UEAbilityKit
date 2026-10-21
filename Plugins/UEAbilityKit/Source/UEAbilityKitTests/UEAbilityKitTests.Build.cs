@@ -23,7 +23,8 @@ public class UEAbilityKitTests : ModuleRules
 			"Slate",
 			"SlateCore",
 			"UnrealEd",          // 编辑器上下文自动化（FAutomationEditorCommonUtils 等）
-			"AssetRegistry"
+			"AssetRegistry",
+			"UnrealClient"       // FScreenshotRequest：逐帧截图（录屏素材）
 		});
 	}
 }

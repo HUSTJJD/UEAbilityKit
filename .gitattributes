@@ -1,23 +1,8 @@
-# 文本：统一换行，diff 友好
-* text=auto eol=lf
+# 测试素材（截图 / 录屏）走 Git LFS：mp4 / png 直接进 git 会把历史撑爆。
+# 需要本机装了 git-lfs（git lfs install）才能受益；没装也不影响提交，只是文件照常入库。
+docs/reports/media/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+docs/reports/media/**/*.png filter=lfs diff=lfs merge=lfs -text
 
-*.h      text
-*.cpp    text
-*.inl    text
-*.cs     text
-*.json   text
-*.uplugin text
-*.md     text
-*.txt    text
-LICENSE  text
-NOTICE   text
-
-# 二进制：不参与 diff
-*.uasset binary
-*.umap   binary
-*.png    binary
-*.jpg    binary
-*.psd    binary
-*.wav    binary
-*.mp3    binary
-*.fbx    binary
+# 文本结论正常入库（要能 diff）
+docs/reports/*.md text eol=lf
+docs/reports/*.json text eol=lf

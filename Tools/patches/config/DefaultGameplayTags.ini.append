@@ -1,0 +1,9 @@
+; ---- UAK 追加（Tools/patch_lyra.py 写入，勿手改）----
+; Lyra 的 DefaultGameplayTags.ini 是基线，我们只把自己的 Tag 追加在后面。
+;
+; 说明：UAK 插件自带的 Tag（如 UAK.Test.Tag）是 C++ 原生注册的，不需要写在这里。
+; 只有项目自己新增、且希望被 Tag 字典收录的 Tag 才写进来，例如：
+;
+; +GameplayTagList=(Tag="Ability.UAK.Melee",Comment="UAK 近战技能")
+;
+; 追加后重跑 `python Tools/patch_lyra.py` 是幂等的（已存在就不会重复写）。
