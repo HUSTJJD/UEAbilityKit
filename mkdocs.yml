@@ -62,8 +62,6 @@ nav:
   - 测试与自动化: testing.md
   - 测试报告: reports/latest.md
   - Showcase: showcase.md
-  - 调研:
-      - Able 与 AbilityKit 调研: research/Able与AbilityKit调研及命名提案.md
 
 markdown_extensions:
   - admonition

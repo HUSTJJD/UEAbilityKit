@@ -2,7 +2,7 @@
 
 ## M0 — 仓库与插件骨架 ✅
 
-- [x] 仓库治理：`README` / `NOTICE` / `LICENSE`(Apache-2.0) / `.gitignore` / `.gitattributes`
+- [x] 仓库治理：`README` / `NOTICE` / `LICENSE`(PolyForm Small Business 1.0.0，2026-10-21 由 Apache-2.0 变更) / `CLA.md` / `CONTRIBUTING.md` / `.gitignore` / `.gitattributes`
 - [x] 插件骨架：`UEAbilityKit.uplugin` + Runtime 模块 + Editor 模块
 - [x] 资产模型：`UAKAbilityAsset`（时间轴数据）
 - [x] Task 基类：`UAKAbilityTaskBase`

@@ -8,7 +8,7 @@ _技能是一条时间轴，逻辑全部落到 GAS，配置是可 diff 的纯数
 
 [![Stars](https://img.shields.io/github/stars/HUSTJJD/UEAbilityKit?style=for-the-badge&color=gold&label=⭐%20Star)](https://github.com/HUSTJJD/UEAbilityKit/stargazers)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.8-ff3b30?style=for-the-badge&logo=unrealengine&logoColor=white)](https://www.unrealengine.com/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm%20Small%20Business%201.0.0-orange?style=for-the-badge)](LICENSE)
 [![Docs](https://img.shields.io/badge/Docs-MkDocs%20Material-526CFE?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
 [![中文](https://img.shields.io/badge/语言-中文-2496ed?style=for-the-badge)](https://hustjjd.github.io/UEAbilityKit/)
 [![脚本方案](https://img.shields.io/badge/脚本方案-UnLuaNova-0052cc?style=for-the-badge)](https://github.com/HUSTJJD/UnLuaNova)
@@ -151,7 +151,8 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 │  └─ Demo/Abilities/*.json         ← 技能资产示例（Json，可 diff）
 ├─ docs/                            ← 设计 / 示例 / 测试 / 报告 / Showcase
 ├─ mkdocs.yml                       ← GitHub Pages 站点配置
-└─ LICENSE                          ← Apache-2.0
+├─ LICENSE                          ← PolyForm Small Business 1.0.0
+└─ LICENSE-COMMERCIAL.md            ← 商业授权说明
 ```
 
 ---
@@ -222,7 +223,6 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 | 接入示例 | [最小多人配置](docs/examples/01-minimal-multiplayer-setup.md) · [冷却消耗堆叠](docs/examples/02-cooldown-cost-stacking.md) · [示例工程](docs/examples/03-sample-project.md) · [UnLua 脚本](docs/examples/04-scripting-with-unlua.md) · [跑通示例](docs/examples/05-run-the-demo.md) · [实况联调清单](docs/examples/06-live-trace-checklist.md) |
 | 测试 | [docs/testing.md](docs/testing.md) |
 | Showcase | [docs/showcase.md](docs/showcase.md)（由测试产物自动生成） |
-| 调研 | [Able 与 AbilityKit 调研](docs/research/Able与AbilityKit调研及命名提案.md) |
 
 **开发 / 验证环境**
 
@@ -245,4 +245,12 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 
 ## 📄 License
 
-Apache License 2.0，见 [LICENSE](LICENSE)。
+本项目采用 **PolyForm Small Business License 1.0.0**（源码可得 / Source Available，**非 OSI 开源许可**），见 [LICENSE](LICENSE)。
+
+- **免费**：团队人数 < 100 人且上一税务年度总收入 < 1,000,000 USD（2019 年基准，按 CPI 调整）；个人学习、教学与非商业用途同样免费。
+- **需付费**：超过上述规模 / 营收门槛的主体用于商业项目、外包交付、再分发或以本项目变现，须先取得商业授权。
+
+商业授权范围、档位与联系方式见 [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md)。
+
+提交 PR 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 并签署 [CLA](CLA.md)（企业贡献需 CCLA）。
+第三方组件（`Plugins/UnLuaNova` 等）仍按其各自的 MIT / Lua / Epic 许可执行，详见该文档第 6 节与 [NOTICE](NOTICE)。

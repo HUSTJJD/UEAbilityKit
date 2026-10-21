@@ -1,17 +1,39 @@
-UEAbilityKit (UAK) — UE5 技能编辑器
+UEAbilityKit (UAK) — 基于 GAS 的 UE5 技能时间轴编排框架
 Copyright 2026 UEAbilityKit contributors
+https://github.com/HUSTJJD/UEAbilityKit
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+--------------------------------------------------------------------------
+许可
+--------------------------------------------------------------------------
+本项目以 PolyForm Small Business License 1.0.0 授权，属于「源码可得 /
+Source Available」模式，**不是** OSI 认证的自由/开源许可。完整条款见
+仓库根目录 LICENSE，或：
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://polyformproject.org/licenses/small-business/1.0.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+摘要（一切以 LICENSE 原文为准）：
+
+  - 免费：你方（含关联公司）雇佣人数 < 100 人，且上一税务年度总收入
+    < 1,000,000 USD（2019 年基准，按美国 CPI 逐年调整）。个人学习、
+    教学与非商业用途同样免费（额外授权见 LICENSE-COMMERCIAL.md 第 5 节）。
+  - 需付费：超过上述规模 / 营收门槛的主体，用于任何商业项目、外包交付、
+    再分发，或以本项目变现，须先取得书面商业授权。
+  - 商业授权范围、档位与联系方式见 LICENSE-COMMERCIAL.md。
+
+本项目原先采用 Apache License 2.0，自 2026-10-21 起变更为 PolyForm Small
+Business 1.0.0。Apache-2.0 下的授权不可撤销：在该变更日之前已依 Apache-2.0
+取得副本的被授权人，可继续按 Apache-2.0 的条款使用当时获取的那个版本；
+该使用不扩展至变更日之后的新版本。
+（以上为对既有授权法律效果的说明，非法律意见。）
+
+--------------------------------------------------------------------------
+贡献与再授权
+--------------------------------------------------------------------------
+所有外部贡献均需签署贡献者许可协议（CLA），见 CLA.md 与 CONTRIBUTING.md。
+贡献者保留其贡献的著作权，并授予维护者永久、全球、免版税、不可撤销的许
+可，可将其贡献以 PolyForm Small Business 1.0.0 或任何专有 / 商业许可对外
+再许可与分发 —— 这是本项目得以提供商业授权的前提。
+贡献为无偿行为，贡献者不就本项目的商业授权收入主张任何分成或报酬。
 
 --------------------------------------------------------------------------
 商标声明
@@ -19,19 +41,33 @@ limitations under the License.
 Unreal(R) 是 Epic Games, Inc. 在美国及其他地区的商标或注册商标。
 本项目为社区独立项目，并非 Epic Games 官方产品，也未获得 Epic Games 的
 认可、赞助或授权。本项目不使用 Epic Games 的官方 Logo、字体与配色。
-本项目的存在依赖于 Unreal(R) Engine，仅作描述性与指代性使用。
+本项目的存在依赖于 Unreal(R)  Engine，仅作描述性与指代性使用。
 
 --------------------------------------------------------------------------
 第三方与参考声明
 --------------------------------------------------------------------------
-1) AbilityKit (https://github.com/HOBOBO/AbilityKit), MIT License.
+以下组件**不包含**在本项目的 PolyForm 授权范围内，仍按各自许可执行，
+使用者需自行遵守其条款：
+
+1) UnLuaNova（Plugins/UnLuaNova/）—— MIT License。
+   Copyright (C) 2019 Tencent. All rights reserved.
+   Tencent/UnLua 的社区续作，提供示例工程的脚本层。
+   完整条款见 Plugins/UnLuaNova/LICENSE.TXT。
+   其内含的第三方：Lua 5.3.4（MIT，Copyright (C) 1994-2019 Lua.org,
+   PUC-Rio）、Luau（MIT，Roblox Corporation）、isocline 及
+   bench 目录下的其他组件（各自独立许可，随其源码分发）。
+
+2) Content/AnimationAssets/ 中的 UE4 Mannequin —— 源自 Epic Games 示例
+   内容，遵循 Epic Games 相关内容许可条款。
+
+3) AbilityKit (https://github.com/HOBOBO/AbilityKit), MIT License。
    本项目在"架构思想"层面参考了其关于技能管线（Pipeline）、事件触发
    （Triggering）、强类型 Action Schema、溯源（Trace）与配置治理的设计
    思路。
    AbilityKit 为 Unity / 纯 C# 实现；本项目为 Unreal Engine / C++ 的独立
    实现，未复制、未派生、未翻译其任何源码，也未使用其任何资源文件。
 
-2) Able (Extra Life Studios, LLC) — 商业 UE 插件。
+4) Able (Extra Life Studios, LLC) — 商业 UE 插件。
    本项目仅参考其公开可见的编辑器交互模式（时间轴编排、任务验证器、
    预览视口等通用做法）。本项目未复用 Able 的任何源码、资源（.uasset /
    图片）与文档文案，与其无隶属、授权或衍生关系。
@@ -41,4 +77,5 @@ Unreal(R) 是 Epic Games, Inc. 在美国及其他地区的商标或注册商标�
 引擎相关
 --------------------------------------------------------------------------
 使用、修改或分发本插件中的 Unreal Engine 相关部分，仍需遵守 Epic Games
-的 Unreal(R) Engine EULA 与相关条款。
+的 Unreal(R) Engine EULA 与相关条款。本项目的授权不授予任何 Unreal(R)
+Engine 本身的权利。

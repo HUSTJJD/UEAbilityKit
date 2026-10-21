@@ -153,7 +153,6 @@ flowchart LR
 - :material-school: [**示例**](examples/03-sample-project.md) — 最小多人配置、冷却 / 消耗 / 堆叠、UnLua 脚本
 - :material-test-tube: [**测试与自动化**](testing.md) — 用例分层、一键脚本、报告与素材生成
 - :material-image-multiple: [**Showcase**](showcase.md) — 由测试产物自动生成
-- :material-magnify: [**调研**](research/Able与AbilityKit调研及命名提案.md) — Able 与 AbilityKit 调研及命名提案
 
 </div>
 
@@ -166,4 +165,5 @@ flowchart LR
 ## 仓库
 
 - GitHub：[HUSTJJD/UEAbilityKit](https://github.com/HUSTJJD/UEAbilityKit)
-- License：Apache-2.0
+- License：PolyForm Small Business 1.0.0（源码可得 / Source Available，非 OSI 开源许可）；商业授权见 `LICENSE-COMMERCIAL.md`
+- 贡献：需先签署 CLA，见 `CONTRIBUTING.md` / `CLA.md`
