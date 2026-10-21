@@ -94,7 +94,7 @@
       ApplyGE 记 GE→SetByCaller→目标，CollisionQuery 记命中目标
 - [x] 多人接入示例：[examples/01-minimal-multiplayer-setup.md](examples/01-minimal-multiplayer-setup.md)
 - [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
-- [x] 多人示例：`Source/UAKDemo/` —— 工程自带的示例模块
+- [x] 多人示例：`Plugins/UEAbilityKit/Source/UAKDemo/` —— 工程自带的示例模块
       （ASC + 属性集 + 带冷却/消耗的技能）
 - [x] **脚本方案**：`Plugins/UnLuaNova` 以 git submodule 引入，仅示例模块依赖；
       UAK 插件本身不依赖任何脚本系统（核心 C++，扩展用 Lua）

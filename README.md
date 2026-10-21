@@ -170,7 +170,7 @@ cd Tools
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
 ├─ UAKDemo.uproject                 ← 示例工程
-├─ Source/UAKDemo/                  ← 示例游戏模块（属性集 / 角色 / 技能）
+├─ Plugins/UEAbilityKit/Source/UAKDemo/                  ← 示例游戏模块（属性集 / 角色 / 技能）
 ├─ Plugins/
 │  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
 │  │  └─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}

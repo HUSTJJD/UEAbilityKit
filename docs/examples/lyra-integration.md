@@ -10,7 +10,7 @@
 ```
 Plugins/UEAbilityKit/              ← 产品插件：零依赖，可服务任何游戏
    ├─ Source/UEAbilityKit/         ← 核心（时间轴、任务、GAS 桥接）
-   ├─ Source/UAKDemo/              ← 示例模块（随插件走，不单独成工程）
+   ├─ Plugins/UEAbilityKit/Source/UAKDemo/              ← 示例模块（随插件走，不单独成工程）
    └─ Source/UEAbilityKitTests/    ← 测试
 Source/LyraGame/                   ← 拷进来的 Lyra（保持 Lyra 命名，保留 Epic 版权头）
 Source/LyraAdapt/                  ← 适配层：唯一同时认识 Lyra 与 UAK 的地方

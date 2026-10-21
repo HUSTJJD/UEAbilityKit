@@ -3,7 +3,7 @@
 > 目标：让一条 UAK 技能在 Listen Server + 1 Client 下正确预测与复制。
 > **UAK 不提供任何网络代码**——网络正确性来自"所有副作用都落在 GAS 原语上"。
 >
-> 配套可编译示例：`Source/UAKDemo/`（工程自带的示例模块，含 ASC / 属性集 / 示例技能），
+> 配套可编译示例：`Plugins/UEAbilityKit/Source/UAKDemo/`（工程自带的示例模块，含 ASC / 属性集 / 示例技能），
 > 使用步骤见 [03-sample-project.md](03-sample-project.md)。
 
 ## 1. ASC 放哪

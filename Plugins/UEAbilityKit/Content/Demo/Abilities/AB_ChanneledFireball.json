@@ -1,0 +1,110 @@
+{
+	"version": 1,
+	"asset": "AB_ChanneledFireball",
+	"displayName": "引导火球",
+	"description": "演示引导（Channeling）：引导窗口内必须保持「几乎不动」，否则按 CancelAbility 打断；成功后按 Sequence 编排依次发射三发。",
+	"assetVersion": 1,
+
+	"length": 2.5,
+	"playRate": 1.0,
+	"frameRate": 30,
+	"loop": false,
+	"loopStartTime": 0.0,
+	"maxLoops": 0,
+
+	"abilityTags": "",
+	"cancelAbilitiesWithTag": "",
+	"blockAbilitiesWithTag": "",
+	"requiredTags": "",
+
+	"markers": [
+		{ "name": "ChannelStart", "time": 0.2 },
+		{ "name": "Cast", "time": 2.0 }
+	],
+
+	"channeled": true,
+	"channelingStartTime": 0.2,
+	"channelingEndTime": 2.0,
+	"channelFailureAction": "EAKChannelFailureAction::CancelAbility",
+	"evaluateChannelingOnAuthorityOnly": true,
+	"channelingConditions": [
+		{
+			"$type": "UAKChanneling_MovementCondition",
+			"speedThreshold": 30.0
+		},
+		{
+			"$type": "UAKDemoChanneling_InputHeld",
+			"slotIndex": 1
+		}
+	],
+
+	"tracks": [
+		{
+			"name": "Cast",
+			"type": "EAKTrackType::Main",
+			"enabled": true,
+			"compositeMode": "EAKTrackCompositeMode::Sequence",
+			"repeatCount": 1,
+			"repeatInterval": 0.0,
+			"startDelay": 2.0,
+			"tasks": [
+				{
+					"$type": "UAKAbilityTask_ApplyGameplayEffect",
+					"taskId": "Fireball01",
+					"startTime": 0.0,
+					"duration": 0.0,
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
+					"level": 1.0,
+					"applyToSelfIfNoTarget": false,
+					"setByCaller": {
+						"Damage": 25.0
+					},
+					"note": "Sequence 模式下 startTime 被忽略，依次执行"
+				},
+				{
+					"$type": "UAKAbilityTask_ApplyGameplayEffect",
+					"taskId": "Fireball02",
+					"startTime": 0.0,
+					"duration": 0.0,
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
+					"level": 1.0,
+					"applyToSelfIfNoTarget": false,
+					"setByCaller": {
+						"Damage": 25.0
+					}
+				},
+				{
+					"$type": "UAKAbilityTask_ApplyGameplayEffect",
+					"taskId": "Fireball03",
+					"startTime": 0.0,
+					"duration": 0.0,
+					"effectClass": "/Script/UAKDemo.UAKDemoGE_FireballDamage",
+					"level": 1.0,
+					"applyToSelfIfNoTarget": false,
+					"setByCaller": {
+						"Damage": 25.0
+					}
+				}
+			]
+		},
+		{
+			"name": "ChannelVFX",
+			"type": "EAKTrackType::Presentation",
+			"enabled": true,
+			"compositeMode": "EAKTrackCompositeMode::Timeline",
+			"repeatCount": 1,
+			"repeatInterval": 0.0,
+			"startDelay": 0.0,
+			"tasks": [
+				{
+					"$type": "UAKAbilityTask_SendGameplayCue",
+					"taskId": "ChannelLoop",
+					"startTime": 0.2,
+					"duration": 1.8,
+					"cueTag": "GameplayCue.Ability.Fireball.Channel",
+					"operation": "EAKCueOperation::Add"
+				}
+			]
+		}
+	]
+}

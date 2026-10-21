@@ -18,6 +18,7 @@
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "GameFramework/PlayerStart.h"
+#include "Interfaces/IPluginManager.h"
 #include "Misc/FileHelper.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -29,9 +30,32 @@ DEFINE_LOG_CATEGORY_STATIC(LogUAKDemoSetup, Log, All);
 
 namespace
 {
-	const TCHAR* DemoContentRoot = TEXT("/Game/Demo");
-	const TCHAR* AbilityFolder = TEXT("/Game/Demo/Abilities");
-	const TCHAR* MapPath = TEXT("/Game/Demo/Maps/L_Demo");
+	/**
+	 * 示例资产放在**插件自己的 Content** 里，插件自己管。
+	 *
+	 * 插件名 UEAbilityKit 的 Content 挂载点是 /UEAbilityKit/，
+	 * 所以资产路径也跟着换：/Game/Demo/... → /UEAbilityKit/Demo/...
+	 * 这样插件被拷到任何工程（Lyra 也好、空工程也好）都能一键生成示例，
+	 * 不会往宿主工程的 Content 里写东西。
+	 */
+	const TCHAR* PluginName = TEXT("UEAbilityKit");
+	const TCHAR* PluginMount = TEXT("/UEAbilityKit");
+
+	const TCHAR* DemoContentRoot = TEXT("/UEAbilityKit/Demo");
+	const TCHAR* AbilityFolder = TEXT("/UEAbilityKit/Demo/Abilities");
+	const TCHAR* MapPath = TEXT("/UEAbilityKit/Demo/Maps/L_Demo");
+
+	/** 插件的 Content 目录（磁盘路径）；找不到插件时退回工程目录 */
+	FString GetPluginContentDir()
+	{
+		if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(PluginName))
+		{
+			return FPaths::ConvertRelativePathToFull(Plugin->GetContentDir());
+		}
+
+		UE_LOG(LogUAKDemoSetup, Warning, TEXT("找不到插件 %s，退回工程 Content 目录"), PluginName);
+		return FPaths::ProjectContentDir();
+	}
 
 	/** 建一个资产（不用 Factory：插件的 Factory 在编辑器模块里，这里拿不到） */
 	template <class T>
@@ -132,7 +156,16 @@ UUAKDemoSetupCommandlet::UUAKDemoSetupCommandlet()
 
 int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 {
-	UE_LOG(LogUAKDemoSetup, Display, TEXT("=== UAK 示例工程搭建 ==="));
+	UE_LOG(LogUAKDemoSetup, Display, TEXT("=== UAK 示例资产搭建（资产全部落在插件自己的 Content 里）==="));
+
+	TArray<FString> Tokens;
+	TArray<FString> Switches;
+	TMap<FString, FString> ParamMap;
+	ParseCommandLine(*Params, Tokens, Switches, ParamMap);
+
+	// 默认**不**改宿主的 GameDefaultMap：宿主可能是 Lyra，
+	// 把默认地图换成示例关卡会顶掉它自己的流程。需要时显式加 -SetDefaultMap。
+	const bool bSetDefaultMap = Switches.Contains(TEXT("SetDefaultMap"));
 
 	// ── 1. 技能资产（Json → 资产）───────────────────────────────────
 	TArray<UAKAbilityAsset*> AbilityAssets;
@@ -165,7 +198,7 @@ int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 	AActor* CharacterCDO = CharacterBP->GeneratedClass->GetDefaultObject<AActor>();
 
 	if (USkeletalMesh* Mannequin = LoadObject<USkeletalMesh>(nullptr,
-		TEXT("/Game/AnimationAssets/UE4_Mannequin/Mesh/SK_Mannequin.SK_Mannequin")))
+		*(FString::Printf(TEXT("%s/AnimationAssets/UE4_Mannequin/Mesh/SK_Mannequin.SK_Mannequin"), PluginMount)))
 	{
 		if (USkeletalMeshComponent* MeshComp = CharacterCDO->FindComponentByClass<USkeletalMeshComponent>())
 		{
@@ -205,14 +238,21 @@ int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 	// ── 5. 设为默认地图并保存 ────────────────────────────────────────
 	// 直接改工程里的 Config/DefaultEngine.ini：GConfig->Flush 只会写进
 	// Saved/Config（本机用户配置），不会落到仓库里——那样"打开工程就落在示例关卡"就不成立了。
-	FString IniError;
-	if (!SetProjectDefaultMap(MapPath, IniError))
+	if (bSetDefaultMap)
 	{
-		UE_LOG(LogUAKDemoSetup, Warning, TEXT("设置默认地图失败：%s（可在编辑器里手动设置）"), *IniError);
+		FString IniError;
+		if (!SetProjectDefaultMap(MapPath, IniError))
+		{
+			UE_LOG(LogUAKDemoSetup, Warning, TEXT("设置默认地图失败：%s（可在编辑器里手动设置）"), *IniError);
+		}
+		else
+		{
+			UE_LOG(LogUAKDemoSetup, Display, TEXT("  ✓ Config/DefaultEngine.ini：GameDefaultMap=%s"), MapPath);
+		}
 	}
 	else
 	{
-		UE_LOG(LogUAKDemoSetup, Display, TEXT("  ✓ Config/DefaultEngine.ini：GameDefaultMap=%s"), MapPath);
+		UE_LOG(LogUAKDemoSetup, Display, TEXT("  · 未指定 -SetDefaultMap：不动宿主的 GameDefaultMap"));
 	}
 
 	UEditorLoadingAndSavingUtils::SaveDirtyPackages(/*bSaveMapPackages=*/true, /*bSaveContentPackages=*/true);
@@ -223,7 +263,8 @@ int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 
 int32 UUAKDemoSetupCommandlet::CreateAbilityAssets(TArray<UAKAbilityAsset*>& OutAssets)
 {
-	const FString JsonDir = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("Demo"), TEXT("Abilities"));
+	// Json 也在插件的 Content 里（Plugins/UEAbilityKit/Content/Demo/Abilities）
+	const FString JsonDir = FPaths::Combine(GetPluginContentDir(), TEXT("Demo"), TEXT("Abilities"));
 
 	TArray<FString> JsonFiles;
 	IFileManager::Get().FindFiles(JsonFiles, *FPaths::Combine(JsonDir, TEXT("*.json")), true, false);

@@ -32,7 +32,7 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 | UnLua | UAK |
 |---|---|
 | `UnLuaNovaDemo.uproject` | `UAKDemo.uproject` |
-| `Source/UnLuaNovaDemo/`（示例游戏代码） | `Source/UAKDemo/`（示例游戏代码） |
+| `Source/UnLuaNovaDemo/`（示例游戏代码） | `Plugins/UEAbilityKit/Source/UAKDemo/`（示例游戏代码） |
 | `Plugins/UnLuaNova/`（库） | `Plugins/UEAbilityKit/`（库） |
 | `Plugins/UnLuaNovaTestSuite/` | ——（暂无，CI 用 `UAKValidateCommandlet` 代替） |
 | `Docs/` | `docs/` |
@@ -41,9 +41,9 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 
 | 文件 | 内容 |
 |---|---|
-| `Source/UAKDemo/UAKDemoAttributeSet.h/.cpp` | Health / MaxHealth / Mana / MaxMana，含属性复制与夹取 |
-| `Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能 |
-| `Source/UAKDemo/UAKDemoAbility.h/.cpp` | `UAKGameplayAbility` 的最小子类，`CommitAbility` 走冷却与消耗 |
+| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAttributeSet.h/.cpp` | Health / MaxHealth / Mana / MaxMana，含属性复制与夹取 |
+| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能 |
+| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAbility.h/.cpp` | `UAKGameplayAbility` 的最小子类，`CommitAbility` 走冷却与消耗 |
 
 ## 3. 怎么用
 

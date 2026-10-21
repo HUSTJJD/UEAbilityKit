@@ -6,7 +6,7 @@
 
 角色与动画，**来自 UnLuaNova 示例工程**（[HUSTJJD/UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)，MIT；其中的 UE4 Mannequin 来自 Epic 示例内容）。
 
-原样保留了目录路径 `/Game/AnimationAssets/...`，这样资产之间的内部引用（骨骼、材质、贴图）不会断。
+原样保留了目录路径 `/UEAbilityKit/AnimationAssets/...`，这样资产之间的内部引用（骨骼、材质、贴图）不会断。
 
 ```
 AnimationAssets/
@@ -39,7 +39,7 @@ AnimationAssets/
 导入：编辑器里打开一个 `Ability Asset`，用 UAK 编辑器的 Json 导入功能载入这些文件
 （或直接改好后用「导出」回写，格式与 `UAKAbilityJsonSerializer` 完全一致）。
 
-> 这两个 Json 里引用的 `/Game/Demo/GE_*` 与 `GameplayCue.*` 需要你先创建，见下节。
+> 这两个 Json 里引用的 `/UEAbilityKit/Demo/GE_*` 与 `GameplayCue.*` 需要你先创建，见下节。
 > 缺资产时导入不会报错，对应任务只是拿不到 GE / Cue。
 
 ## Script/
@@ -62,10 +62,10 @@ UnrealEditor-Cmd.exe UAKDemo.uproject -run=UAKDemoSetup -unattended -nosplash
 
 | 以前要手工建 | 现在 |
 |---|---|
-| `GE_MeleeDamage` / `GE_FireballDamage` / `GE_Cooldown_Sample` / `GE_Cost_Sample` | C++ 类 `Source/UAKDemo/UAKDemoEffects.h`（不进仓库二进制，冷却 Tag 用原生 Tag 注册） |
+| `GE_MeleeDamage` / `GE_FireballDamage` / `GE_Cooldown_Sample` / `GE_Cost_Sample` | C++ 类 `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoEffects.h`（不进仓库二进制，冷却 Tag 用原生 Tag 注册） |
 | `BP_SampleAbility` | 命令生成，CDO 自动填好 `AbilityAsset` / 冷却 / 消耗 |
 | `BP_DemoCharacter` | 命令生成，自动挂 `SK_Mannequin` 与默认技能 |
-| 关卡 + `GameDefaultMap` | `/Game/Demo/Maps/L_Demo`，并写进 `Config/DefaultEngine.ini` |
+| 关卡 + `GameDefaultMap` | `/UEAbilityKit/Demo/Maps/L_Demo`，并写进 `Config/DefaultEngine.ini` |
 
 只有 **GameplayCue** 仍建议按需建（没有对应 GC 蓝图时 Cue 只是空转，不影响逻辑）：
 在项目设置或 `DefaultGameplayTags.ini` 里加

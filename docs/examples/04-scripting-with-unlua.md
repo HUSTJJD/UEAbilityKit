@@ -59,7 +59,7 @@ Plugins/UnLuaNova/                          ← submodule 根（UnLuaNova 工程
 只有**示例模块**依赖脚本系统，UAK 插件本身不依赖任何脚本：
 
 ```csharp
-// Source/UAKDemo/UAKDemo.Build.cs
+// Plugins/UEAbilityKit/Source/UAKDemo/UAKDemo.Build.cs
 PublicDependencyModuleNames.AddRange(new[] {
     "Core", "CoreUObject", "Engine",
     "GameplayAbilities", "GameplayTags",

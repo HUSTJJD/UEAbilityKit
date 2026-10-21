@@ -9,7 +9,7 @@
 |---|---|
 | 示例工程能进 PIE | 打开 `UAKDemo.uproject`，关卡里有 `BP_DemoCharacter` 并设为 `GameDefaultMap` |
 | 角色被授予了技能 | `BP_DemoCharacter` 的 `Default Abilities` 里填了 `UAKDemoAbility` 的蓝图子类 |
-| 技能指向了资产 | 该技能的 `AbilityAsset` 字段指向一个 `Ability Asset`（可用 `Content/Demo/Abilities/*.json` 导入） |
+| 技能指向了资产 | 该技能的 `AbilityAsset` 字段指向一个 `Ability Asset`（可用 `Plugins/UEAbilityKit/Content/Demo/Abilities/*.json` 导入） |
 | Lua 后端可用（PIE 不崩） | PIE 启动后日志里能看到 `[UAKDemo] Character BeginPlay` |
 
 ## 2. 开启记录
