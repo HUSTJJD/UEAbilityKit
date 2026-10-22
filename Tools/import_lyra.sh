@@ -103,21 +103,19 @@ else
 fi
 
 # ── 1. 拷源码 ────────────────────────────────────────────────────────────
-# 排除：Settings / Hotfix / Performance / Replays / Development / Tests
-LYRA_DIRS=(
-  AbilitySystem Animation Audio Camera Character Cosmetics
-  Equipment Feedback GameFeatures GameModes Input Interaction
-  Inventory Messages Physics Player System Teams Weapons UI
-)
+# Lyra 这几个子目录互相引用（System → Hotfix、GameModes → Replays、
+# UI/PerformanceStats → Performance、Cosmetics → Development、Input → Settings、
+# Player → Tests/LyraGameplayRpcRegistrationComponent.h），
+# 按白名单挑目录拷是不行的：少拷一个 LyraGame 就编不过。所以整拷 LyraGame。
 
 for f in "$LYRA_PATH"/Source/LyraGame/*; do
   [[ -f "$f" ]] || continue
   copy_lyra "$f" "Source/LyraGame/$(basename "$f")"
 done
 
-for dir in "${LYRA_DIRS[@]}"; do
-  src="$LYRA_PATH/Source/LyraGame/$dir"
-  [[ -d "$src" ]] || { echo "[import] Lyra 里没有 $dir，跳过"; continue; }
+for src in "$LYRA_PATH"/Source/LyraGame/*/; do
+  [[ -d "$src" ]] || continue
+  dir="$(basename "$src")"
   copy_lyra "$src" "Source/LyraGame/$dir"
   MANIFEST+=("Source/LyraGame/$dir")
   echo "[import] 源码：$dir"

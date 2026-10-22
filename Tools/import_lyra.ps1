@@ -136,23 +136,19 @@ else {
 
 # ── 1. 拷源码 ───────────────────────────────────────────────────────────
 # "完整可玩"需要的模块：能力 / 角色 / 玩家 / 输入 / 相机 / 武器 / 装备 / 库存 / 队伍 / UI 等。
-# 刻意排除：Settings、Hotfix、Performance、Replays、Development、Tests（与技能主线无关）。
-$LyraDirs = @(
-    'AbilitySystem', 'Animation', 'Audio', 'Camera', 'Character', 'Cosmetics',
-    'Equipment', 'Feedback', 'GameFeatures', 'GameModes', 'Input', 'Interaction',
-    'Inventory', 'Messages', 'Physics', 'Player', 'System', 'Teams', 'Weapons', 'UI'
-)
+# Lyra 这几个子目录互相引用（System → Hotfix、GameModes → Replays、
+# UI/PerformanceStats → Performance、Cosmetics → Development、Input → Settings、
+# Player → Tests/LyraGameplayRpcRegistrationComponent.h），
+# 按白名单挑目录拷是不行的：少拷一个 LyraGame 就编不过。所以整拷 LyraGame。
 
 foreach ($file in Get-ChildItem -Path (Join-Path $LyraPath 'Source\LyraGame') -File -ErrorAction SilentlyContinue) {
     Copy-Lyra -Src $file.FullName -Rel "Source\LyraGame\$($file.Name)"
 }
 
-foreach ($dir in $LyraDirs) {
-    $src = Join-Path $LyraPath "Source\LyraGame\$dir"
-    if (-not (Test-Path $src)) { Write-Warning "[import] Lyra 里没有 $dir，跳过"; continue }
-    Copy-Lyra -Src $src -Rel "Source\LyraGame\$dir" -Dir
-    $script:Manifest.Add("Source/LyraGame/$dir")
-    Write-Host "[import] 源码：$dir"
+foreach ($dir in Get-ChildItem -Path (Join-Path $LyraPath 'Source\LyraGame') -Directory -ErrorAction SilentlyContinue) {
+    Copy-Lyra -Src $dir.FullName -Rel "Source\LyraGame\$($dir.Name)" -Dir
+    $script:Manifest.Add("Source/LyraGame/$($dir.Name)")
+    Write-Host "[import] 源码：$($dir.Name)"
 }
 
 # LyraEditor（编辑器工具，小）

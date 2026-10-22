@@ -11,7 +11,7 @@ void ULyraAdaptInputCondition::SetHeld(bool bInHeld)
 	bHeld = bInHeld;
 }
 
-bool ULyraAdaptInputCondition::IsConditionSatisfied(const FAKAbilityContext& Context) const
+bool ULyraAdaptInputCondition::IsSatisfied(const FAKAbilityContext& Context) const
 {
 	return bHeld;
 }

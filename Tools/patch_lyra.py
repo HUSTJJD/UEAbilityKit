@@ -198,12 +198,16 @@ def patch_targets(spec: dict, check_only: bool) -> int:
             continue
 
         backup(target)
+        last_anchor = anchors[-1]   # 只在最后一行模块声明后面补，避免多个锚点各补一份
         out = []
-        for line in lines:
+        for i, line in enumerate(lines):
             out.append(line)
-            if "ExtraModuleNames.Add" in line:
+            if i == last_anchor:
+                indent = line[: len(line) - len(line.lstrip())]
+                # 一行一个模块：原来"整行复制再替换名字"的写法，遇到
+                # AddRange(new string[] { "LyraGame", "LyraEditor" }) 会补出两个同名模块
                 for module in missing:
-                    out.append(line.replace('"LyraGame"', f'"{module}"').replace('"LyraEditor"', f'"{module}"'))
+                    out.append(f'{indent}ExtraModuleNames.AddRange(new string[] {{ "{module}" }});')
         write(target, "\n".join(out) + "\n")
         print(f"[patch] {target.name} 补 {missing}")
     return pending

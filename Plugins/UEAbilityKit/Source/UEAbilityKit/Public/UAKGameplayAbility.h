@@ -38,6 +38,9 @@ class UEABILITYKIT_API UAKGameplayAbility : public UGameplayAbility
 
 public:
 	UAKGameplayAbility();
+	// 宿主（Lyra）的能力类是带 FObjectInitializer 的构造：Super(ObjectInitializer)，
+	// 基类没有这个重载就编不过
+	UAKGameplayAbility(const FObjectInitializer& ObjectInitializer);
 
 	/** 要执行的技能时间轴资产 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Kit")

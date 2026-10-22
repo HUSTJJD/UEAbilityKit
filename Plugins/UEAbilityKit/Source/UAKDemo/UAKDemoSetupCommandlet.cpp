@@ -198,7 +198,7 @@ int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 	AActor* CharacterCDO = CharacterBP->GeneratedClass->GetDefaultObject<AActor>();
 
 	if (USkeletalMesh* Mannequin = LoadObject<USkeletalMesh>(nullptr,
-		*(FString::Printf(TEXT("%s/AnimationAssets/UE4_Mannequin/Mesh/SK_Mannequin.SK_Mannequin"), PluginMount)))
+		*(FString::Printf(TEXT("%s/AnimationAssets/UE4_Mannequin/Mesh/SK_Mannequin.SK_Mannequin"), PluginMount))))
 	{
 		if (USkeletalMeshComponent* MeshComp = CharacterCDO->FindComponentByClass<USkeletalMeshComponent>())
 		{

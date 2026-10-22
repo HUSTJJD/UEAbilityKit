@@ -127,7 +127,7 @@ void UAKTraceSubsystem::ClearFinished()
 namespace
 {
 	/** 收集当前所有真正会跑技能的世界（Game / PIE），调试命令只作用于它们 */
-	TArray<UWorld*> GetGameWorlds()
+	TArray<UWorld*> GetTraceWorlds()
 	{
 		TArray<UWorld*> Out;
 		if (!GEngine)
@@ -151,7 +151,7 @@ namespace
 	void SetTraceRecording(bool bEnable)
 	{
 		int32 Count = 0;
-		for (UWorld* World : GetGameWorlds())
+		for (UWorld* World : GetTraceWorlds())
 		{
 			if (UAKTraceSubsystem* TraceSubsystem = World->GetSubsystem<UAKTraceSubsystem>())
 			{
@@ -174,7 +174,7 @@ namespace
 
 	void CmdTraceClear()
 	{
-		for (UWorld* World : GetGameWorlds())
+		for (UWorld* World : GetTraceWorlds())
 		{
 			if (UAKTraceSubsystem* TraceSubsystem = World->GetSubsystem<UAKTraceSubsystem>())
 			{
@@ -194,7 +194,7 @@ namespace
 		}
 
 		int32 Printed = 0;
-		for (UWorld* World : GetGameWorlds())
+		for (UWorld* World : GetTraceWorlds())
 		{
 			UAKTraceSubsystem* TraceSubsystem = World->GetSubsystem<UAKTraceSubsystem>();
 			if (!TraceSubsystem)

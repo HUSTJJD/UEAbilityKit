@@ -24,6 +24,17 @@
 					"to": "\"GameplayTags\",\n\t\t\t\"UEAbilityKit\","
 				}
 			]
+		},
+		{
+			"id": "relax-native-pointer",
+			"file": "Source/LyraEditor.Target.cs",
+			"desc": "Lyra 把非引擎模块的裸 UObject* 成员设成报错（引擎默认是 AllowSilently，是 Lyra 自己加严的）；UAK 还没迁到 TObjectPtr，先放宽成 AllowAndLog。TODO：插件迁完 TObjectPtr 后删掉这条",
+			"replace": [
+				{
+					"from": "NativePointerMemberBehaviorOverride = PointerMemberBehavior.Disallow;",
+					"to": "NativePointerMemberBehaviorOverride = PointerMemberBehavior.AllowAndLog;"
+				}
+			]
 		}
 	],
 

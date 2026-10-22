@@ -32,7 +32,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UAK|Lyra")
 	bool IsHeld() const { return bHeld; }
 
-	virtual bool IsConditionSatisfied(const FAKAbilityContext& Context) const override;
+	// 基类 UAKChannelingCondition 的虚函数叫 IsSatisfied（不是 IsConditionSatisfied）
+	virtual bool IsSatisfied(const FAKAbilityContext& Context) const override;
 
 	/** 便于在输入绑定里定位：对应的 Lyra InputTag（如 InputTag.Weapon.Fire），仅作标记用 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UAK|Lyra", meta = (Categories = "InputTag"))
