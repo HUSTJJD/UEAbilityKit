@@ -111,6 +111,20 @@ if ($EngineRoot -and (Test-Path $EngineRoot)) {
 }
 
 # ── 0b. 先清干净：没有这一步，上一次的手改会留下来骗过测试 ────────────────
+# -SkipAssets = 这次不拷资产，那就绝不能把资产删掉（否则工程直接残废）
+if ($SkipAssets) {
+    $KeepAssets = $true
+    Write-Host '[import] -SkipAssets：资产不重拷，沿用现有的（等价于 -KeepAssets）'
+}
+
+# 清单里原有的资产条目先记下来：这次不拷，但它们还在磁盘上，清单要继续带着
+# （不然下次 clean 就不知道这些资产是谁拷进来的了）
+$prevAssetPaths = @()
+$pathsFile = Join-Path $PSScriptRoot '.lyra_paths.txt'
+if (Test-Path $pathsFile) {
+    $prevAssetPaths = @(Get-Content $pathsFile | Where-Object { $_ -match '^Plugins[\\/]' -or $_ -match '^Content[\\/]Shooter' })
+}
+
 if (-not $NoClean) {
     Write-Host "[import] 预清理（保证这次导入是唯一的变量来源）…"
     & (Join-Path $PSScriptRoot 'clean_lyra.ps1') -KeepAssets:$KeepAssets
@@ -228,6 +242,7 @@ if (-not $SkipPatch) {
 }
 
 # ── 5. 记账：清的时候照单全删；记快照：之后可离线校验 ────────────────────
+if ($prevAssetPaths) { $script:Imported.AddRange([string[]]$prevAssetPaths) }
 $pathsFile = Join-Path $PSScriptRoot '.lyra_paths.txt'
 $script:Imported | Sort-Object -Unique | Out-File -FilePath $pathsFile -Encoding utf8
 Write-Host "[import] 导入清单（clean_lyra 按它删）：$pathsFile"

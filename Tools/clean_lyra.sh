@@ -55,9 +55,14 @@ rm_target() {
 echo "[clean] 工程根目录：$REPO_ROOT"
 
 # 1. 上次导入的清单（照单全删，最准）
+# --keep-assets 时 Plugins/ 下的条目同样要留着，否则清单会把资产一个个删光
 if [[ -f "$SCRIPT_DIR/.lyra_paths.txt" ]]; then
   while IFS= read -r line; do
-    [[ -n "${line// /}" ]] && rm_target "$line"
+    [[ -n "${line// /}" ]] || continue
+    if [[ "$KEEP_ASSETS" -eq 1 && ( "$line" == Plugins/* || "$line" == Content/Shooter* ) ]]; then
+      continue
+    fi
+    rm_target "$line"
   done < "$SCRIPT_DIR/.lyra_paths.txt"
 fi
 

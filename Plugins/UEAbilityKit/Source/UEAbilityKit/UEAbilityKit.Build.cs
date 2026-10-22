@@ -20,8 +20,10 @@ public class UEAbilityKit : ModuleRules
 		{
 			"PhysicsCore",    // FCollisionShape（碰撞查询任务）
 			"Json",           // Json 双向序列化
-			"JsonUtilities",
-			"UnrealClient"    // FScreenshotRequest：UAK.Auto.Record / Screenshot（进程外 e2e 的录屏）
+			"JsonUtilities"
+			// 注意：UnrealClient.h（FScreenshotRequest）属于 Engine 模块，5.x 里没有
+			// UnrealClient 这个模块了（UE4 遗留下来的依赖），写进来会报
+			// "Could not find definition for module 'UnrealClient'"
 		});
 	}
 }

@@ -64,11 +64,17 @@ function Remove-UakPath {
 Write-Host "[clean] 工程根目录：$RepoRoot"
 
 # ── 1. 上次导入的清单（有的话就照单全删，最准）────────────────────────────
+# -KeepAssets 时对 Plugins/ 下的条目同样要留着，否则清单会把资产一个个删光
 $pathsFile = Join-Path $PSScriptRoot '.lyra_paths.txt'
 if (Test-Path $pathsFile) {
     foreach ($line in (Get-Content $pathsFile)) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
-        Remove-UakPath $line.Trim()
+        $rel = $line.Trim()
+        if ($KeepAssets -and ($rel -match '^Plugins[\\/]' -or $rel -match '^Content[\\/]Shooter')) {
+            Write-Verbose "[clean] 保留（资产）：$rel"
+            continue
+        }
+        Remove-UakPath $rel
     }
 }
 

@@ -23,8 +23,8 @@ public class UEAbilityKitTests : ModuleRules
 			"Slate",
 			"SlateCore",
 			"UnrealEd",          // 编辑器上下文自动化（FAutomationEditorCommonUtils 等）
-			"AssetRegistry",
-			"UnrealClient"       // FScreenshotRequest：逐帧截图（录屏素材）
+			"AssetRegistry"
+			// UnrealClient.h（FScreenshotRequest）属于 Engine 模块，5.x 没有 UnrealClient 模块
 		});
 	}
 }

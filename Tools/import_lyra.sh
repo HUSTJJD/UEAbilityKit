@@ -77,6 +77,20 @@ copy_lyra() {
 }
 
 # ── 0. 先清干净：没有这一步，上一次的手改会留下来骗过测试 ────────────────
+# --skip-assets = 这次不拷资产，那就绝不能把资产删掉（否则工程直接残废）
+if [[ "$SKIP_ASSETS" -eq 1 ]]; then
+  KEEP_ASSETS=1
+  echo "[import] --skip-assets：资产不重拷，沿用现有的（等价于 --keep-assets）"
+fi
+
+# 清单里原有的资产条目先记下来：这次不拷，但它们还在磁盘上，清单要继续带着
+PREV_ASSET_PATHS=()
+if [[ -f "$SCRIPT_DIR/.lyra_paths.txt" ]]; then
+  while IFS= read -r line; do
+    [[ "$line" == Plugins/* || "$line" == Content/Shooter* ]] && PREV_ASSET_PATHS+=("$line")
+  done < "$SCRIPT_DIR/.lyra_paths.txt"
+fi
+
 if [[ "$NO_CLEAN" -eq 0 ]]; then
   echo "[import] 预清理（保证这次导入是唯一的变量来源）…"
   if [[ "$KEEP_ASSETS" -eq 1 ]]; then
@@ -193,6 +207,10 @@ if [[ "$SKIP_PATCH" -eq 0 ]]; then
 fi
 
 # ── 5. 记账 ───────────────────────────────────────────────────────────────
+if ((${#PREV_ASSET_PATHS[@]})); then
+  IMPORTED+=("${PREV_ASSET_PATHS[@]}")
+fi
+
 if ((${#IMPORTED[@]})); then
   printf '%s\n' "${IMPORTED[@]}" | sort -u > "$SCRIPT_DIR/.lyra_paths.txt"
 else
