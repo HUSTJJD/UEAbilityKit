@@ -19,8 +19,8 @@ Tutorials/*.json  →  UAK.Tutorial.Run  →  Saved/.../run.json + 截图 + 帧�
 
 ```powershell
 ./Tools/generate_tutorials.ps1            # 打开编辑器录制 + 生成文档
-./Tools/generate_tutorials.ps1 -DocsOnly  # 只用已有产物重新生成文档
-./Tools/generate_tutorials.ps1 -NoCapture # 只验证步骤，不采素材
+./Tools/generate_tutorials.ps1 --docs-only  # 只用已有产物重新生成文档
+./Tools/generate_tutorials.ps1 --no-capture # 只验证步骤，不采素材
 ```
 
 ```bash

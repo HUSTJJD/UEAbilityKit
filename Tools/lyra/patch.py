@@ -7,15 +7,15 @@
     Lyra 有的文件 → **copy（以 Lyra 为基线）→ patch（把我们的加回去）**
     Lyra 没有的文件 → 保持我们自己的
 
-所有改动都声明在 Tools/lyra_patches.json 里，本文件只是执行器：
+所有改动都声明在 Tools/lyra/lyra_patches.json 里，本文件只是执行器：
     - 幂等：已打过的自动跳过，重复跑不会叠加
     - 可查：--check 只列出待打 / 已打，不动文件
     - 可撤：--revert 按 .orig 还原
 
 用法：
-    python Tools/patch_lyra.py
-    python Tools/patch_lyra.py --check
-    python Tools/patch_lyra.py --revert
+    python Tools/lyra/cli.py patch
+    python Tools/lyra/cli.py patch --check
+    python Tools/lyra/cli.py patch --revert
 """
 
 from __future__ import annotations
@@ -26,11 +26,12 @@ import shutil
 import sys
 from pathlib import Path
 
-TOOLS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = TOOLS_DIR.parent
-SPEC_FILE = TOOLS_DIR / "lyra_patches.json"
-LOCAL_SPEC_FILE = TOOLS_DIR / "lyra_patches.local.json"   # 本机覆盖（不进仓库）
-PATCHED_LIST = TOOLS_DIR / ".patched_files.txt"
+LYRA_DIR = Path(__file__).resolve().parent                # Tools/lyra/
+TOOLS_DIR = LYRA_DIR.parent                               # Tools/
+REPO_ROOT = TOOLS_DIR.parent                              # 仓库根 = UE 工程根
+SPEC_FILE = LYRA_DIR / "lyra_patches.json"
+LOCAL_SPEC_FILE = LYRA_DIR / "lyra_patches.local.json"    # 本机覆盖（不进仓库）
+PATCHED_LIST = LYRA_DIR / ".patched_files.txt"
 
 MARKER = "UAK-PATCH"
 
@@ -84,7 +85,7 @@ def patch_source(spec: dict, check_only: bool) -> int:
     for item in spec.get("source", []):
         target = REPO_ROOT / item["file"]
         if not target.is_file():
-            print(f"[patch] 跳过（文件不存在）：{item['file']}  —— 先跑 import_lyra")
+            print(f"[patch] 跳过（文件不存在）：{item['file']}  —— 先跑 lyra import")
             continue
 
         text = read(target)
@@ -127,7 +128,7 @@ def patch_uproject(spec: dict, check_only: bool) -> int:
 
     ours = sorted(REPO_ROOT.glob("*.uproject"))
     if not ours:
-        print("[patch] 本工程下找不到 .uproject（先跑 import_lyra 拷 Lyra 的过来）", file=sys.stderr)
+        print("[patch] 本工程下找不到 .uproject（先跑 lyra import 拷 Lyra 的过来）", file=sys.stderr)
         return 0
     target = ours[0]
 
@@ -297,11 +298,11 @@ def revert() -> int:
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="对拷进来的 Lyra 文件打补丁（copy → patch）")
     ap.add_argument("--check", action="store_true", help="只看状态，不改文件")
     ap.add_argument("--revert", action="store_true")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if args.revert:
         return revert()

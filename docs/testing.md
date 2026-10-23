@@ -16,9 +16,9 @@ UAK 的目标之一：**让"技能编排"这种容易出玄学 bug 的东西，�
 ```powershell
 # Windows（PowerShell）
 ./Tools/run_tests.ps1                 # 全部 stage：Editor + Game + DS/多客户端
-./Tools/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
-./Tools/run_tests.ps1 -Headless       # 没 GPU：只跑断言，不出素材
-./Tools/run_tests.ps1 -Commit         # 跑完把结论提交（CI 随后发布）
+./Tools/run_tests.ps1 --stage editor --filter UAK.Unit --skip-build
+./Tools/run_tests.ps1 --headless       # 没 GPU：只跑断言，不出素材
+./Tools/run_tests.ps1 --commit        # 跑完把结论提交（CI 随后发布）
 ```
 
 ```bash
@@ -31,9 +31,9 @@ UAK 的目标之一：**让"技能编排"这种容易出玄学 bug 的东西，�
 
 脚本做的事：
 
-1. **编译**：`UnrealBuildTool` 编 `UAKDemoEditor`（`-SkipBuild` 可跳过）
+1. **编译**：`UnrealBuildTool` 编 `LyraEditor`（`--skip-build` 可跳过）
 2. **跑三个 stage**（见下）
-3. **出结论**：`Tools/report/generate_report.py` 生成 `docs/reports/latest.{md,html,json}`
+3. **出结论**：`Tools/test/report/generate_report.py` 生成 `docs/reports/latest.{md,html,json}`
 4. **出素材**：截图、帧序列（有 ffmpeg 时自动合成 mp4）、血缘树文本
 5. **出文档**：`docs/showcase.md` 由素材自动生成（展示页不是手写的宣传页）
 
@@ -154,9 +154,9 @@ docs/reports/media/**           # 只有 mp4 + 少量关键 png 入库（走 LFS
 
 ```powershell
 ./Tools/generate_tutorials.ps1                  # 录制全部教程并生成文档
-./Tools/generate_tutorials.ps1 -DocsOnly        # 只用已有产物重新生成文档
-./Tools/generate_tutorials.ps1 -NoCapture       # 只验证步骤能不能跑通
-./Tools/generate_tutorials.ps1 -Tutorial 01-first-ability
+./Tools/generate_tutorials.ps1 --docs-only        # 只用已有产物重新生成文档
+./Tools/generate_tutorials.ps1 --no-capture       # 只验证步骤能不能跑通
+./Tools/generate_tutorials.ps1 --tutorial 01-first-ability
 ```
 
 ```bash
@@ -213,10 +213,10 @@ export/*.json                 教程里导出的资产 Json
 
 | 现象 | 原因 |
 | --- | --- |
-| 报告里没有截图/录屏 | 跑了 `-Headless`（`-NullRHI` 没有像素）；或没装 ffmpeg（只有 png 没有 mp4） |
+| 报告里没有截图/录屏 | 跑了 `--headless`（`-NullRHI` 没有像素）；或没装 ffmpeg（只有 png 没有 mp4） |
 | `UAK.Media.*` 全部通过但没素材 | 同上；用例检测到没开采集会直接跳过 |
 | Net stage 只有 1 份快照 | DS 没起来或客户端没连上：看 `Saved/Automation/Logs/Server-*.log`，必要时调大 `-ServerBootWait` |
 | 多端一致性失败 | 先看是不是 Actor 数量不一致（有端还没 Possess）；再查 GE 的复制设置，见 `docs/examples/01-minimal-multiplayer-setup.md` |
 | mp4 没生成 | `ffmpeg` 不在 PATH；或帧目录是空的 |
-| 教程页只有文字没有图 | 没跑录制（`-DocsOnly` 只是重新渲染）；或 `-NullRHI` 没有像素 |
+| 教程页只有文字没有图 | 没跑录制（`--docs-only` 只是重新渲染）；或 `-NullRHI` 没有像素 |
 | 教程某一步 FAIL | 看该步折叠块里的备注；最常见是 `props` 里的属性名或任务类型改过了 |

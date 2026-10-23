@@ -20,7 +20,7 @@ Plugins/UEAbilityKit/
 ```powershell
 # ① 导入 Lyra（拷源码 + 外围文件 + 资产，然后打补丁）
 cd Tools
-./import_lyra.ps1 -LyraPath <你的 Lyra 目录>
+./lyra.ps1 import --lyra-path <你的 Lyra 目录>
 
 # ② 编译
 cd ..

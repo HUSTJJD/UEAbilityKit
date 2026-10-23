@@ -9,7 +9,7 @@
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
-├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，不进 git，由 import_lyra 复现）
+├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，不进 git，由 lyra import 复现）
 ├─ Source/
 │  ├─ LyraGame/                     ← 拷进来的 Lyra（不进 git）
 │  └─ LyraAdapt/                    ← 适配层：唯一同时认识 Lyra 与 UAK 的地方
@@ -57,7 +57,7 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 ```
 
 1. 导入 Lyra（清 → 拷 → 打补丁 → 校验，一条命令）：
-   `./Tools/import_lyra.ps1 -LyraPath <你的 Lyra 目录> -EngineRoot <你的引擎目录>`
+   `./Tools/lyra.ps1 import --lyra-path <你的 Lyra 目录> --engine-root <你的引擎目录>`
    详见 [lyra-integration.md](lyra-integration.md)
 2. 编译：`Tools\build.ps1`
 3. 一键生成示例资产 / 蓝图 / 关卡：`-run=UAKDemoSetup`，见 [05-run-the-demo.md](05-run-the-demo.md)

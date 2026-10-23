@@ -86,7 +86,7 @@ flowchart LR
 git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 ```
 
-工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`，先跑 `Tools/import_lyra.ps1` 导入），
+工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`，先跑 `Tools/lyra.ps1 import` 导入），
 布局参照 [UnLua](https://github.com/Tencent/UnLua)：**库放 Plugins，示例随库走**。
 
 > 必须加 `--recursive`：脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 自身还嵌套了 Lua / Luau 等子模块。忘了就补 `git submodule update --init --recursive`。
@@ -98,7 +98,7 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 
 ```powershell
 ./Tools/run_tests.ps1      # Windows：编译 + 跑用例 + 出报告
-./Tools/run_tests.ps1 -Filter UAK.Unit
+./Tools/run_tests.ps1 --filter UAK.Unit
 ```
 
 ```bash
@@ -115,7 +115,8 @@ UAK 是**技能模块**，Lyra 是被改造进来当示例的游戏：
 
 ```powershell
 cd Tools
-./import_lyra.ps1 -LyraPath <你的 Lyra 目录>               # 下载好 Lyra 5.8 后跑这一条
+./lyra.ps1 import --lyra-path <你的 Lyra 目录>   # 下载好 Lyra 5.8 后跑这一条
+./lyra.ps1 verify                            # 确认工程 = Lyra 原版 + 声明过的补丁
 ```
 
 - **继承方向是 Lyra 继承 UAK**：`UGameplayAbility → UAKGameplayAbility → ULyraGameplayAbility`
@@ -170,24 +171,24 @@ cd Tools
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
-├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，由 import_lyra 复现）
+├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，由 lyra import 复现）
 ├─ Source/LyraAdapt/                ← 适配层（唯一同时认识 Lyra 与 UAK 的地方）
 ├─ Plugins/UEAbilityKit/Source/UAKDemo/                  ← 示例模块（属性集 / 角色 / 技能，随插件分发）
 ├─ Plugins/
 │  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
 │  │  └─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}
 │  └─ UnLuaNova/                    ← 脚本方案（git submodule）
-├─ Tools/                           ← 唯一的脚本目录（自动化 / 构建 / 测试 / Lyra 工具都在这里）
-│  ├─ import_lyra.ps1 / .sh         ← 导入 Lyra（清 → 拷 → 打补丁 → 校验）
-│  ├─ patch_lyra.py                 ← 打 / 撤销 Lyra 补丁（幂等）
-│  ├─ clean_lyra.ps1 / .sh          ← 清除 Lyra 与补丁痕迹
-│  ├─ verify_lyra.py                ← 校验有没有人手改过 Lyra
-│  ├─ run_tests.ps1 / .sh           ← 测试启动脚本
-│  ├─ build.ps1                     ← 命令行编译（绕过 Build.bat 锁）
+├─ Tools/                           ← 唯一的脚本目录：shell 只是薄入口，逻辑全在 Python
+│  ├─ lyra.ps1 / .sh                ← Lyra 唯一入口：import / clean / patch / verify
+│  ├─ build.ps1 / .sh               ← 命令行编译（绕过 Build.bat 锁）
+│  ├─ run_tests.ps1 / .sh           ← 一键测试（三 stage）
 │  ├─ generate_tutorials.ps1 / .sh  ← 教程录制 + 文档生成
-│  ├─ patches/config/               ← 打进 Lyra ini 的配置片段
-│  ├─ report/generate_report.py     ← 报告 / Showcase 生成器
-│  └─ tutorial/generate_tutorials.py← 教程页渲染器
+│  ├─ common.py                     ← 共用：路径 / 引擎定位 / 子进程
+│  ├─ lyra/                         ← cli.py + import/clean/patch/verify + 补丁清单
+│  ├─ build/                        ← build.py
+│  ├─ test/                         ← run.py + report/
+│  ├─ tutorial/                     ← run.py + generate_tutorials.py
+│  └─ hygiene/                      ← check_no_local_paths.py
 ├─ Content/
 │  ├─ AnimationAssets/              ← 角色与动画（来自 UnLuaNova 示例）
 │  └─ Demo/Abilities/*.json         ← 技能资产示例（Json，可 diff）

@@ -51,8 +51,8 @@ desktop.ini
 
 # ── 从下载的 Lyra 拷进来的外围文件 ─────────────────────────────────────
 # Config/ 不进仓库：Lyra 有自己的 Config，按 copy → patch 的原则由
-# Tools/import_lyra 拷贝、Tools/patch_lyra.py 追加我们的段落。
-# 我们真正拥有的配置只有补丁片段，在 Tools/patches/config/。
+# Tools/lyra.ps1 import 拷贝、Tools/lyra/patch.py 追加我们的段落。
+# 我们真正拥有的配置只有补丁片段，在 Tools/lyra/patches/config/。
 Config/
 
 # ── Plugins/ 下只有我们自己的插件进仓库，其余全是 Lyra 拷来的 ────────────
@@ -61,7 +61,7 @@ Plugins/*
 !Plugins/UnLuaNova/
 
 # ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
-# 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 3 GB，不进仓库。
+# 这些由 Tools/lyra.ps1 import 从你本地的 Lyra 拷贝，约 3 GB，不进仓库。
 Plugins/GameFeatures/
 Plugins/LyraExampleContent/
 Plugins/LyraExtTool/
@@ -76,13 +76,13 @@ Content/*
 !Content/Script/
 !Content/README.md
 
-# ── 导入脚本的运行期状态（clean_lyra 会删，重新 import 会再生成）────────
-Tools/.patched_files.txt
-Tools/.lyra_paths.txt
-Tools/.lyra_state.json
-Tools/lyra_manifest.txt
+# ── 导入脚本的运行期状态（lyra clean 会删，重新 import 会再生成）────────
+Tools/lyra/.patched_files.txt
+Tools/lyra/.lyra_paths.txt
+Tools/lyra/.lyra_state.json
+Tools/lyra/lyra_manifest.txt
 # 本机专属覆盖（引擎 GUID 之类），不进仓库
-Tools/lyra_patches.local.json
+Tools/lyra/lyra_patches.local.json
 
 # ── 从 Lyra 拷来的东西：一律不进仓库，每次 import 重新生成 ───────────────
 # （源码也是拷来的，同样不进——这样 git status 在导入后仍然是干净的）

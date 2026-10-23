@@ -50,12 +50,12 @@
 	},
 
 	"config": {
-		"desc": "Lyra 的 ini 是基线，我们只在末尾追加自己的段落（文件在 Tools/patches/config/）。Lyra 没有的 ini 则由这些片段直接生成。",
+		"desc": "Lyra 的 ini 是基线，我们只在末尾追加自己的段落（文件在 Tools/lyra/patches/config/）。Lyra 没有的 ini 则由这些片段直接生成。",
 		"append": {
-			"DefaultGame.ini": "Tools/patches/config/DefaultGame.ini.append",
-			"DefaultInput.ini": "Tools/patches/config/DefaultInput.ini.append",
-			"DefaultGameplayTags.ini": "Tools/patches/config/DefaultGameplayTags.ini.append",
-			"DefaultUnLuaNovaEditor.ini": "Tools/patches/config/DefaultUnLuaNovaEditor.ini.append"
+			"DefaultGame.ini": "Tools/lyra/patches/config/DefaultGame.ini.append",
+			"DefaultInput.ini": "Tools/lyra/patches/config/DefaultInput.ini.append",
+			"DefaultGameplayTags.ini": "Tools/lyra/patches/config/DefaultGameplayTags.ini.append",
+			"DefaultUnLuaNovaEditor.ini": "Tools/lyra/patches/config/DefaultUnLuaNovaEditor.ini.append"
 		}
 	}
 }

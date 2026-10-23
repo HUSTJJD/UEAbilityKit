@@ -141,7 +141,7 @@ flowchart LR
 
     ```powershell
     ./Tools/run_tests.ps1           # Windows
-    ./Tools/run_tests.ps1 -Filter UAK.Unit
+    ./Tools/run_tests.ps1 --filter UAK.Unit
     ```
 
     ```bash

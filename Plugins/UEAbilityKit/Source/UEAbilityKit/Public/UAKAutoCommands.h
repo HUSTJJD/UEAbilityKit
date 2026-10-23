@@ -16,7 +16,7 @@
  *   UAK.Auto.Record <Name> [Frames] [Fps]     逐帧截图 → Saved/UAKAutomation/<Name>/frames/
  *   UAK.Auto.Screenshot <Name>                单张截图 → Saved/UAKAutomation/<Name>/shot.png
  *
- * 每条命令都会打一行机器可读的标记，供 Tools/report/generate_report.py 汇总：
+ * 每条命令都会打一行机器可读的标记，供 Tools/test/report/generate_report.py 汇总：
  *   UAK_E2E <Action> <Name> <OK|FAIL|SKIP> [k=v ...]
  */
 class UEABILITYKIT_API FUAKAutoCommands

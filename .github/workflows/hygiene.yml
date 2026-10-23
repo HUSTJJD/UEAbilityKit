@@ -1,8 +1,8 @@
 name: Repo hygiene
 
 # 仓库里不许出现本机路径 / 引擎 GUID —— 这类东西一进仓库，别人 clone 下来就是坏的。
-# 本机相关的配置一律走：命令行参数（-LyraPath / -EngineRoot）、环境变量
-# （UE_ENGINE_ROOT / UE_ENGINE_GUID）、或 Tools/lyra_patches.local.json（已 gitignore）。
+# 本机相关的配置一律走：命令行参数（--lyra-path / --engine-root）、环境变量
+# （UE_ENGINE_ROOT / UE_ENGINE_GUID）、或 Tools/lyra/lyra_patches.local.json（已 gitignore）。
 on:
   push:
   pull_request:
@@ -22,4 +22,4 @@ jobs:
         with:
           python-version: "3.12"
       - name: 跟踪的文件里没有本机路径 / 引擎 GUID
-        run: python Tools/check_no_local_paths.py
+        run: python Tools/hygiene/check_no_local_paths.py

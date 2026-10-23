@@ -5,18 +5,18 @@
 
 为什么要它：
     拷进来的 Lyra 文件一旦被人手改过，编译/测试就会"因为改过而通过"，把 bug 藏起来。
-    唯一允许的改动写在 Tools/lyra_patches.json 里，且只由 patch_lyra.py 自动打——
+    唯一允许的改动写在 Tools/lyra/lyra_patches.json 里，且只由 patch.py 自动打——
     所以"重新 import 一遍就能复现"的状态才是可信的基线。
 
 两种校验方式：
     1) 在线（权威，需要 Lyra 源目录）：把工程里每个 Lyra 文件与 Lyra 源逐字节比 sha256
-       python Tools/verify_lyra.py -l <你的 Lyra 目录>
+       python Tools/lyra/cli.py verify -l <你的 Lyra 目录>
     2) 离线（快，不需要 Lyra 源）：与上次导入时记录的快照比
-       python Tools/verify_lyra.py
+       python Tools/lyra/cli.py verify
 
 其它：
-    python Tools/verify_lyra.py -l <Lyra> --update-state   # 刷新快照（import_lyra 会自动调）
-    python Tools/verify_lyra.py --self-test                # 自检（不动工程里的任何文件）
+    python Tools/lyra/cli.py verify -l <Lyra> --update-state   # 刷新快照（import 会自动调）
+    python Tools/lyra/cli.py verify --self-test                # 自检（不动工程里的任何文件）
 
 退出码：0 干净 / 1 有手改或补丁缺失 / 2 用法错误
 """
@@ -31,10 +31,11 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-TOOLS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = TOOLS_DIR.parent
-SPEC_FILE = TOOLS_DIR / "lyra_patches.json"
-STATE_FILE = TOOLS_DIR / ".lyra_state.json"
+LYRA_DIR = Path(__file__).resolve().parent                # Tools/lyra/
+TOOLS_DIR = LYRA_DIR.parent                               # Tools/
+REPO_ROOT = TOOLS_DIR.parent                              # 仓库根 = UE 工程根
+SPEC_FILE = LYRA_DIR / "lyra_patches.json"
+STATE_FILE = LYRA_DIR / ".lyra_state.json"
 
 # 哪些目录算"从 Lyra 拷来的"
 LYRA_TREES = ("Source/LyraGame", "Source/LyraEditor", "Platforms")
@@ -209,16 +210,16 @@ def verify_offline(root: Path, spec: dict, state: dict, deep: bool) -> list[dict
 
 
 def patches_pending(root: Path, spec: dict) -> int:
-    """声明了但没打上的补丁数量（复用 patch_lyra 的检查逻辑）"""
+    """声明了但没打上的补丁数量（复用 lyra patch 的检查逻辑）"""
     try:
-        if str(TOOLS_DIR) not in sys.path:
-            sys.path.insert(0, str(TOOLS_DIR))
-        import patch_lyra as P  # noqa: E402
+        if str(LYRA_DIR) not in sys.path:
+            sys.path.insert(0, str(LYRA_DIR))
+        import patch as P  # noqa: E402
     except Exception:
         return -1
 
     P.REPO_ROOT = root
-    P.PATCHED_LIST = root / "Tools" / ".patched_files.txt"
+    P.PATCHED_LIST = root / "Tools" / "lyra" / ".patched_files.txt"
     pending = 0
     pending += P.patch_source(spec, check_only=True)
     pending += P.patch_uproject(spec, check_only=True)
@@ -264,14 +265,14 @@ def self_test() -> int:
         rel = "Source/LyraGame/AbilitySystem/LyraGameplayAbility.h"
         (root / Path(rel).parent).mkdir(parents=True, exist_ok=True)
         (lyra / Path(rel).parent).mkdir(parents=True, exist_ok=True)
-        (root / "Tools").mkdir(parents=True, exist_ok=True)
+        (root / "Tools" / "lyra").mkdir(parents=True, exist_ok=True)
 
         original = "class ULyraGameplayAbility : public UGameplayAbility\n"
         (lyra / rel).write_text(original, encoding="utf-8")
 
         spec = {"source": [{"id": "ability-base", "file": rel,
                             "replace": [{"from": "public UGameplayAbility", "to": "public UAKGameplayAbility"}]}]}
-        spec_file = root / "Tools" / "lyra_patches.json"
+        spec_file = root / "Tools" / "lyra" / "lyra_patches.json"
         spec_file.write_text(json.dumps(spec, ensure_ascii=False), encoding="utf-8")
 
         # 1) 与 Lyra 一致 → 干净
@@ -310,14 +311,14 @@ def self_test() -> int:
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="校验工程里的 Lyra 内容没有手改")
     ap.add_argument("-l", "--lyra", default="", help="Lyra 源工程目录（给了就做权威比对）")
-    ap.add_argument("--update-state", action="store_true", help="刷新 Tools/.lyra_state.json 快照")
+    ap.add_argument("--update-state", action="store_true", help="刷新 Tools/lyra/.lyra_state.json 快照")
     ap.add_argument("--deep", action="store_true", help="连 Plugins/GameFeatures 的资产一起校验（慢）")
     ap.add_argument("--quiet", action="store_true", help="只报问题")
     ap.add_argument("--self-test", action="store_true", help="在临时目录里自检，不碰真实工程")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if args.self_test:
         return self_test()
@@ -345,7 +346,7 @@ def main() -> int:
             print(f"[verify] 快照已写入：{STATE_FILE}")
     else:
         if not stored:
-            print("[verify] 没有快照（Tools/.lyra_state.json）。先跑：python Tools/verify_lyra.py -l <Lyra 目录>", file=sys.stderr)
+            print("[verify] 没有快照（Tools/lyra/.lyra_state.json）。先跑：python Tools/lyra/cli.py verify -l <Lyra 目录>", file=sys.stderr)
             return 2
         print(f"[verify] 离线比对快照（{raw_state.get('generated', '?')}，源 {raw_state.get('lyra')}）")
         results = verify_offline(REPO_ROOT, spec, stored, args.deep)
@@ -354,13 +355,13 @@ def main() -> int:
     problems += report(results, args.quiet)
 
     if pending > 0:
-        print(f"[verify] ✗ 有 {pending} 处 lyra_patches.json 声明的补丁没打上（重跑 patch_lyra.py 或 import_lyra）")
+        print(f"[verify] ✗ 有 {pending} 处 lyra_patches.json 声明的补丁没打上（重跑 lyra/patch.py 或 lyra import）")
         problems += pending
     elif pending == 0:
         print("[verify] 补丁清单已全部打上")
 
     if problems:
-        print(f"[verify] 不干净：{problems} 处。修法只有一条 —— 清掉重来：Tools/clean_lyra 然后重新 import_lyra", file=sys.stderr)
+        print(f"[verify] 不干净：{problems} 处。修法只有一条 —— 清掉重来：Tools/lyra clean 然后重新 lyra import", file=sys.stderr)
         return 1
 
     print("[verify] 干净：工程 = Lyra 原版 + 声明过的补丁，没有手改")

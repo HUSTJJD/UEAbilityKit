@@ -12,7 +12,7 @@ namespace UAKTest
 	 *   <Project>/Saved/UAKAutomation/<TestName>/frames/frame_00000.png
 	 *   <Project>/Saved/UAKAutomation/<TestName>/<FileName>.txt
 	 *
-	 * 目录结构与 Tools/report/generate_report.py 的 collect_media() 一一对应：
+	 * 目录结构与 Tools/test/report/generate_report.py 的 collect_media() 一一对应：
 	 * 帧序列由 Python 用 ffmpeg 合成 mp4，txt 作为血缘树素材直接进 Showcase。
 	 *
 	 * 采集只在命令行带 -UAKCaptureMedia 时发生（Tools/run_tests.ps1 默认带上）。

@@ -156,7 +156,7 @@ UAK 只给出一个类型安全的扩展点 —— 框架不会被任何一种�
 切换方式（改完必须重新编译，不能只重启编辑器）：
 
 ```ini
-; Config/DefaultUnLuaNovaEditor.ini（由 Tools/patches/config 下的片段生成）
+; Config/DefaultUnLuaNovaEditor.ini（由 Tools/lyra/patches/config 下的片段生成）
 [/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings]
 LuaBackend=Luau      ; 或 Lua
 ```
@@ -174,7 +174,7 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
 ## 6. 打包：脚本要跟着进包
 
 `DirectoriesToAlwaysStageAsUFS` 的路径**相对工程 Content 目录**（引擎 AutomationTool 就是这么解析的），
-所以回到工程根要写 `..`。补丁片段 `Tools/patches/config/DefaultGame.ini.append` 里有两条：
+所以回到工程根要写 `..`。补丁片段 `Tools/lyra/patches/config/DefaultGame.ini.append` 里有两条：
 
 ```ini
 [/Script/UnrealEd.ProjectPackagingSettings]
@@ -193,8 +193,8 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
     （它硬编码的旧路径），但**不会**补插件目录这一条 —— 少了它，打包后
     `require('UnLuaNova.Vector')` 直接失败，而编辑器里一切正常（最容易漏的就是这条）。
 
-`Config/` 不进 git：这些行由 `Tools/patches/config/*.append` 打进 Lyra 的 ini
-（`python Tools/patch_lyra.py`）。已经打过的 ini 不会重复追加（有 `UAK-PATCH` 标记），
+`Config/` 不进 git：这些行由 `Tools/lyra/patches/config/*.append` 打进 Lyra 的 ini
+（`python Tools/lyra/cli.py patch`）。已经打过的 ini 不会重复追加（有 `UAK-PATCH` 标记），
 所以**改了片段要先 `--revert` 再重打**，或直接手改 `Config/DefaultGame.ini` 那两行。
 
 ## 7. 智能提示与静态检查

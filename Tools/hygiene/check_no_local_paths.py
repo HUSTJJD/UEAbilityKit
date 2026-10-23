@@ -5,13 +5,13 @@
 
 原因：这些东西一进仓库，别人 clone 下来就是坏的（打不开、编不过）。
 本机相关的东西一律走"运行时生成 + 不进仓库"：
-    - Lyra / 引擎目录：命令行参数（-LyraPath / -EngineRoot）或环境变量 UE_ENGINE_ROOT
-    - 引擎 GUID：import_lyra 自动写进 Tools/lyra_patches.local.json（已 gitignore）
-    - 导入清单与快照：Tools/.lyra_paths.txt / .lyra_state.json（已 gitignore）
+    - Lyra / 引擎目录：命令行参数（--lyra-path / --engine-root）或环境变量 UE_ENGINE_ROOT
+    - 引擎 GUID：lyra import 自动写进 Tools/lyra/lyra_patches.local.json（已 gitignore）
+    - 导入清单与快照：Tools/lyra/.lyra_paths.txt / .lyra_state.json（已 gitignore）
 
 用法：
-    python Tools/check_no_local_paths.py            # 有问题就退出码 1
-    python Tools/check_no_local_paths.py --verbose  # 把所有命中的行打出来
+    python Tools/hygiene/check_no_local_paths.py            # 有问题就退出码 1
+    python Tools/hygiene/check_no_local_paths.py --verbose  # 把所有命中的行打出来
 
 豁免：确需出现样例时，在行尾加 `# noqa: local-path`。
 """
@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[2]   # Tools/hygiene/ → 仓库根
 
 PATTERNS = [
     (re.compile(r"[A-Za-z]:[\\/](Users|learning|Project|Games|CodeBuddy)[\\/]"), "本机盘符路径（如 D:\\learning\\...）"),
@@ -35,7 +35,7 @@ PATTERNS = [
 
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".uasset", ".umap", ".pdf", ".zip"}
 # 规则自己就是这些pattern，别把自己报出来
-SKIP_FILES = {"Tools/check_no_local_paths.py"}
+SKIP_FILES = {"Tools/hygiene/check_no_local_paths.py"}
 NOQA = "noqa: local-path"
 MAX_BYTES = 2 * 1024 * 1024
 

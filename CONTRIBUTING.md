@@ -40,14 +40,14 @@
 
 ## 4. 构建与测试
 
-需要先设置引擎路径环境变量 `$env:UE_ENGINE_ROOT`（或在脚本参数中显式传 `-EngineRoot`）。
+需要先设置引擎路径环境变量 `$env:UE_ENGINE_ROOT`（或在脚本参数中显式传 `--engine-root`）。
 
 ```powershell
-./Tools/build.ps1                        # UAKDemoEditor / Win64 / Development
+./Tools/build.ps1                        # LyraEditor / Win64 / Development
 ./Tools/build.ps1 -Target UAKDemo -Configuration Shipping
 ./Tools/run_tests.ps1                    # 全量：Editor + Game + DS/多客户端，默认带截图/录屏
-./Tools/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
-./Tools/run_tests.ps1 -Headless          # 没 GPU：只跑断言，不出素材
+./Tools/run_tests.ps1 --stage editor --filter UAK.Unit --skip-build
+./Tools/run_tests.ps1 --headless          # 没 GPU：只跑断言，不出素材
 ./Tools/run_tests.ps1 -Commit            # 跑完把结论提交（CI 再发布到 Pages）
 ```
 
