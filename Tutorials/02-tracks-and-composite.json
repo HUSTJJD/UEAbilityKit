@@ -1,0 +1,159 @@
+{
+  "id": "02-tracks-and-composite",
+  "title": "轨道与复合编排：Sequence / Parallel / Repeat",
+  "summary": "轨道不只是「分类分组」。它能整体开关、整体延迟、整体重复——把 AbilityKit 的 Pipeline 组合思想落在了「这一串片段怎么排」上。",
+  "level": "beginner",
+  "duration": "10 min",
+  "fps": 30,
+  "asset": {
+    "path": "/Game/UAK/Tutorials/TA_Composite",
+    "length": 3.0,
+    "frameRate": 60
+  },
+  "prerequisites": [
+    "做过「第一个技能」教程",
+    "知道什么是前摇 / 命中 / 后摇"
+  ],
+  "checks": [
+    "我能说出 Timeline / Sequence / Parallel 三种模式分别什么时候用",
+    "我知道轨道整体静音能用来做什么",
+    "我知道 Repeat 只在 Sequence / Parallel 下生效"
+  ],
+  "steps": [
+    {
+      "id": "open",
+      "title": "新建并打开一条 3 秒的技能",
+      "say": "这次我们需要更长的时间轴，才能看出「复合排布」和「绝对时间」的差别。",
+      "do": "新建 Ability Asset，Length 设为 3.0。",
+      "expect": "空的时间轴，标尺 0.0 → 3.0。",
+      "action": "OpenAsset",
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "add-effect-track",
+      "title": "加一条 Effect 轨道（逻辑）",
+      "say": "把「逻辑」和「表现」分到两条轨道，是 UAK 强烈推荐的习惯：分了之后，你才能在不改任何配置的前提下，只跑逻辑做服务器校验。",
+      "do": "工具条 → +轨道 → TrackName = Effect，TrackType = Effect。",
+      "expect": "左栏出现 Effect 轨道。",
+      "advance": { "minTracks": 1 },
+      "action": "AddTrack",
+      "args": { "name": "Effect", "type": 1 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-presentation-track",
+      "title": "再加一条 Presentation 轨道（表现）",
+      "say": "表现轨道上放 Cue / 特效这类「只在本地端有意义」的任务。它们的 NetMode 默认是 ClientOnly。",
+      "do": "工具条 → +轨道 → TrackName = Presentation，TrackType = Presentation。",
+      "expect": "左栏出现第二条轨道。",
+      "advance": { "minTracks": 2 },
+      "action": "AddTrack",
+      "args": { "name": "Presentation", "type": 2 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-effect-a",
+      "title": "在 Effect 上放第一个逻辑任务",
+      "say": "我们放一个「挂 Tag」任务当作第一段逻辑。真实项目里这里通常是 ApplyGameplayEffect（伤害 / Buff / 冷却）。",
+      "do": "右键 Effect 轨道 → 添加任务 → Apply Loose Tags，0.0 – 0.4。",
+      "expect": "Effect 轨道上出现第一个片段。",
+      "advance": { "minTasks": 1 },
+      "action": "AddTask",
+      "args": {
+        "track": "Effect",
+        "type": "UAKAbilityTask_ApplyLooseTags",
+        "startTime": 0.0,
+        "duration": 0.4,
+        "taskId": "Windup",
+        "props": { "Tags": "(\"Ability.Windup\")" }
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-effect-b",
+      "title": "放第二个逻辑任务（故意重叠）",
+      "say": "注意我把它的起点也设在 0.0，和上一个重叠。**在 Timeline 模式下重叠是完全合法的**——它只是「同一时刻有两件事」。",
+      "do": "右键 Effect 轨道 → 添加任务 → Wait Until，0.0 – 0.5。",
+      "expect": "两个片段在时间上互相重叠。",
+      "advance": { "minTasks": 2 },
+      "action": "AddTask",
+      "args": {
+        "track": "Effect",
+        "type": "UAKAbilityTask_WaitUntil",
+        "startTime": 0.0,
+        "duration": 0.5,
+        "taskId": "Hold"
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "switch-sequence",
+      "title": "把 Effect 轨道切成 Sequence",
+      "say": "切到 Sequence 后，任务**忽略自己的绝对时间**，按数组顺序首尾相接：上一个结束，下一个开始。改排布不用再逐个挪时间点——这是它最大的价值。",
+      "do": "左栏点轨道名 → Inspector → Composite → CompositeMode = Sequence。",
+      "expect": "画布上两个片段被重新排成首尾相接，而不是重叠。",
+      "action": "SetTrackMode",
+      "args": { "track": "Effect", "mode": "Sequence" },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-cue",
+      "title": "在表现轨道上放一个 Cue",
+      "say": "表现一律走 GameplayCue，不走 GE 也不走 Task 直连特效——这样才能被 GAS 的网络与预测体系正确对待。",
+      "do": "右键 Presentation 轨道 → 添加任务 → Send Gameplay Cue，0.2 – 0.0；Cue Tag 填 GameplayCue.Demo.Hit。",
+      "expect": "Presentation 轨道上出现一个单帧片段。",
+      "advance": { "minTasks": 3 },
+      "action": "AddTask",
+      "args": {
+        "track": "Presentation",
+        "type": "UAKAbilityTask_SendGameplayCue",
+        "startTime": 0.2,
+        "duration": 0.0,
+        "taskId": "HitSpark",
+        "props": { "CueTag": "GameplayCue.Demo.Hit" }
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "switch-parallel",
+      "title": "把表现轨道切成 Parallel 并重复 3 次",
+      "say": "Parallel 下所有任务同时开始；配合 RepeatCount=3 / RepeatInterval=0.2，就是「连续三段火花」。**Repeat 只在 Sequence / Parallel 下生效**——Timeline 模式下任务有自己的绝对时间，重复没有意义。",
+      "do": "选中 Presentation 轨道 → CompositeMode = Parallel，RepeatCount = 3，RepeatInterval = 0.2。",
+      "expect": "画布上出现三段落错开的片段。",
+      "action": "SetTrackMode",
+      "args": { "track": "Presentation", "mode": "Parallel", "repeatCount": 3, "repeatInterval": 0.2 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "mute-presentation",
+      "title": "整体静音表现轨道",
+      "say": "左栏轨道头的勾选框就是「整体开关」。关掉表现轨道，执行计划里就不再包含它的任务——服务器校验、压测、跑批时最常用的一个动作，UAK 独有。注意静音**不等于删除**：校验仍然会看它，避免问题被静音藏起来。",
+      "do": "点 Presentation 轨道头的勾选框，取消勾选。",
+      "expect": "该轨道变灰；执行计划里不再包含它的任务。",
+      "action": "SetTrackMode",
+      "args": { "track": "Presentation", "enabled": false },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "validate",
+      "title": "校验：逻辑轨道仍然成立",
+      "say": "静音不等于删除。校验只针对**会参与执行**的轨道，所以被静音轨道上的问题不会来打扰你。",
+      "do": "看底部校验条。",
+      "expect": "0 错误。",
+      "advance": { "expectErrors": 0, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 0,
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "export",
+      "title": "导出，看 Json 里怎么记这三种模式",
+      "say": "复合参数是轨道级字段（compositeMode / repeatCount / repeatInterval / startDelay），导出后是稳定的文本字段，review 时一眼能看出「这轨是串行的、重复 3 次」。",
+      "do": "工具条 → 导出 Json。",
+      "expect": "Json 里 tracks[i].compositeMode 分别为 Sequence / Parallel。",
+      "action": "ExportJson",
+      "args": { "path": "composite.json" },
+      "capture": { "shot": true }
+    }
+  ]
+}

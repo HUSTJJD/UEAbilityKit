@@ -35,6 +35,15 @@
 		{
 			"Name": "GameplayAbilities",
 			"Enabled": true
+		},
+		{
+			"Name": "GuidedTutorials",
+			"Enabled": true,
+			"Optional": true
+		},
+		{
+			"Name": "UnLuaNova",
+			"Enabled": true
 		}
-	]
+		]
 }

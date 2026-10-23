@@ -41,6 +41,8 @@ const FName FUEAbilityKitAssetEditor::DetailsTabId(TEXT("UAKDetails"));
 const FName FUEAbilityKitAssetEditor::BloodlineTabId(TEXT("UAKBloodline"));
 const FName FUEAbilityKitAssetEditor::PreviewTabId(TEXT("UAKPreview"));
 
+TArray<TWeakPtr<FUEAbilityKitAssetEditor>> FUEAbilityKitAssetEditor::OpenEditors;
+
 void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 	const TSharedPtr<IToolkitHost>& InitToolkitHost, UAKAbilityAsset* InAsset)
 {
@@ -91,10 +93,20 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 	{
 		GEditor->RegisterForUndo(this);
 	}
+
+	// 教程自动化：登记实例，UAK.Tutorial.* 靠它找到要驱动的那台编辑器
+	OpenEditors.Add(TWeakPtr<FUEAbilityKitAssetEditor>(
+		StaticCastSharedRef<FUEAbilityKitAssetEditor>(AsShared())));
 }
 
 FUEAbilityKitAssetEditor::~FUEAbilityKitAssetEditor()
 {
+	OpenEditors.RemoveAll([this](const TWeakPtr<FUEAbilityKitAssetEditor>& Weak)
+	{
+		const TSharedPtr<FUEAbilityKitAssetEditor> Pinned = Weak.Pin();
+		return !Pinned.IsValid() || Pinned.Get() == this;
+	});
+
 	if (PIETickerHandle.IsValid())
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(PIETickerHandle);
@@ -273,6 +285,11 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 
 	ValidationBarWidget = SNew(SUAKValidationBar).Asset(Asset);
 
+	// 引导高亮锚点：官方教程按 SWidget::GetTag() 找控件
+	ApplyTutorialTags(TimelineWidget, EUAKTutorialRegion::Timeline);
+	ApplyTutorialTags(ImpactBarWidget, EUAKTutorialRegion::Validation);
+	ApplyTutorialTags(ValidationBarWidget, EUAKTutorialRegion::Validation);
+
 	return SNew(SDockTab)
 		.Label(LOCTEXT("TimelineTabLabel", "时间轴"))
 		[
@@ -311,6 +328,12 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Details(const FSpawnTabA
 	TaskPickerWidget = SNew(SUAKTaskPicker)
 		.Asset(Asset)
 		.OnAddTask(this, &FUEAbilityKitAssetEditor::OnAddTask);
+
+	ApplyTutorialTags(TaskPickerWidget, EUAKTutorialRegion::Details);
+	if (DetailsView.IsValid())
+	{
+		ApplyTutorialTags(DetailsView, EUAKTutorialRegion::Details);
+	}
 
 	return SNew(SDockTab)
 		.Label(LOCTEXT("DetailsTabLabel", "Inspector"))
@@ -377,6 +400,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Bloodline(const FSpawnTa
 	check(Args.GetTabId() == BloodlineTabId);
 
 	BloodlineWidget = SNew(SUAKBloodlineView).Asset(Asset);
+	ApplyTutorialTags(BloodlineWidget, EUAKTutorialRegion::Bloodline);
 
 	return SNew(SDockTab)
 		.Label(LOCTEXT("BloodlineTabLabel", "血缘"))
@@ -863,6 +887,225 @@ FReply FUEAbilityKitAssetEditor::OnPreviewLoopClicked()
 		PreviewWidget->ToggleLooping();
 	}
 	return FReply::Handled();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 教程自动化桥接：只做转发，不含业务逻辑
+// ─────────────────────────────────────────────────────────────────────────
+TSharedPtr<FUEAbilityKitAssetEditor> FUEAbilityKitAssetEditor::FindEditorForAsset(const UAKAbilityAsset* InAsset)
+{
+	TSharedPtr<FUEAbilityKitAssetEditor> Fallback;
+
+	for (int32 Index = OpenEditors.Num() - 1; Index >= 0; --Index)
+	{
+		TSharedPtr<FUEAbilityKitAssetEditor> Editor = OpenEditors[Index].Pin();
+		if (!Editor.IsValid())
+		{
+			OpenEditors.RemoveAt(Index);
+			continue;
+		}
+
+		if (!InAsset)
+		{
+			Fallback = Editor;
+			break;
+		}
+		if (Editor->Asset.Get() == InAsset)
+		{
+			return Editor;
+		}
+	}
+
+	return Fallback;
+}
+
+FName FUEAbilityKitAssetEditor::GetTabIdForName(const FString& Name)
+{
+	if (Name.Equals(TEXT("Bloodline"), ESearchCase::IgnoreCase)) { return BloodlineTabId; }
+	if (Name.Equals(TEXT("Details"), ESearchCase::IgnoreCase)
+		|| Name.Equals(TEXT("Inspector"), ESearchCase::IgnoreCase)) { return DetailsTabId; }
+	if (Name.Equals(TEXT("Preview"), ESearchCase::IgnoreCase)) { return PreviewTabId; }
+	return TimelineTabId;
+}
+
+TSharedPtr<SWidget> FUEAbilityKitAssetEditor::GetWidgetForRegion(EUAKTutorialRegion Region)
+{
+	auto TabContent = [this](const FName& TabId) -> TSharedPtr<SWidget>
+	{
+		if (GetTabManager().IsValid())
+		{
+			if (const TSharedPtr<SDockTab> Tab = GetTabManager()->FindExistingLiveTab(TabId))
+			{
+				return Tab->GetContent();
+			}
+		}
+		return nullptr;
+	};
+
+	switch (Region)
+	{
+	case EUAKTutorialRegion::Timeline:
+		return TimelineWidget.IsValid() ? TimelineWidget : TabContent(TimelineTabId);
+
+	case EUAKTutorialRegion::Bloodline:
+		return BloodlineWidget.IsValid() ? BloodlineWidget : TabContent(BloodlineTabId);
+
+	case EUAKTutorialRegion::Details:
+		return TabContent(DetailsTabId);
+
+	case EUAKTutorialRegion::Validation:
+		return ValidationBarWidget;
+
+	case EUAKTutorialRegion::Editor:
+		if (GetTabManager().IsValid())
+		{
+			if (const TSharedPtr<SDockTab> Owner = GetTabManager()->GetOwnerTab())
+			{
+				return Owner->GetContent();
+			}
+		}
+		return TabContent(TimelineTabId);
+
+	default:
+		return TabContent(TimelineTabId);
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationFocusTab(FName TabId)
+{
+	if (!GetTabManager().IsValid())
+	{
+		return;
+	}
+
+	if (const TSharedPtr<SDockTab> Tab = GetTabManager()->TryInvokeTab(TabId))
+	{
+		Tab->ActivateInParent(ETabActivationCause::SetDirectly);
+		Tab->DrawAttention();
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationRefresh()
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->ForceRefresh();
+	}
+	if (BloodlineWidget.IsValid())
+	{
+		BloodlineWidget->Invalidate(EInvalidateWidgetReason::Layout);
+	}
+	if (ImpactBarWidget.IsValid())
+	{
+		ImpactBarWidget->Invalidate(EInvalidateWidgetReason::Layout);
+	}
+	if (ValidationBarWidget.IsValid())
+	{
+		ValidationBarWidget->Invalidate(EInvalidateWidgetReason::Layout);
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationSetCursorTime(float InTime)
+{
+	CursorTime = InTime;
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->SetCursorTime(InTime);
+	}
+	OnCursorTimeChanged(InTime);
+}
+
+void FUEAbilityKitAssetEditor::AutomationPlay()
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->Play();
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationPause()
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->Pause();
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationStop()
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->Stop();
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationStepFrames(int32 Frames)
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->StepFrame(Frames);
+		CursorTime = TimelineWidget->GetCursorTime();
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationSetShowFrames(bool bInShowFrames)
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->SetShowFrames(bInShowFrames);
+	}
+}
+
+void FUEAbilityKitAssetEditor::AutomationSelectTask(UAKAbilityTaskBase* Task)
+{
+	OnTaskSelected(Task);
+}
+
+void FUEAbilityKitAssetEditor::AutomationSelectTrack(int32 TrackIndex)
+{
+	SelectedTrackIndex = TrackIndex;
+	if (Asset.IsValid() && Asset->Tracks.IsValidIndex(TrackIndex))
+	{
+		OnTrackSelected(Asset->Tracks[TrackIndex], TrackIndex);
+	}
+}
+
+void FUEAbilityKitAssetEditor::ApplyTutorialTags(const TSharedPtr<SWidget>& Widget, EUAKTutorialRegion Region)
+{
+	if (Widget.IsValid())
+	{
+		Widget->SetTag(UAKTutorialTagForRegion(Region));
+	}
+}
+
+FUEAbilityKitAssetEditor::FGuidedStats FUEAbilityKitAssetEditor::GetGuidedStats(bool bNeedValidation) const
+{
+	FGuidedStats Stats;
+	Stats.CursorTime = GetCursorTime();
+	Stats.bHasSelectedTask = SelectedTask.IsValid();
+	Stats.bHasSelectedTrack = (SelectedTrackIndex != INDEX_NONE);
+
+	if (Asset.IsValid())
+	{
+		Stats.Tracks = Asset->Tracks.Num();
+		for (const UAKAbilityTrack* Track : Asset->Tracks)
+		{
+			if (Track)
+			{
+				Stats.Tasks += Track->Tasks.Num();
+			}
+		}
+
+		if (bNeedValidation)
+		{
+			FAKValidationResult Result;
+			Asset->Validate(Result);
+			Stats.Errors = Result.NumErrors();
+			Stats.Warnings = Result.NumWarnings();
+		}
+	}
+
+	return Stats;
 }
 
 #undef LOCTEXT_NAMESPACE

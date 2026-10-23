@@ -61,14 +61,20 @@ Plugins/*
 !Plugins/UnLuaNova/
 
 # ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
-# 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 1.4 GB，不进仓库。
+# 这些由 Tools/import_lyra.ps1 从你本地的 Lyra 拷贝，约 3 GB，不进仓库。
 Plugins/GameFeatures/
 Plugins/LyraExampleContent/
 Plugins/LyraExtTool/
-Content/ShooterCore/
-Content/ShooterMaps/
 *.uak.bak
 *.orig
+
+# ── /Game 根内容（Content/）同样是 Lyra 拷来的 ─────────────────────────
+# DefaultGameData / PawnData / 关卡 / 音频宏 … 全在这一层，缺了工程起不来。
+# 整层忽略，再用否定规则把我们真正拥有的目录放行。
+Content/*
+!Content/UAK/
+!Content/Script/
+!Content/README.md
 
 # ── 导入脚本的运行期状态（clean_lyra 会删，重新 import 会再生成）────────
 Tools/.patched_files.txt

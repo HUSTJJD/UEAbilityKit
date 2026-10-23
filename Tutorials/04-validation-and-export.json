@@ -1,0 +1,181 @@
+{
+  "id": "04-validation-and-export",
+  "title": "校验治理与 Json 往返：让错误无法被配置出来",
+  "summary": "校验不是「保存时弹个窗」，而是常驻底栏、边改边报；导出的 Json 也不是给人看的快照，而是能原样回导、能进 CI 的权威文本。这篇把两件事一次讲透。",
+  "level": "intermediate",
+  "duration": "9 min",
+  "fps": 30,
+  "asset": {
+    "path": "/Game/UAK/Tutorials/TA_Validation",
+    "length": 2.0,
+    "frameRate": 60
+  },
+  "prerequisites": [
+    "知道 GE 与 GameplayCue 的分工",
+    "知道 git diff 是什么"
+  ],
+  "checks": [
+    "我能区分 Error 与 Warning 分别代表什么",
+    "我知道双击校验条目可以定位到片段",
+    "我知道 Json 是双向无损的，且能被 commandlet 校验"
+  ],
+  "steps": [
+    {
+      "id": "open",
+      "title": "新建并打开技能",
+      "say": "校验条常驻在编辑器**底部**，不是弹窗。理由很直接：弹窗是「你来问我才答」，常驻条是「边改边报」——错误在写出来的那一秒就出现，而不是等到保存。",
+      "do": "新建 Ability Asset，Length 2.0。",
+      "expect": "底部出现常驻校验条（当前显示 0 警告 · 0 错误）。",
+      "action": "OpenAsset",
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "add-effect-track",
+      "title": "加 Effect 轨道并放一个空壳 GE 任务",
+      "say": "我们先把两个「必定出错」的任务摆上去，看看校验怎么说。",
+      "do": "工具条 → +轨道 → TrackName = Effect，TrackType = Effect。",
+      "expect": "左栏出现 Effect 轨道。",
+      "advance": { "minTracks": 1 },
+      "action": "AddTrack",
+      "args": { "name": "Effect", "type": 1 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-ge-empty",
+      "title": "空壳 GE 任务已就位",
+      "say": "这条错误不是外部校验器报的，是 `UAKAbilityTask_ApplyGameplayEffect::Validate()` 自己报的。新增任务类型时规则跟着任务走，不会出现「任务换了、校验器忘了跟」的漂移。",
+      "do": "确认片段在 Effect 轨道上。",
+      "expect": "片段可见。",
+      "advance": { "minTasks": 1 },
+      "action": "AddTask",
+      "args": {
+        "track": "Effect",
+        "type": "UAKAbilityTask_ApplyGameplayEffect",
+        "startTime": 0.2,
+        "duration": 0.1,
+        "taskId": "Unfilled"
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-presentation-track",
+      "title": "再放一个空壳 Cue 任务",
+      "say": "表现类任务同样有自己的规则：Cue Tag 为空就是「这个任务什么也不会触发」，属于错误而不是警告。",
+      "do": "工具条 → +轨道 → TrackName = Presentation，TrackType = Presentation。",
+      "expect": "左栏出现第二条轨道。",
+      "advance": { "minTracks": 2 },
+      "action": "AddTrack",
+      "args": { "name": "Presentation", "type": 2 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-cue-empty",
+      "title": "空壳 Cue 任务已就位",
+      "say": "现在两条错误分别来自两个不同的任务。双击任意一条都会选中并滚动到对应片段——**定位成本必须接近零**，否则没人会用校验。",
+      "do": "右键 Presentation 轨道 → 添加任务 → Send Gameplay Cue，0.25 – 0.0，不填 Cue Tag。",
+      "expect": "片段可见，校验条变成 2 条错误。",
+      "advance": { "minTasks": 2 },
+      "action": "AddTask",
+      "args": {
+        "track": "Presentation",
+        "type": "UAKAbilityTask_SendGameplayCue",
+        "startTime": 0.25,
+        "duration": 0.0,
+        "taskId": "UnfilledCue"
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "validate-two",
+      "title": "校验：2 条错误",
+      "say": "这一刻的「2 条错误」是可以被引擎断言的——教程流水线会把这个数字写进产物，`Automation RunTests UAK.Tutorial` 会验证它。教程因此不会教人做一件做不到的事。",
+      "do": "看底部校验条。",
+      "expect": "2 条错误，分别指向两个任务。",
+      "advance": { "expectErrors": 2, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 2,
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "fix-ge",
+      "title": "补上 GE 类",
+      "say": "示例工程自带几个 C++ GE（`UAKDemoGE_MeleeDamage` / `FireballDamage` / `Cooldown` / `Cost`）。用 C++ GE 的好处：仓库里不塞二进制，冷却 Tag 也不用改 .ini。",
+      "do": "选中 GE 任务 → Inspector → EffectClass 选 GE_MeleeDamage。",
+      "expect": "1 条错误消失。",
+      "action": "SetTaskProp",
+      "args": {
+        "track": "Effect",
+        "task": 0,
+        "property": "EffectClass",
+        "value": "/Script/UAKDemo.UAKDemoGE_MeleeDamage"
+      },
+      "capture": { "shot": true, "region": "Details" }
+    },
+    {
+      "id": "fix-cue",
+      "title": "补上 Cue Tag",
+      "say": "Cue Tag 是 GAS 的 GameplayCue Tag。表现与逻辑分离在这里落地：伤害走 GE，火花走 Cue，两边互不干涉。",
+      "do": "选中 Cue 任务 → Inspector → CueTag 填 GameplayCue.Demo.Hit。",
+      "expect": "第 2 条错误消失。",
+      "action": "SetTaskProp",
+      "args": {
+        "track": "Presentation",
+        "task": 0,
+        "property": "CueTag",
+        "value": "GameplayCue.Demo.Hit"
+      },
+      "capture": { "shot": true, "region": "Details" }
+    },
+    {
+      "id": "validate-zero",
+      "title": "校验：0 错误",
+      "say": "错误清零。注意「错误」和「警告」的分工：**错误**是「这样配一定不对」，**警告**是「这样配可能不是你想要的」（例如任务超出技能长度）。",
+      "do": "看底部校验条。",
+      "expect": "0 错误。",
+      "advance": { "expectErrors": 0, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 0,
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "shrink-length",
+      "title": "故意把技能长度改小，制造警告",
+      "say": "把长度改成 0.25 秒，原来的任务就超出了时间轴末端。这类情况被判为**警告而不是错误**——它可能被有意用来做「尾部溢出但仍在跑」的编排，UAK 不该替你决定。",
+      "do": "工具条 → 资产属性 → Length = 0.25。",
+      "expect": "校验条出现「任务结束时间超出技能长度」的警告。",
+      "action": "SetAssetProp",
+      "args": { "property": "Length", "value": "0.25" },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "validate-warning",
+      "title": "校验：0 错误 + 若干警告",
+      "say": "错误数依然是 0，说明资产可以正常保存与运行；警告提醒你去确认这是有意为之。",
+      "do": "看底部校验条。",
+      "expect": "0 错误，至少 1 条警告。",
+      "advance": { "expectErrors": 0, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 0,
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "export",
+      "title": "导出 Json",
+      "say": "导出的是**强类型字段**，不是属性表 dump。字段名稳定，适合 review 与 diff；每个任务带 `$type`，回导时能定位到具体类。",
+      "do": "工具条 → 导出 Json。",
+      "expect": "得到一个含 version / length / tracks[] / tasks[] 的文本文件。",
+      "action": "ExportJson",
+      "args": { "path": "validation.json" },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "ci-note",
+      "title": "它在 CI 里的位置",
+      "say": "`UAKValidateCommandlet` 可以直接加载 Json（或资产）跑一遍校验，不需要打开编辑器、不需要 GPU。所以「配置可 diff」不只是口号——它是真的能被流水线断言的。",
+      "do": "在 CI 里执行 UAKValidateCommandlet；本地则用 Scripts/generate_tutorials.ps1 一键重录教程。",
+      "expect": "校验结论以退出码返回，失败即阻断。",
+      "action": "Note",
+      "capture": { "shot": true }
+    }
+  ]
+}

@@ -57,7 +57,8 @@ public class UAKDemo : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			string.Equals(backend, "Lua", StringComparison.OrdinalIgnoreCase) ? "Lua" : "Luau"
+			string.Equals(backend, "Lua", StringComparison.OrdinalIgnoreCase) ? "Lua" : "Luau",
+			"Projects"        // IPluginManager（示例资产写到插件自己的 Content 目录）
 		});
 
 		// UAKDemoSetupCommandlet：一键生成示例资产 / 蓝图 / 关卡。

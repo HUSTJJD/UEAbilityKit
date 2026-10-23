@@ -13,6 +13,7 @@
         - 源码：Source/LyraGame、Source/LyraEditor、Source/*.Target.cs
         - 外围：根目录 *.uproject、Config/、Platforms/
         - 资产：Plugins/ 下除 -KeepPlugin 之外的所有插件（GameFeatures 等，约 1.4 GB）
+        - 资产：Content/ 下从 Lyra 拷来的 /Game 根内容（DefaultGameData 等，约 1.8 GB）
         - 补丁痕迹：*.orig、*.uak.bak、Tools/.patched_files.txt、Tools/.lyra_state.json
         - 导入清单：Tools/.lyra_paths.txt、Tools/lyra_manifest.txt
 
@@ -70,7 +71,7 @@ if (Test-Path $pathsFile) {
     foreach ($line in (Get-Content $pathsFile)) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         $rel = $line.Trim()
-        if ($KeepAssets -and ($rel -match '^Plugins[\\/]' -or $rel -match '^Content[\\/]Shooter')) {
+        if ($KeepAssets -and ($rel -match '^Plugins[\\/]' -or $rel -match '^Content[\\/]')) {
             Write-Verbose "[clean] 保留（资产）：$rel"
             continue
         }

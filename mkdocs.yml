@@ -60,6 +60,15 @@ nav:
       - 跑通示例工程: examples/05-run-the-demo.md
       - 实况联调清单: examples/06-live-trace-checklist.md
       - Lyra 上一键体验: examples/lyra-integration.md
+  - 编辑器教程:
+      - 教程总览: tutorials/index.md
+      # UAK_TUTORIALS_BEGIN
+      - 第一个技能：从新建资产到跑起来: tutorials/01-first-ability.md
+      - 轨道与复合编排：Sequence / Parallel / Repeat: tutorials/02-tracks-and-composite.md
+      - 血缘视图：回答「这 120 伤害是哪来的」: tutorials/03-bloodline-explain.md
+      - 校验治理与 Json 往返：让错误无法被配置出来: tutorials/04-validation-and-export.md
+      - 实况联调：让编辑器跟着 PIE 一起动: tutorials/05-live-debug-pie.md
+      # UAK_TUTORIALS_END
   - 测试与自动化: testing.md
   - 测试报告: reports/latest.md
   - Showcase: showcase.md

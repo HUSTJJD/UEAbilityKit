@@ -6,6 +6,8 @@
 #include "SUAKTimelineToolbar.h"
 #include "Toolkits/AssetEditorToolkit.h"
 #include "Toolkits/IToolkitHost.h"
+#include "UAKTutorialTypes.h"   // EUAKTutorialRegion（教程自动化采哪个区域）
+#include "Widgets/SWidget.h"
 
 class UAKAbilityAsset;
 class UAKAbilityTaskBase;
@@ -31,6 +33,68 @@ class FUEAbilityKitAssetEditor : public FAssetEditorToolkit, public FEditorUndoC
 public:
 	void InitEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost>& InitToolkitHost, UAKAbilityAsset* InAsset);
 	virtual ~FUEAbilityKitAssetEditor();
+
+	// ─────────────────────────────────────────────────────────────────────
+	// 教程自动化桥接（UAK.Tutorial.*）：让教程引擎能"开着编辑器亲手操作一遍"
+	//
+	// 为什么要这一层：教程要截的是面板（时间轴 / 血缘 / Inspector），
+	// 而不是视口；而驱动 UI 又必须走真实的控件，否则"录出来的"和"读者点的"是两回事。
+	// 这一层只做转发，不含业务逻辑。
+	// ─────────────────────────────────────────────────────────────────────
+
+	/** 当前打开的所有技能资产编辑器（教程引擎据此找到要操作的那一台） */
+	static TSharedPtr<FUEAbilityKitAssetEditor> FindEditorForAsset(const UAKAbilityAsset* InAsset);
+	/** 按名字取 TabId：Timeline / Bloodline / Details / Preview */
+	static FName GetTabIdForName(const FString& Name);
+
+	/**
+	 * 教程要截哪个区域；拿不到就返回空（例如 Tab 还没被打开过）
+	 *
+	 * 不是 const：要查 Tab 内容得走 FAssetEditorToolkit::GetTabManager()，
+	 * 而引擎那个访问器是非 const 的（它会返回可写的 TabManager）。
+	 */
+	TSharedPtr<SWidget> GetWidgetForRegion(EUAKTutorialRegion Region);
+
+	/**
+	 * 给面板里的关键控件打上 Slate Tag（UAK.Timeline / UAK.Bloodline / …）。
+	 *
+	 * 官方 IntroTutorials 的 NamedWidget 锚点匹配的就是 `SWidget::GetTag()`
+	 * ——这是 Slate 通用机制，所以 UAK 自己的面板打了 Tag 就能被引导的高亮框住，
+	 * 不需要引擎那套内部 wrapper。
+	 */
+	static void ApplyTutorialTags(const TSharedPtr<SWidget>& Widget, EUAKTutorialRegion Region);
+
+	void AutomationFocusTab(FName TabId);
+	void AutomationRefresh();
+	void AutomationSetCursorTime(float InTime);
+	void AutomationPlay();
+	void AutomationPause();
+	void AutomationStop();
+	void AutomationStepFrames(int32 Frames);
+	void AutomationSetShowFrames(bool bInShowFrames);
+	void AutomationSelectTask(UAKAbilityTaskBase* Task);
+	void AutomationSelectTrack(int32 TrackIndex);
+	float GetCursorTimePublic() const { return GetCursorTime(); }
+
+	/**
+	 * 引导（UAK.Tutorial.Guided）用的进度快照。
+	 *
+	 * 与上面那些"执行"接口不同，这一组是**只读**的：引导模式下是读者在动手，
+	 * 引擎只负责判断"目标状态达成没有"，所以只需要把当前状态取出来比对。
+	 */
+	struct FGuidedStats
+	{
+		int32 Tracks = 0;
+		int32 Tasks = 0;
+		float CursorTime = 0.f;
+		bool bHasSelectedTask = false;
+		bool bHasSelectedTrack = false;
+		int32 Errors = 0;
+		int32 Warnings = 0;
+	};
+
+	/** @param bNeedValidation 只有脚本声明了 expectErrors 时才跑校验，避免每 tick 白算 */
+	FGuidedStats GetGuidedStats(bool bNeedValidation = false) const;
 
 	// FAssetEditorToolkit
 	virtual void RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager) override;
@@ -104,6 +168,10 @@ private:
 	TWeakObjectPtr<const UAKTrace> LastLinkedTrace;
 	bool bPIERecordingForced = false;
 
+	/** 所有活着的编辑器实例：教程自动化靠它"找到"要驱动的那台 */
+	static TArray<TWeakPtr<FUEAbilityKitAssetEditor>> OpenEditors;
+
+public:
 	static const FName TimelineTabId;
 	static const FName DetailsTabId;
 	static const FName BloodlineTabId;

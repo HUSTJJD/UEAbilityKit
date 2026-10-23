@@ -40,6 +40,21 @@ namespace
 		default:							return FLinearColor(0.60f, 0.60f, 0.65f);
 		}
 	}
+
+	/**
+	 * 画一块矩形要的 PaintGeometry。
+	 *
+	 * 引擎 5.2 起 FGeometry::ToPaintGeometry(偏移, 尺寸) 被标记弃用，新签名是
+	 * (局部尺寸, 布局变换)——参数顺序反了，而且尺寸/偏移收窄成 float。
+	 * 这里收口成"偏移 + 尺寸"，调用点不用再关心这两件事。
+	 * 布局变换的偏移与旧版的 LocalOffset 同为局部空间，scale 为 1 时两者等价。
+	 */
+	FPaintGeometry PaintGeom(const FGeometry& Geometry, const FVector2D& Offset, const FVector2D& Size)
+	{
+		return Geometry.ToPaintGeometry(
+			UE::Slate::CastToVector2f(Size),
+			FSlateLayoutTransform(UE::Slate::CastToVector2f(Offset)));
+	}
 }
 
 void SUAKTimeline::Construct(const FArguments& InArgs)
@@ -597,7 +612,7 @@ void SUAKTimeline::DrawRuler(const FGeometry& Geometry, FSlateWindowElementList&
 {
 	// 标尺底
 	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-		Geometry.ToPaintGeometry(FVector2D(0, 0), FVector2D(Geometry.GetLocalSize().X, RulerHeight)),
+		PaintGeom(Geometry, FVector2D(0, 0), FVector2D(Geometry.GetLocalSize().X, RulerHeight)),
 		FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorRuler);
 
 	const float Width = Geometry.GetLocalSize().X;
@@ -627,7 +642,7 @@ void SUAKTimeline::DrawRuler(const FGeometry& Geometry, FSlateWindowElementList&
 		const FLinearColor Color = bMajor ? ColorGridMajor : ColorGrid;
 
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-			Geometry.ToPaintGeometry(FVector2D(X, RulerHeight - (bMajor ? 10.f : 5.f)), FVector2D(1.f, bMajor ? 10.f : 5.f)),
+			PaintGeom(Geometry, FVector2D(X, RulerHeight - (bMajor ? 10.f : 5.f)), FVector2D(1.f, bMajor ? 10.f : 5.f)),
 			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Color);
 
 		if (bMajor)
@@ -639,7 +654,7 @@ void SUAKTimeline::DrawRuler(const FGeometry& Geometry, FSlateWindowElementList&
 				: FText::Format(LOCTEXT("TimeLabel", "{0}s"), FText::AsNumber(FMath::RoundToFloat(T * 100.f) / 100.f));
 
 			FSlateDrawElement::MakeText(OutDrawElements, LayerId,
-				Geometry.ToPaintGeometry(FVector2D(X + 3.f, 3.f), FVector2D(60.f, 14.f)),
+				PaintGeom(Geometry, FVector2D(X + 3.f, 3.f), FVector2D(60.f, 14.f)),
 				Label, Font, ESlateDrawEffect::None, FLinearColor(0.65f, 0.65f, 0.65f));
 		}
 	}
@@ -663,7 +678,7 @@ void SUAKTimeline::DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementL
 
 		// 行底
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-			Geometry.ToPaintGeometry(FVector2D(0, Y), FVector2D(Width, RowHeight - 1.f)),
+			PaintGeom(Geometry, FVector2D(0, Y), FVector2D(Width, RowHeight - 1.f)),
 			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
 			(Row % 2 == 0) ? ColorBackground : FLinearColor(0.05f, 0.05f, 0.05f));
 
@@ -671,19 +686,19 @@ void SUAKTimeline::DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementL
 		const FLinearColor TrackColor = Track ? ColorForTrack(Track->TrackType) : FLinearColor::Gray;
 		const FLinearColor HeaderColor = Track && !Track->bEnabled ? FLinearColor(0.05f, 0.05f, 0.05f) : ColorHeader;
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-			Geometry.ToPaintGeometry(FVector2D(0, Y), FVector2D(TrackHeaderWidth - 1.f, RowHeight - 1.f)),
+			PaintGeom(Geometry, FVector2D(0, Y), FVector2D(TrackHeaderWidth - 1.f, RowHeight - 1.f)),
 			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HeaderColor);
 
 		// 轨道色条 + 开关方块
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
-			Geometry.ToPaintGeometry(FVector2D(4.f, Y + 6.f), FVector2D(6.f, RowHeight - 13.f)),
+			PaintGeom(Geometry, FVector2D(4.f, Y + 6.f), FVector2D(6.f, RowHeight - 13.f)),
 			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
 			Track && Track->bEnabled ? TrackColor : FLinearColor(0.25f, 0.25f, 0.25f));
 
 		if (Track)
 		{
 			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
-				Geometry.ToPaintGeometry(FVector2D(18.f, Y + 7.f), FVector2D(TrackHeaderWidth - 24.f, 16.f)),
+				PaintGeom(Geometry, FVector2D(18.f, Y + 7.f), FVector2D(TrackHeaderWidth - 24.f, 16.f)),
 				Track->GetDisplayName(), Font, ESlateDrawEffect::None,
 				Track->bEnabled ? FLinearColor(0.85f, 0.85f, 0.85f) : FLinearColor(0.4f, 0.4f, 0.4f));
 		}
@@ -702,7 +717,7 @@ void SUAKTimeline::DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementL
 			const float X = TimeToX(T);
 			if (X < TrackHeaderWidth || X > Width) { continue; }
 			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-				Geometry.ToPaintGeometry(FVector2D(X, Y), FVector2D(1.f, RowHeight - 1.f)),
+				PaintGeom(Geometry, FVector2D(X, Y), FVector2D(1.f, RowHeight - 1.f)),
 				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorGrid);
 		}
 	}
@@ -757,7 +772,7 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 			Fill.A = bSelected ? 0.95f : 0.7f;
 
 			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-				Geometry.ToPaintGeometry(FVector2D(X0, Y + 4.f), FVector2D(W, RowHeight - 9.f)),
+				PaintGeom(Geometry, FVector2D(X0, Y + 4.f), FVector2D(W, RowHeight - 9.f)),
 				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Fill);
 
 			if (bSelected)
@@ -765,10 +780,10 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 				// 选中描边
 				const FLinearColor Outline(1.f, 1.f, 1.f, 0.9f);
 				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
-					Geometry.ToPaintGeometry(FVector2D(X0, Y + 4.f), FVector2D(W, 1.f)),
+					PaintGeom(Geometry, FVector2D(X0, Y + 4.f), FVector2D(W, 1.f)),
 					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Outline);
 				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
-					Geometry.ToPaintGeometry(FVector2D(X0, Y + RowHeight - 5.f), FVector2D(W, 1.f)),
+					PaintGeom(Geometry, FVector2D(X0, Y + RowHeight - 5.f), FVector2D(W, 1.f)),
 					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Outline);
 			}
 
@@ -781,7 +796,7 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 					Task->GetClass()->GetName().Replace(TEXT("UAKAbilityTask_"), TEXT("")));
 #endif
 				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
-					Geometry.ToPaintGeometry(FVector2D(X0 + 4.f, Y + 7.f), FVector2D(W - 8.f, 14.f)),
+					PaintGeom(Geometry, FVector2D(X0 + 4.f, Y + 7.f), FVector2D(W - 8.f, 14.f)),
 					Label, Font, ESlateDrawEffect::None, FLinearColor(0.05f, 0.05f, 0.05f));
 			}
 		}
@@ -794,11 +809,11 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 		if (X < TrackHeaderWidth || X > Width) { continue; }
 
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
-			Geometry.ToPaintGeometry(FVector2D(X, RulerHeight), FVector2D(1.f, ViewHeight - RulerHeight)),
+			PaintGeom(Geometry, FVector2D(X, RulerHeight), FVector2D(1.f, ViewHeight - RulerHeight)),
 			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, FLinearColor(0.4f, 0.75f, 0.95f, 0.55f));
 
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
-			Geometry.ToPaintGeometry(FVector2D(X + 3.f, RulerHeight + 2.f), FVector2D(80.f, 12.f)),
+			PaintGeom(Geometry, FVector2D(X + 3.f, RulerHeight + 2.f), FVector2D(80.f, 12.f)),
 			FText::FromName(Marker.Name), Font, ESlateDrawEffect::None, FLinearColor(0.4f, 0.75f, 0.95f));
 	}
 }
@@ -807,7 +822,7 @@ void SUAKTimeline::DrawCursor(const FGeometry& Geometry, FSlateWindowElementList
 {
 	const float X = TimeToX(CursorTime);
 	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-		Geometry.ToPaintGeometry(FVector2D(X, 0.f), FVector2D(1.5f, ViewHeight)),
+		PaintGeom(Geometry, FVector2D(X, 0.f), FVector2D(1.5f, ViewHeight)),
 		FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorCursor);
 }
 

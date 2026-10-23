@@ -8,7 +8,7 @@
       1. 校验 Lyra 路径与引擎版本
       2. 拷源码：Source/LyraGame（子集，完整可玩那套）+ Source/LyraEditor
       3. 拷外围：.uproject / Target.cs / Config（以 Lyra 为基线，我们的东西靠补丁加回来）
-      4. 拷资产：Plugins/GameFeatures/* 等（约 1.4 GB，不进 git）
+      4. 拷资产：Content/（/Game 根内容）+ Plugins/GameFeatures/* 等（约 3 GB，不进 git）
       5. 打补丁：ULyraGameplayAbility 继承 UAKGameplayAbility 等（Tools/patch_lyra.py）
       6. 记清单 + 校验：Tools/.lyra_paths.txt（清的时候照单全删）、
          Tools/.lyra_state.json（快照，之后 verify_lyra.py 可离线比对）
@@ -122,7 +122,7 @@ if ($SkipAssets) {
 $prevAssetPaths = @()
 $pathsFile = Join-Path $PSScriptRoot '.lyra_paths.txt'
 if (Test-Path $pathsFile) {
-    $prevAssetPaths = @(Get-Content $pathsFile | Where-Object { $_ -match '^Plugins[\\/]' -or $_ -match '^Content[\\/]Shooter' })
+    $prevAssetPaths = @(Get-Content $pathsFile | Where-Object { $_ -match '^Plugins[\\/]' -or $_ -match '^Content[\\/]' })
 }
 
 if (-not $NoClean) {
@@ -184,7 +184,7 @@ Write-Host '[import] Target.cs ← Lyra'
 
 # ── 3. 拷资产（大，不进 git）─────────────────────────────────────────────
 if (-not $SkipAssets) {
-    Write-Host "[import] 拷资产（约 1.4 GB，不进 git）…"
+    Write-Host "[import] 拷资产（Content 约 1.8 GB + 插件约 1.4 GB，不进 git）…"
 
     # 3a. GameFeature 插件：武器、关卡都在这（ShooterCore / ShooterMaps / ...）
     $gfSrc = Join-Path $LyraPath 'Plugins\GameFeatures'
@@ -217,9 +217,32 @@ if (-not $SkipAssets) {
             Write-Host "[import] Lyra 插件：$($p.Name)"
         }
     }
+
+    # 3c. /Game 根内容：不拷它工程就起不来
+    #     Config/DefaultGame.ini 指向 /Game/DefaultGameData.DefaultGameData、
+    #     /Game/Characters/Heroes/.../DefaultPawnData_EmptyPawn，
+    #     少一个 ULyraAssetManager::StartInitialLoading 就 Fatal（"Failed to load GameData asset"）。
+    #     ShooterCore 的 System/Audio/WeaponAudioFunctions 也依赖 /Game/Audio/Blueprints/WeaponAudioMacros，
+    #     缺了会在启动时报一堆 "Macro instance is pointing at an invalid macro graph"。
+    $contentSrc = Join-Path $LyraPath 'Content'
+    if (Test-Path $contentSrc) {
+        # 这几个是我们自己的（Content/UAK 的 Json 技能、Content/Script 的 Lua），永不覆盖
+        $ourContent = @('UAK', 'Script', 'Collections', 'Developers', 'README.md')
+        foreach ($item in Get-ChildItem -Path $contentSrc -Force) {
+            if ($ourContent -contains $item.Name) {
+                Write-Verbose "[import] Content/$($item.Name) 是我们自己的，跳过"
+                continue
+            }
+            Copy-Lyra -Src $item.FullName -Rel "Content\$($item.Name)" -Dir:$item.PSIsContainer
+            Write-Host "[import] /Game 内容：Content/$($item.Name)"
+        }
+    }
+    else {
+        Write-Warning "[import] $LyraPath 下没有 Content/：工程缺 /Game 根资产，启动必崩"
+    }
 }
 
-# 3c. 平台配置（小，属于外围文件，与 -SkipAssets 无关）
+# 3d. 平台配置（小，属于外围文件，与 -SkipAssets 无关）
 $platformSrc = Join-Path $LyraPath 'Platforms'
 if (Test-Path $platformSrc) {
     Copy-Lyra -Src $platformSrc -Rel 'Platforms' -Dir

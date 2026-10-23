@@ -1,0 +1,140 @@
+{
+  "id": "03-bloodline-explain",
+  "title": "血缘视图：回答「这 120 伤害是哪来的」",
+  "summary": "血缘（Explain）是 UAK 最强的差异化能力：不运行游戏就能看到一条技能对 GAS 的全部影响，还能逐层下钻到属性数值。这篇教你读它、用它定位问题。",
+  "level": "intermediate",
+  "duration": "10 min",
+  "fps": 30,
+  "asset": {
+    "path": "/Game/UAK/Tutorials/TA_Bloodline",
+    "length": 2.0,
+    "frameRate": 60
+  },
+  "prerequisites": [
+    "知道 GameplayEffect 会改属性",
+    "做过「第一个技能」教程"
+  ],
+  "checks": [
+    "我知道血缘视图在「设计期」和「运行期（PIE）」分别由什么数据驱动",
+    "我能从血缘树一路下钻到 SetByCaller 与具体目标",
+    "我知道 GetGASImpact 是每个任务自己实现的契约"
+  ],
+  "steps": [
+    {
+      "id": "open",
+      "title": "新建并打开技能",
+      "say": "血缘视图的数据来自每个任务的 `GetGASImpact()`——它是 UAK 任务的四个契约之一（生命周期 / 自校验 / 自述影响 / Json 双向）。因为影响是「任务自己说出来的」，所以**不用跑游戏就能画出来**。",
+      "do": "新建 Ability Asset，Length 2.0。",
+      "expect": "空的资产编辑器。",
+      "action": "OpenAsset",
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "add-track",
+      "title": "加一条 Effect 轨道",
+      "say": "伤害、Buff、治疗、护盾在 UAK 里全部是 GE——UAK 不自建任何属性 / 修正器系统，这是「不重复造轮子」这条原则的直接体现。",
+      "do": "工具条 → +轨道 → Effect。",
+      "expect": "左栏出现 Effect 轨道。",
+      "advance": { "minTracks": 1 },
+      "action": "AddTrack",
+      "args": { "name": "Effect", "type": 1 },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "add-damage",
+      "title": "放一个 ApplyGameplayEffect，先不填 GE",
+      "say": "故意先不填。马上你就会看到校验把它拦下来——这就是「错误无法被配置出来」。",
+      "do": "右键 → 添加任务 → Apply Gameplay Effect，0.3 – 0.1。",
+      "expect": "片段出现，但底部校验条立刻冒出 1 条错误。",
+      "advance": { "minTasks": 1 },
+      "action": "AddTask",
+      "args": {
+        "track": "Effect",
+        "type": "UAKAbilityTask_ApplyGameplayEffect",
+        "startTime": 0.3,
+        "duration": 0.1,
+        "taskId": "Damage"
+      },
+      "capture": { "shot": true }
+    },
+    {
+      "id": "validate-before",
+      "title": "校验：1 条错误",
+      "say": "注意错误来自**任务自己的 Validate()**，不是外部绑定的校验器。新增一个任务类型时，它的规则跟着它一起走，不会出现「任务换了、校验器忘了跟」。",
+      "do": "看底部校验条，双击条目可直接定位到片段。",
+      "expect": "1 条错误：ApplyGameplayEffect 未指定 GE。",
+      "advance": { "expectErrors": 1, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 1,
+      "capture": { "shot": true, "region": "Editor" }
+    },
+    {
+      "id": "fix-effect",
+      "title": "补上 GE 类",
+      "say": "UAK 里 GE 可以是任意 GE 类：`.uasset` 蓝图 GE、C++ GE 都行。示例工程里 `UAKDemoGE_MeleeDamage` 是一个 C++ GE（Health -30）——用 C++ GE 的好处是仓库里不用塞二进制。",
+      "do": "Inspector → Effect 分类 → EffectClass 选 GE_MeleeDamage（或你的项目里的伤害 GE）。",
+      "expect": "校验条上的错误消失。",
+      "action": "SetTaskProp",
+      "args": {
+        "track": "Effect",
+        "task": 0,
+        "property": "EffectClass",
+        "value": "/Script/UAKDemo.UAKDemoGE_MeleeDamage"
+      },
+      "capture": { "shot": true, "region": "Details" }
+    },
+    {
+      "id": "validate-after",
+      "title": "再校验：0 错误",
+      "say": "改完立刻重算，不用手动点「校验」——常驻底栏的设计就是为了边改边报。",
+      "do": "看底部校验条。",
+      "expect": "0 错误。",
+      "advance": { "expectErrors": 0, "timeout": 120 },
+      "action": "Validate",
+      "expectErrors": 0,
+      "capture": { "shot": true }
+    },
+    {
+      "id": "open-bloodline",
+      "title": "切到血缘视图",
+      "say": "Able 是「时间轴 + 蓝图图」双模式；UAK 的资产是纯数据资产（不是蓝图），所以没有图模式，取而代之的就是血缘视图。它回答的不是「现在在跑哪个任务」，而是「这 120 点伤害是哪来的」。",
+      "do": "左栏视图切换 → 血缘（Explain）。",
+      "expect": "视图变成一棵树：技能 → 任务 → GE → SetByCaller / 目标。",
+      "action": "FocusTab",
+      "args": { "tab": "Bloodline" },
+      "capture": { "shot": true, "region": "Bloodline" }
+    },
+    {
+      "id": "cursor-on-hit",
+      "title": "把光标移到 0.35 秒",
+      "say": "设计期的血缘由 `GetGASImpact()` 静态汇总；运行期（PIE）则由 `UAKTrace` 写入真实数据，能看到**每个目标各自**掉了多少血、谁被格挡了、谁 miss 了。",
+      "do": "拖动光标到伤害片段中间。",
+      "expect": "GAS 影响条与血缘树上都高亮这一段。",
+      "advance": { "minCursorTime": 0.35 },
+      "action": "SetCursor",
+      "args": { "time": 0.35 },
+      "capture": { "shot": true, "region": "Bloodline" }
+    },
+    {
+      "id": "select-node",
+      "title": "下钻到任务节点",
+      "say": "血缘树可以一跳一跳展开：技能 → 任务 → GE → SetByCaller → 目标 → 属性。定位一个「莫名其妙的伤害」，从这棵树往下走三跳就够了。",
+      "do": "在时间轴里选中伤害任务，再看血缘视图。",
+      "expect": "血缘树定位到该任务节点，展开可见 GE 类与 SetByCaller 数值。",
+      "advance": { "requireSelectedTask": true },
+      "action": "SelectTask",
+      "args": { "track": "Effect", "task": 0 },
+      "capture": { "shot": true, "region": "Bloodline" }
+    },
+    {
+      "id": "dump-trace",
+      "title": "导出血缘树文本",
+      "say": "运行期可以用 `UAK.Trace.Dump` 把血缘树打成文本。它是最适合进 CI 的产物——headless 环境没有像素，但文本一定有。",
+      "do": "控制台执行 UAK.Trace.Dump。",
+      "expect": "日志里出现技能 → 任务 → GE → SetByCaller → 目标 → 属性的树形文本。",
+      "action": "Exec",
+      "args": { "cmd": "UAK.Trace.Dump" },
+      "capture": { "shot": true }
+    }
+  ]
+}

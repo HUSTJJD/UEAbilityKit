@@ -61,6 +61,10 @@ flowchart LR
 
     `UEAbilityKitTests` 模块 + 一键脚本：单元 / 实例 / GAS 三层用例，自动产出报告与 Showcase
 
+- :material-human-male-board: **教程也是自动化的**
+
+    教程脚本即用例：`UAK.Tutorial.Run` 在真实编辑器里点一遍并采集截图 / 录屏，再渲染成教程页
+
 </div>
 
 ---
@@ -151,6 +155,7 @@ flowchart LR
 - :material-map: [**路线图**](roadmap.md) — 里程碑与当前进度
 - :material-book-open-variant: [**设计文档**](design/00-index.md) — 模型、执行器、目标选取、溯源、网络、序列化、校验…
 - :material-school: [**示例**](examples/03-sample-project.md) — 最小多人配置、冷却 / 消耗 / 堆叠、UnLua 脚本
+- :material-human-male-board: [**编辑器教程**](tutorials/index.md) — 分步讲解 + 截图 + 录屏，全部由自动化录制生成
 - :material-test-tube: [**测试与自动化**](testing.md) — 用例分层、一键脚本、报告与素材生成
 - :material-image-multiple: [**Showcase**](showcase.md) — 由测试产物自动生成
 
