@@ -5,11 +5,11 @@
 # 测试只在本地跑；CI 不跑 UE，只把产出的 docs/reports 与 docs/showcase.md 渲染到 Pages。
 #
 # 用法：
-#   ./Scripts/run_tests.sh                       # 全部 stage（默认开采集）
-#   ./Scripts/run_tests.sh --stage editor --filter UAK.Unit
-#   ./Scripts/run_tests.sh --headless            # 没 GPU：只跑断言，不出素材
-#   ./Scripts/run_tests.sh --stage net --clients 3 --ability-class /Script/LyraAdapt.XXX
-#   ./Scripts/run_tests.sh --commit              # 跑完把结论提交
+#   ./Tools/run_tests.sh                       # 全部 stage（默认开采集）
+#   ./Tools/run_tests.sh --stage editor --filter UAK.Unit
+#   ./Tools/run_tests.sh --headless            # 没 GPU：只跑断言，不出素材
+#   ./Tools/run_tests.sh --stage net --clients 3 --ability-class /Script/LyraAdapt.XXX
+#   ./Tools/run_tests.sh --commit              # 跑完把结论提交
 #
 set -uo pipefail
 

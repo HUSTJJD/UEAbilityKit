@@ -3,7 +3,7 @@
 - 运行时间：`2026-10-21 00:15:21`
 - 用例总数：**33**　通过：**33**　失败：**0**
 
-> 本文件由 `Scripts/report/generate_report.py` 自动生成，请勿手改。
+> 本文件由 `Tools/report/generate_report.py` 自动生成，请勿手改。
 
 ## 用例明细
 

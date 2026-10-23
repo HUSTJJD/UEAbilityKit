@@ -3,7 +3,7 @@
 """
 UAK 自动化报告生成器。
 
-输入（全部由 Scripts/run_tests.ps1 / .sh 在本地产生）：
+输入（全部由 Tools/run_tests.ps1 / .sh 在本地产生）：
   1) UE 的自动化报告：<ReportDir>/index.json（或若干 Report-*.json），可给多个目录
      兜底：解析 Saved/Automation/Logs/Automation*.log
   2) 进程外 e2e 的标记行：日志里的 "UAK_E2E <Action> <Name> <OK|FAIL|SKIP> [k=v ...]"
@@ -365,8 +365,8 @@ def build_markdown(results: list[dict], media: dict, net: dict, stamp: str) -> s
         f"- 运行时间：`{stamp}`",
         f"- 用例总数：**{total}**　通过：**{passed}**　失败：**{failed}**",
         "",
-        "> 本文件由 `Scripts/report/generate_report.py` 自动生成，请勿手改。",
-        "> 测试在本地一键运行（`Scripts/run_tests.ps1`），CI 只负责把结论渲染到 Pages。",
+        "> 本文件由 `Tools/report/generate_report.py` 自动生成，请勿手改。",
+        "> 测试在本地一键运行（`Tools/run_tests.ps1`），CI 只负责把结论渲染到 Pages。",
         "",
         "## 用例明细",
         "",
@@ -509,7 +509,7 @@ def build_showcase(results: list[dict], media: dict, net: dict, stamp: str) -> s
     lines = [
         "# Showcase",
         "",
-        "这一页由 `Scripts/report/generate_report.py` 自动生成——素材全部来自本地一键跑出来的测试，",
+        "这一页由 `Tools/report/generate_report.py` 自动生成——素材全部来自本地一键跑出来的测试，",
         "**不是手写的宣传页**：截图、录屏、血缘树、多端一致性，都是测试的直接产物。",
         "",
         f"最近一次运行：`{stamp}`　（用例 {len(results)} 个）",
@@ -527,7 +527,7 @@ def build_showcase(results: list[dict], media: dict, net: dict, stamp: str) -> s
             "## 录屏与截图",
             "",
             "本次运行没有产出媒体（headless / `-Headless` 运行没有像素）。",
-            "在本机执行 `Scripts/run_tests.ps1` 即可产出截图与录屏。",
+            "在本机执行 `Tools/run_tests.ps1` 即可产出截图与录屏。",
             "",
         ]
 

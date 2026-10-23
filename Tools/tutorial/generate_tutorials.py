@@ -20,9 +20,9 @@ UAK 教程文档生成器：把"教程脚本 + 录制产物"变成可以发布�
 只依赖标准库；ffmpeg 可选（没有 ffmpeg 时不合成 mp4，但截图与文本照常产出）。
 
 用法
-  python Scripts/tutorial/generate_tutorials.py --project .                # 有录制产物时用产物
-  python Scripts/tutorial/generate_tutorials.py --project . --offline      # 只看脚本，先出文档骨架
-  python Scripts/tutorial/generate_tutorials.py --project . --no-mkdocs    # 不同步 mkdocs.yml
+  python Tools/tutorial/generate_tutorials.py --project .                # 有录制产物时用产物
+  python Tools/tutorial/generate_tutorials.py --project . --offline      # 只看脚本，先出文档骨架
+  python Tools/tutorial/generate_tutorials.py --project . --no-mkdocs    # 不同步 mkdocs.yml
 """
 
 from __future__ import annotations
@@ -209,7 +209,7 @@ def build_step_md(index: int, step: dict, result: dict | None, media: dict, sid:
         for note in res.get("notes", []) or []:
             detail += [f"- {note}", ""]
     else:
-        detail += ["> 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。", ""]
+        detail += ["> 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。", ""]
 
     # 折叠块内的空行也要带缩进，否则 Markdown 会把块提前截断
     lines += ["??? note \"自动化是怎么做这一步的\"", ""] + \
@@ -240,7 +240,7 @@ def build_tutorial_md(script: dict, run: dict | None, media: dict, stamp: str) -
 
     if recorded:
         lines += [
-            f"> 本页由 `Scripts/tutorial/generate_tutorials.py` 自动生成，素材来自 "
+            f"> 本页由 `Tools/tutorial/generate_tutorials.py` 自动生成，素材来自 "
             f"`UAK.Tutorial.Run` 的真实录制（{run.get('stamp', stamp)}）。请勿手改。",
             "",
             f"录制结论：{ok}/{total} 步通过　引擎 {run.get('engine', '-')}",
@@ -250,7 +250,7 @@ def build_tutorial_md(script: dict, run: dict | None, media: dict, stamp: str) -
         lines += [
             "!!! warning \"还没有录制产物\"",
             "    本页目前只由教程脚本渲染，截图 / 录屏尚未采集。",
-            "    在本机执行 `Scripts/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，",
+            "    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，",
             "    文档结构与讲解不受影响。",
             "",
         ]
@@ -287,7 +287,7 @@ def build_tutorial_md(script: dict, run: dict | None, media: dict, stamp: str) -
         "Tutorials/<id>.json      ← 人写的：讲解 + 动作 + 采集声明（唯一事实来源）",
         "   ↓ UAK.Tutorial.Run（编辑器内自动化，真实点一遍）",
         "Saved/UAKAutomation/Tutorials/<id>/{run.json, *.png, frames/}",
-        "   ↓ Scripts/tutorial/generate_tutorials.py",
+        "   ↓ Tools/tutorial/generate_tutorials.py",
         "docs/tutorials/<id>.md   ← 你正在看的这页",
         "```",
         "",
@@ -329,14 +329,14 @@ def build_index_md(entries: list[dict], stamp: str) -> str:
         "## 本地重录一遍",
         "",
         "```powershell",
-        "./Scripts/generate_tutorials.ps1            # 打开编辑器录制 + 生成文档",
-        "./Scripts/generate_tutorials.ps1 -DocsOnly  # 只用已有产物重新生成文档",
-        "./Scripts/generate_tutorials.ps1 -NoCapture # 只验证步骤，不采素材",
+        "./Tools/generate_tutorials.ps1            # 打开编辑器录制 + 生成文档",
+        "./Tools/generate_tutorials.ps1 -DocsOnly  # 只用已有产物重新生成文档",
+        "./Tools/generate_tutorials.ps1 -NoCapture # 只验证步骤，不采素材",
         "```",
         "",
         "```bash",
-        "./Scripts/generate_tutorials.sh",
-        "./Scripts/generate_tutorials.sh --docs-only",
+        "./Tools/generate_tutorials.sh",
+        "./Tools/generate_tutorials.sh --docs-only",
         "```",
         "",
         "完整流程见 [测试与自动化](../testing.md#教程流水线文档也是自动化的产物)。",

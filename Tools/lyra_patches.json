@@ -54,7 +54,8 @@
 		"append": {
 			"DefaultGame.ini": "Tools/patches/config/DefaultGame.ini.append",
 			"DefaultInput.ini": "Tools/patches/config/DefaultInput.ini.append",
-			"DefaultGameplayTags.ini": "Tools/patches/config/DefaultGameplayTags.ini.append"
+			"DefaultGameplayTags.ini": "Tools/patches/config/DefaultGameplayTags.ini.append",
+			"DefaultUnLuaNovaEditor.ini": "Tools/patches/config/DefaultUnLuaNovaEditor.ini.append"
 		}
 	}
 }

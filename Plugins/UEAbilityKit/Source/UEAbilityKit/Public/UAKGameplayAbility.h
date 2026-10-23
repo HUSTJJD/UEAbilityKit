@@ -44,7 +44,7 @@ public:
 
 	/** 要执行的技能时间轴资产 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Kit")
-	UAKAbilityAsset* AbilityAsset = nullptr;
+	TObjectPtr<UAKAbilityAsset> AbilityAsset = nullptr;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -65,12 +65,12 @@ private:
 	void EndTrace();
 
 	UPROPERTY()
-	UAKAbilityInstance* ActiveInstance = nullptr;
+	TObjectPtr<UAKAbilityInstance> ActiveInstance = nullptr;
 
 	UPROPERTY()
-	UAKTrace* ActiveTrace = nullptr;
+	TObjectPtr<UAKTrace> ActiveTrace = nullptr;
 
 	/** 本次施放登记到的调试器（结束技能时据此注销） */
 	UPROPERTY()
-	UAKDebugSubsystem* ActiveDebugSubsystem = nullptr;
+	TObjectPtr<UAKDebugSubsystem> ActiveDebugSubsystem = nullptr;
 };

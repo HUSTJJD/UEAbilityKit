@@ -54,7 +54,7 @@ public:
 
 	/** 轨道上的任务片段（内联实例化） */
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Track")
-	TArray<UAKAbilityTaskBase*> Tasks;
+	TArray<TObjectPtr<UAKAbilityTaskBase>> Tasks;
 
 	/** 轨道显示名：未命名时回落到类型名 */
 	FText GetDisplayName() const;

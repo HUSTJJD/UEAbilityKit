@@ -16,7 +16,7 @@ struct FAKActiveTask
 	GENERATED_BODY()
 
 	UPROPERTY()
-	UAKAbilityTaskBase* Task = nullptr;
+	TObjectPtr<UAKAbilityTaskBase> Task = nullptr;
 
 	/** 该任务应当结束的时间（时间轴秒） */
 	UPROPERTY()
@@ -124,7 +124,7 @@ private:
 	void RestartLoop();
 
 	UPROPERTY()
-	UAKAbilityAsset* Asset = nullptr;
+	TObjectPtr<UAKAbilityAsset> Asset = nullptr;
 
 	/** 作为 UPROPERTY，使其中的 UObject 引用（ScratchPads）能被 GC 正确追踪 */
 	UPROPERTY()
@@ -138,7 +138,7 @@ private:
 	TArray<FAKActiveTask> ActiveTasks;
 
 	UPROPERTY()
-	UAKTrace* Trace = nullptr;
+	TObjectPtr<UAKTrace> Trace = nullptr;
 
 	int32 PendingIndex = 0;
 	int32 LoopCount = 0;

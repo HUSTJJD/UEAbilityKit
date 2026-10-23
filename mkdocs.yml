@@ -52,6 +52,7 @@ nav:
       - 投射物与区域: design/17-projectile-and-area.md
       - 中断: design/18-interrupt.md
       - 引导与吟唱: design/19-channeling.md
+      - 脚本集成: design/20-scripting-integration.md
   - 示例:
       - 最小多人配置: examples/01-minimal-multiplayer-setup.md
       - 冷却/消耗/堆叠: examples/02-cooldown-cost-stacking.md

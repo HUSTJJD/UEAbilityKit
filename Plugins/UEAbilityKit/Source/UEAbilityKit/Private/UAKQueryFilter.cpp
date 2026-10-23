@@ -19,7 +19,7 @@ void UAKQueryFilter::ImportJson(const FJsonObject& InJson)
 	// 基类没有可恢复字段
 }
 
-void UAKQueryFilter::ExportFilterArray(const TArray<UAKQueryFilter*>& Filters, TArray<TSharedPtr<FJsonValue>>& OutArray)
+void UAKQueryFilter::ExportFilterArray(const TArray<TObjectPtr<UAKQueryFilter>>& Filters, TArray<TSharedPtr<FJsonValue>>& OutArray)
 {
 	OutArray.Reset();
 	for (const UAKQueryFilter* Filter : Filters)
@@ -34,7 +34,7 @@ void UAKQueryFilter::ExportFilterArray(const TArray<UAKQueryFilter*>& Filters, T
 	}
 }
 
-void UAKQueryFilter::ImportFilterArray(const TArray<TSharedPtr<FJsonValue>>& InArray, UObject* Outer, TArray<UAKQueryFilter*>& OutFilters)
+void UAKQueryFilter::ImportFilterArray(const TArray<TSharedPtr<FJsonValue>>& InArray, UObject* Outer, TArray<TObjectPtr<UAKQueryFilter>>& OutFilters)
 {
 	OutFilters.Reset();
 	for (const TSharedPtr<FJsonValue>& Value : InArray)

@@ -64,7 +64,7 @@ struct FAKAbilityContext
 
 	/** Task 的运行时状态（Key = Task 实例，Value = ScratchPad） */
 	UPROPERTY()
-	TMap<UAKAbilityTaskBase*, UObject*> ScratchPads;
+	TMap<TObjectPtr<UAKAbilityTaskBase>, TObjectPtr<UObject>> ScratchPads;
 
 	/** 本次运行中被 Branch 任务停用的轨道名 */
 	UPROPERTY(BlueprintReadWrite, Category = "Context")
@@ -75,7 +75,7 @@ struct FAKAbilityContext
 	 * 任务可以往里写子节点，让血缘树能下钻到 GE / 属性 / 目标，而不只到任务层。
 	 */
 	UPROPERTY(BlueprintReadWrite, Category = "Context")
-	UAKTrace* Trace = nullptr;
+	TObjectPtr<UAKTrace> Trace = nullptr;
 
 	/**
 	 * 当前正在执行的任务对应的溯源节点索引。

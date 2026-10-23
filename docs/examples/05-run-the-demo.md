@@ -24,7 +24,7 @@ cd Tools
 
 # ② 编译
 cd ..
-./Scripts/build.ps1
+./Tools/build.ps1
 ```
 
 ```powershell
@@ -104,11 +104,17 @@ UAK.Trace.Dump          # 导出血缘树：技能 → 任务 → GE → SetByCa
 
 ## 7. 不想用脚本
 
-示例模块对 UnLuaNova 的依赖只在一处（`AAKDemoCharacter` 实现 `IUnLuaNovaInterface`）：
+示例模块对 UnLuaNova 的依赖集中在三处（`AAKDemoCharacter` 实现 `IUnLuaNovaInterface` + Build.cs + 工程脚本）：
 
 1. 从 `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemo.Build.cs` 去掉 `"UnLuaNova"`
+   **和后端模块那一项**（`Luau` / `Lua`，见文件里的注释）
 2. `AAKDemoCharacter` 去掉 `IUnLuaNovaInterface` 与 `GetModuleName_Implementation`
-3. 把 `K2_OnAbilityInput` 改成 C++ 实现（直接调 `TryActivateAbilityByIndex`）
-4. 宿主的 `.uproject` 里 `UnLuaNova` 设为 `false`
+3. 把 `K2_OnAbilityInput` 改成 C++ 实现（直接调 `TryActivateAbilityByIndex`）；
+   引导条件的"按住"语义本来就是 C++ 读角色状态（`UAKDemoChanneling_InputHeld`），
+   去掉脚本后默认成立，不会把示例卡死
+4. 删除工程 `Content/Script/`；宿主 `.uproject` 里 `UnLuaNova` 设为 `false`
+   （嵌套的 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 同理，见 [04](04-scripting-with-unlua.md) §2）
+5. `Config/DefaultGame.ini` 里那两条 `DirectoriesToAlwaysStageAsUFS` 可以去掉
 
-UAK 插件核心**不依赖任何脚本系统**，不受影响。
+插件侧不用动：`UEAbilityKit.uplugin` 里的 UnLuaNova 引用本来就是 `Optional`，
+**UAK 插件核心不依赖任何脚本系统**，不受影响。

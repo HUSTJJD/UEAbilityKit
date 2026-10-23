@@ -23,7 +23,7 @@ TArray<AActor*> UAKQuery::OverlapActors(
 	int32 MaxResults,
 	const FVector& ConeDirection,
 	float ConeAngleDeg,
-	const TArray<UAKQueryFilter*>& Filters)
+	const TArray<TObjectPtr<UAKQueryFilter>>& Filters)
 {
 	TArray<AActor*> Results;
 	if (!World)

@@ -167,7 +167,7 @@ python Tools/patch_lyra.py --revert  # 撤销（按 .orig 还原）
 ### 3. 编译
 
 ```powershell
-Scripts\build.ps1
+Tools\build.ps1
 ```
 
 ---
@@ -183,6 +183,7 @@ Lyra 全都有，按 copy → patch 原则：Lyra 的拷进去，我们真正需
 | `ProjectID` / `ProjectName` | Lyra 的（宿主就是 Lyra） |
 | 旧式 `+ActionMappings`（UAK_Ability1/2） | **我们的** → `Tools/patches/config/DefaultInput.ini.append` |
 | `+DirectoriesToAlwaysStageAsUFS`（UnLuaNova 脚本） | **我们的** → `Tools/patches/config/DefaultGame.ini.append` |
+| `DefaultUnLuaNovaEditor.ini`（Lua 后端） | **我们的** —— Lyra 没这个 ini，由片段生成 → `Tools/patches/config/DefaultUnLuaNovaEditor.ini.append` |
 | 打包一堆样板设置 | Lyra 的 |
 
 追加是幂等的（带 `UAK-PATCH` 标记，重复跑不会叠加）；Lyra 没有的 ini 则由片段直接生成。
@@ -252,6 +253,22 @@ Runner 已删除。
 Lyra 的跳跃、被动这些纯 GAS 技能没有时间轴可跑，不会被基类误杀。
 
 ---
+
+## 脚本方案（UnLuaNova）在 Lyra 宿主下的位置
+
+脚本方案是 git submodule（`Plugins/UnLuaNova`，v1.0.0），UE 会递归发现它内层的插件，
+`.uproject` 里因此没有任何 UnLuaNova 相关条目。它在 Lyra 宿主里的定位：
+
+| 问题 | 答案 |
+|---|---|
+| Lyra 需要 Lua 吗 | **不需要**。Lyra 侧的实现全是 C++（例如引导条件 `ULyraAdaptInputCondition` 读 Enhanced Input） |
+| 谁在用脚本 | 只有插件自带的示例模块 `UAKDemo`（`AAKDemoCharacter` → `Content/Script/UAKDemoCharacter.lua`） |
+| 插件本体依赖它吗 | 不依赖。`UEAbilityKit.uplugin` 里的引用标了 `"Optional": true`，缺了也不拦 |
+| 打包要注意什么 | 脚本不是资产，要显式 stage 两条路径（工程脚本 + 插件运行时模块），见 [04-scripting-with-unlua.md](04-scripting-with-unlua.md) §6 |
+| 不想要怎么办 | 见 04 §9（关 Build.cs / 角色接口 / 工程脚本 / `.uproject` 开关 / stage 路径） |
+
+内层的 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 会被一起发现并编译（它们 `EnabledByDefault=true`），
+不需要就在 `.uproject` 里显式关掉。
 
 ## 许可与归属（务必保留）
 

@@ -232,7 +232,7 @@ bool FUAKTutorialGuided::Start(const FString& TutorialOrIdOrPath, FString& OutEr
 	if (!IsAvailable())
 	{
 		OutError = TEXT("引导模式不可用：引擎的 IntroTutorials（GuidedTutorials 插件）没启用。"
-			"请在插件浏览器里启用它；或改用 UAK.Tutorial.Run / Scripts/generate_tutorials.ps1 "
+			"请在插件浏览器里启用它；或改用 UAK.Tutorial.Run / Tools/generate_tutorials.ps1 "
 			"看自动录制生成的文档。");
 		return false;
 	}

@@ -21,7 +21,7 @@ public:
 	UAKAbilityTask_PlayMontage();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
-	UAnimMontage* Montage = nullptr;
+	TObjectPtr<UAnimMontage> Montage = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage", meta = (ClampMin = "0.01", UIMin = "0.01"))
 	float Rate = 1.f;

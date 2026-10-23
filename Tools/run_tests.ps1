@@ -15,11 +15,11 @@
     ——因为测试模块是 Editor 类型，在 -game / -server 进程里不一定加载。
 
 .EXAMPLE
-    ./Scripts/run_tests.ps1                          # 全部 stage（默认开采集）
-    ./Scripts/run_tests.ps1 -Stage Editor -Filter UAK.Unit
-    ./Scripts/run_tests.ps1 -Headless                # 没 GPU：只跑断言，不出素材
-    ./Scripts/run_tests.ps1 -Stage Net -Clients 3 -AbilityClass /Script/LyraAdapt.XXX
-    ./Scripts/run_tests.ps1 -Commit                  # 跑完把结论提交（CI 负责发布）
+    ./Tools/run_tests.ps1                          # 全部 stage（默认开采集）
+    ./Tools/run_tests.ps1 -Stage Editor -Filter UAK.Unit
+    ./Tools/run_tests.ps1 -Headless                # 没 GPU：只跑断言，不出素材
+    ./Tools/run_tests.ps1 -Stage Net -Clients 3 -AbilityClass /Script/LyraAdapt.XXX
+    ./Tools/run_tests.ps1 -Commit                  # 跑完把结论提交（CI 负责发布）
 #>
 [CmdletBinding()]
 param(

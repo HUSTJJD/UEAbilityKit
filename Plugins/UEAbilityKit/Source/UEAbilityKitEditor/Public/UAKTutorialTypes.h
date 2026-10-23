@@ -15,7 +15,7 @@
  * 不是"先写文档再补截图"，所以文档永远不会和真实编辑器对不上。
  *
  * 由 UEAbilityKitEditor 模块加载与执行（控制台命令 UAK.Tutorial.*），
- * 产物交给 Scripts/tutorial/generate_tutorials.py 渲染成 Markdown 教程页。
+ * 产物交给 Tools/tutorial/generate_tutorials.py 渲染成 Markdown 教程页。
  */
 
 /** 步骤的原子动作（脚本里 action 字段的取值） */

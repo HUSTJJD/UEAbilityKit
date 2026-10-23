@@ -168,7 +168,7 @@ bool FUEAbilityKitAssetEditor::TickPIELink(float DeltaTime)
 
 	// 找与本资产同名的最新一条溯源记录
 	const UAKTrace* Match = nullptr;
-	auto Scan = [&](const TArray<UAKTrace*>& Traces)
+	auto Scan = [&](const TArray<TObjectPtr<UAKTrace>>& Traces)
 	{
 		for (const UAKTrace* Trace : Traces)
 		{

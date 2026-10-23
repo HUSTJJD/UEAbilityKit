@@ -15,25 +15,25 @@ UAK 的目标之一：**让"技能编排"这种容易出玄学 bug 的东西，�
 
 ```powershell
 # Windows（PowerShell）
-./Scripts/run_tests.ps1                 # 全部 stage：Editor + Game + DS/多客户端
-./Scripts/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
-./Scripts/run_tests.ps1 -Headless       # 没 GPU：只跑断言，不出素材
-./Scripts/run_tests.ps1 -Commit         # 跑完把结论提交（CI 随后发布）
+./Tools/run_tests.ps1                 # 全部 stage：Editor + Game + DS/多客户端
+./Tools/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
+./Tools/run_tests.ps1 -Headless       # 没 GPU：只跑断言，不出素材
+./Tools/run_tests.ps1 -Commit         # 跑完把结论提交（CI 随后发布）
 ```
 
 ```bash
 # Linux / macOS
-./Scripts/run_tests.sh
-./Scripts/run_tests.sh --stage editor --filter UAK.Unit --skip-build
-./Scripts/run_tests.sh --headless
-./Scripts/run_tests.sh --commit
+./Tools/run_tests.sh
+./Tools/run_tests.sh --stage editor --filter UAK.Unit --skip-build
+./Tools/run_tests.sh --headless
+./Tools/run_tests.sh --commit
 ```
 
 脚本做的事：
 
 1. **编译**：`UnrealBuildTool` 编 `UAKDemoEditor`（`-SkipBuild` 可跳过）
 2. **跑三个 stage**（见下）
-3. **出结论**：`Scripts/report/generate_report.py` 生成 `docs/reports/latest.{md,html,json}`
+3. **出结论**：`Tools/report/generate_report.py` 生成 `docs/reports/latest.{md,html,json}`
 4. **出素材**：截图、帧序列（有 ffmpeg 时自动合成 mp4）、血缘树文本
 5. **出文档**：`docs/showcase.md` 由素材自动生成（展示页不是手写的宣传页）
 
@@ -153,14 +153,14 @@ docs/reports/media/**           # 只有 mp4 + 少量关键 png 入库（走 LFS
 `timeout` 是**必须**给的：条件万一因版本差异永远无法满足，读者会被永久卡住——宁可放行（可能没做对），也不能让人走不下去。没写 `advance` 的步骤仍由读者点「下一步」。
 
 ```powershell
-./Scripts/generate_tutorials.ps1                  # 录制全部教程并生成文档
-./Scripts/generate_tutorials.ps1 -DocsOnly        # 只用已有产物重新生成文档
-./Scripts/generate_tutorials.ps1 -NoCapture       # 只验证步骤能不能跑通
-./Scripts/generate_tutorials.ps1 -Tutorial 01-first-ability
+./Tools/generate_tutorials.ps1                  # 录制全部教程并生成文档
+./Tools/generate_tutorials.ps1 -DocsOnly        # 只用已有产物重新生成文档
+./Tools/generate_tutorials.ps1 -NoCapture       # 只验证步骤能不能跑通
+./Tools/generate_tutorials.ps1 -Tutorial 01-first-ability
 ```
 
 ```bash
-./Scripts/generate_tutorials.sh --docs-only
+./Tools/generate_tutorials.sh --docs-only
 ```
 
 ### 编辑器内的命令（`UAK.Tutorial.*`）

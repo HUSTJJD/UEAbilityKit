@@ -98,7 +98,7 @@ public:
 	/** 需要持续维持的条件（任一不满足即失败） */
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Channeling",
 		meta = (EditCondition = "bChanneled"))
-	TArray<UAKChannelingCondition*> ChannelingConditions;
+	TArray<TObjectPtr<UAKChannelingCondition>> ChannelingConditions;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Channeling",
 		meta = (EditCondition = "bChanneled"))
@@ -114,7 +114,7 @@ public:
 
 	// ── 时间轴结构 ─────────────────────────────────────────────────────────
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Ability")
-	TArray<UAKAbilityTrack*> Tracks;
+	TArray<TObjectPtr<UAKAbilityTrack>> Tracks;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	TArray<FAKTimeMarker> Markers;

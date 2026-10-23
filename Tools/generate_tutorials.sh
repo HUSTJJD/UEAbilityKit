@@ -5,10 +5,10 @@
 # CI 只负责把生成的 docs/tutorials 渲染到 GitHub Pages。
 #
 # 用法：
-#   ./Scripts/generate_tutorials.sh                  # 录制全部教程并生成文档
-#   ./Scripts/generate_tutorials.sh --docs-only      # 只用已有产物重新生成文档
-#   ./Scripts/generate_tutorials.sh --no-capture     # 只验证步骤，不采素材
-#   ./Scripts/generate_tutorials.sh --tutorial 01-first-ability
+#   ./Tools/generate_tutorials.sh                  # 录制全部教程并生成文档
+#   ./Tools/generate_tutorials.sh --docs-only      # 只用已有产物重新生成文档
+#   ./Tools/generate_tutorials.sh --no-capture     # 只验证步骤，不采素材
+#   ./Tools/generate_tutorials.sh --tutorial 01-first-ability
 set -euo pipefail
 
 PROJECT=""

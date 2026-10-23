@@ -128,22 +128,24 @@ flowchart LR
     git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
     ```
 
-    仓库本身就是一个可打开的 UE 工程（`UAKDemo.uproject`），布局参照
-    [UnLua](https://github.com/Tencent/UnLua)：项目即示例，库放 `Plugins`。
+    工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`），UAK 是 `Plugins/UEAbilityKit`，
+    示例模块随插件分发；布局参照 [UnLua](https://github.com/Tencent/UnLua)：库放 `Plugins`。
+    宿主怎么拼起来的见 [把 Lyra 改造进本工程](examples/lyra-integration.md)。
 
     !!! warning "别忘了 --recursive"
-        UnLuaNova 自身还嵌套了 Lua / Luau 两个子模块。忘了就补
+        脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 是 git submodule，
+        它自身还嵌套了 Lua / Luau 等子模块。忘了就补
         `git submodule update --init --recursive`。
 
 === "跑测试"
 
     ```powershell
-    ./Scripts/run_tests.ps1           # Windows
-    ./Scripts/run_tests.ps1 -Filter UAK.Unit
+    ./Tools/run_tests.ps1           # Windows
+    ./Tools/run_tests.ps1 -Filter UAK.Unit
     ```
 
     ```bash
-    ./Scripts/run_tests.sh            # Linux / macOS
+    ./Tools/run_tests.sh            # Linux / macOS
     ```
 
 ---
@@ -162,8 +164,15 @@ flowchart LR
 </div>
 
 !!! warning "已知问题"
-    示例工程依赖的 UnLuaNova（Luau 后端）在 UE 5.8 的 PIE 阶段崩溃，已定位为上游问题并跟踪中。
-    UAK 本体**不依赖任何脚本系统**，编译与单元测试均正常。
+    **脚本路径待人工走查**：示例模块经 UnLuaNova 绑定的 Lua 逻辑（Luau 后端）还没在真实 PIE 里逐条验收，
+    按 [实况联调清单](examples/06-live-trace-checklist.md) 走一遍即可确认。
+    UAK 本体**不依赖任何脚本系统**（`.uplugin` 里的 UnLuaNova 引用标了 `Optional`），编译与单元测试均正常。
+
+!!! tip "脚本方案：UnLuaNova 1.0.0"
+    脚本用 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)（submodule，1.0.0 / 2026-10-23）：
+    双 Lua 后端（默认 Luau）、构建期静态绑定、Lua 可观测性（Profiler / 调试服务 / 沙盒）。
+    **只有示例模块依赖它**，核心仍是纯 C++ —— 见 [脚本集成](examples/04-scripting-with-unlua.md)
+    与 [集成契约](design/20-scripting-integration.md)。
 
 ---
 

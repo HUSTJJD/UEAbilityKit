@@ -74,7 +74,7 @@ struct FAKScheduledTask
 	GENERATED_BODY()
 
 	UPROPERTY()
-	UAKAbilityTaskBase* Task = nullptr;
+	TObjectPtr<UAKAbilityTaskBase> Task = nullptr;
 
 	UPROPERTY()
 	float StartTime = 0.f;
@@ -179,7 +179,7 @@ struct FAKValidationIssue
 
 	/** 产生问题的任务（可为 null，表示资产级问题） */
 	UPROPERTY(BlueprintReadWrite, Category = "Validation")
-	UAKAbilityTaskBase* Task = nullptr;
+	TObjectPtr<UAKAbilityTaskBase> Task = nullptr;
 };
 
 /** 校验结果聚合 */

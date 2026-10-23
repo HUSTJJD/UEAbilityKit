@@ -76,10 +76,10 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
-	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Abilities")
-	UAKDemoAttributeSet* AttributeSet = nullptr;
+	TObjectPtr<UAKDemoAttributeSet> AttributeSet = nullptr;
 
 	/** 初始授予的技能（填 UAKDemoAbility 的蓝图子类） */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")

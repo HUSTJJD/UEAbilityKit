@@ -84,16 +84,16 @@ public:
 	UAKTrace* BeginTrace(const FString& Label);
 	void EndTrace(UAKTrace* Trace);
 
-	const TArray<UAKTrace*>& GetActiveTraces() const { return ActiveTraces; }
-	const TArray<UAKTrace*>& GetFinishedTraces() const { return FinishedTraces; }
+	const TArray<TObjectPtr<UAKTrace>>& GetActiveTraces() const { return ActiveTraces; }
+	const TArray<TObjectPtr<UAKTrace>>& GetFinishedTraces() const { return FinishedTraces; }
 
 	/** 清空已完成的记录（供 UAK.Trace.Clear 使用；进行中的记录不受影响） */
 	void ClearFinished();
 
 private:
 	UPROPERTY()
-	TArray<UAKTrace*> ActiveTraces;
+	TArray<TObjectPtr<UAKTrace>> ActiveTraces;
 
 	UPROPERTY()
-	TArray<UAKTrace*> FinishedTraces;
+	TArray<TObjectPtr<UAKTrace>> FinishedTraces;
 };

@@ -202,7 +202,7 @@ namespace
 				continue;
 			}
 
-			const TArray<UAKTrace*>& Finished = TraceSubsystem->GetFinishedTraces();
+			const TArray<TObjectPtr<UAKTrace>>& Finished = TraceSubsystem->GetFinishedTraces();
 			const int32 From = FMath::Max(0, Finished.Num() - MaxCount);
 			for (int32 i = From; i < Finished.Num(); ++i)
 			{
@@ -215,7 +215,7 @@ namespace
 				++Printed;
 			}
 
-			const TArray<UAKTrace*>& Active = TraceSubsystem->GetActiveTraces();
+			const TArray<TObjectPtr<UAKTrace>>& Active = TraceSubsystem->GetActiveTraces();
 			for (const UAKTrace* Trace : Active)
 			{
 				if (!Trace)

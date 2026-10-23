@@ -1,6 +1,6 @@
 # Showcase
 
-这一页由 `Scripts/report/generate_report.py` 自动生成——素材全部来自自动化测试，
+这一页由 `Tools/report/generate_report.py` 自动生成——素材全部来自自动化测试，
 **不是手写的宣传页**：测试跑出来的截图、录屏与血缘树，直接就是展示内容。
 
 最近一次运行：`2026-10-21 00:15:21`　（用例 33 个）
@@ -8,5 +8,5 @@
 ## 截图与录屏
 
 本次运行没有开启媒体采集（headless 默认关闭）。
-在本机执行 `Scripts/run_tests.ps1`（默认开采集）即可产出截图与录屏。
+在本机执行 `Tools/run_tests.ps1`（默认开采集）即可产出截图与录屏。
 

@@ -98,8 +98,8 @@
     {
       "id": "net-note",
       "title": "多端怎么验",
-      "say": "UAK 不写网络代码（网络交给 GAS）。所以「网络正确性」在 UAK 里被翻译成一个可断言的问题：**各端属性是否收敛到同一个值**。跑 `Scripts/run_tests.ps1` 的 Net stage，它会比对各端快照。",
-      "do": "本地执行 Scripts/run_tests.ps1（需要真实 RHI 的阶段才出画面，属性比对不需要）。",
+      "say": "UAK 不写网络代码（网络交给 GAS）。所以「网络正确性」在 UAK 里被翻译成一个可断言的问题：**各端属性是否收敛到同一个值**。跑 `Tools/run_tests.ps1` 的 Net stage，它会比对各端快照。",
+      "do": "本地执行 Tools/run_tests.ps1（需要真实 RHI 的阶段才出画面，属性比对不需要）。",
       "expect": "报告里出现 UAK.Net.Converge.* 行与一致性表。",
       "action": "Note"
     }

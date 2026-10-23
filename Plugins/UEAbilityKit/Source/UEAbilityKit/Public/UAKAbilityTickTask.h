@@ -29,7 +29,7 @@ public:
 
 private:
 	UPROPERTY()
-	UAKAbilityInstance* Instance = nullptr;
+	TObjectPtr<UAKAbilityInstance> Instance = nullptr;
 
 	/** 防止重复调用 EndTask */
 	bool bEnding = false;

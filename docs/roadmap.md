@@ -96,8 +96,9 @@
 - [x] 冷却 / 消耗 / 堆叠示例：[examples/02-cooldown-cost-stacking.md](examples/02-cooldown-cost-stacking.md)
 - [x] 多人示例：`Plugins/UEAbilityKit/Source/UAKDemo/` —— 工程自带的示例模块
       （ASC + 属性集 + 带冷却/消耗的技能）
-- [x] **脚本方案**：`Plugins/UnLuaNova` 以 git submodule 引入，仅示例模块依赖；
-      UAK 插件本身不依赖任何脚本系统（核心 C++，扩展用 Lua）
+- [x] **脚本方案**：`Plugins/UnLuaNova`（**1.0.0** / 2026-10-23）以 git submodule 引入，仅示例模块依赖；
+      UAK 插件本身不依赖任何脚本系统（核心 C++，扩展用 Lua）——
+      见 [04 脚本集成](examples/04-scripting-with-unlua.md) 与 [集成契约](design/20-scripting-integration.md)
 - [x] **工程化改造**：仓库本身成为可打开的 UE 工程（对照 UnLua 布局），
       UAK 作为 `Plugins/UEAbilityKit`；示例插件用 `git mv` 迁为工程模块 `Source/UAKDemo`
 - [x] **内置任务扩展**：`UAKAbilityTask_ApplyLooseTags`（限时 Tag：霸体 / 无敌 / 蓄力中）
@@ -116,6 +117,20 @@
 - [ ] **PIE 走查**：按 06 清单逐条打勾（需人工在编辑器里跑一次）
 - [ ] **更多内置 Task**：按项目反馈继续加（候选：RootMotion / 属性快照回滚 / 子技能调用）
 
+## 脚本方案集成收口 ✅（UnLuaNova 1.0.0）
+
+上游 1.0.0 发布后，把"能用"收成"集成是完整的"：
+
+- [x] **依赖可分发**：`UEAbilityKit.uplugin` 里的 UnLuaNova 引用标 `"Optional": true`
+      —— 没有它，把插件单独拷进无脚本项目会被"引用了不存在的插件"拦住
+- [x] **后端显式化**：新增 `Tools/patches/config/DefaultUnLuaNovaEditor.ini.append`，钉住
+      `LuaBackend=Luau`；`UAKDemo.Build.cs` 读的是同一个键，ini 与二进制不会分叉
+- [x] **打包路径修正**：`DirectoriesToAlwaysStageAsUFS` 第二条改为
+      `../Plugins/UnLuaNova/Plugins/UnLuaNova/Content/Script`（插件运行时 Lua 模块）。
+      原先指向 submodule **示例工程**的脚本，编辑器里一切正常、打包后 `require` 才失败
+- [x] **文档对齐**：04 重写（v1.0.0、嵌套布局与自动发现、后端切换、打包、IntelliSense、`lua.*` 命令、关停步骤）；
+      新增设计页 `design/20-scripting-integration.md`（集成契约与所有权边界）
+
 ## 剩余工作
 
 > 说明：上面另有一个 "M5 — 高级编排（部分）" 小节，本节只汇总**尚未完成**的事项，
@@ -123,6 +138,6 @@
 
 | 事项 | 状态 | 说明 |
 |---|---|---|
-| **PIE 实况走查** | ⏳ 待人工 | 按 [examples/06-live-trace-checklist.md](examples/06-live-trace-checklist.md) 的 10 条验收标准逐条打勾；需要人在编辑器里跑一次 |
+| **PIE 实况走查** | ⏳ 待人工 | 按 [examples/06-live-trace-checklist.md](examples/06-live-trace-checklist.md) 的 10 条验收标准逐条打勾（含脚本路径：Lua 绑定 + Luau 后端）；需要人在编辑器里跑一次 |
 | **调试面板实机试用** | ⏳ 待人工 | 面板与 `UAK.Debug.*` 已可用，尚未在真实 PIE 里走一遍 |
 | **内置任务继续扩展** | 📋 规划中 | 候选：RootMotion 任务、属性快照 / 回滚、子技能调用（按项目反馈排优先级） |

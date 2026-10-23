@@ -35,7 +35,7 @@ public:
 		int32 MaxResults,
 		const FVector& ConeDirection = FVector::ForwardVector,
 		float ConeAngleDeg = 0.f,
-		const TArray<class UAKQueryFilter*>& Filters = TArray<class UAKQueryFilter*>());
+		const TArray<TObjectPtr<class UAKQueryFilter>>& Filters = TArray<TObjectPtr<class UAKQueryFilter>>());
 
 	/** 射线/球体扫掠，用于投射物逐帧推进时的命中检测 */
 	static bool SweepTo(

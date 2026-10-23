@@ -56,14 +56,14 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
 
 	UPROPERTY()
-	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent = nullptr;
 
 	UPROPERTY()
-	UAKTestAttributeSet* Attributes = nullptr;
+	TObjectPtr<UAKTestAttributeSet> Attributes = nullptr;
 
 	/** 根组件：有了它 SetActorLocation / GetActorLocation 才有意义 */
 	UPROPERTY()
-	USceneComponent* Root = nullptr;
+	TObjectPtr<USceneComponent> Root = nullptr;
 };
 
 /**

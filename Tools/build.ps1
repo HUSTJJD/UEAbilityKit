@@ -12,9 +12,9 @@
     与 Build.bat 等价：产出同样的 Binaries/Intermediate，VS 里可直接调试。
 
 .EXAMPLE
-    ./Scripts/build.ps1                          # LyraEditor / Win64 / Development（导入 Lyra 后）
-    ./Scripts/build.ps1 -Target LyraGame -Configuration Shipping
-    ./Scripts/build.ps1 -Clean
+    ./Tools/build.ps1                          # LyraEditor / Win64 / Development（导入 Lyra 后）
+    ./Tools/build.ps1 -Target LyraGame -Configuration Shipping
+    ./Tools/build.ps1 -Clean
 #>
 [CmdletBinding()]
 param(

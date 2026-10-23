@@ -48,7 +48,7 @@ public:
 	 * 形状回答"在哪查"，过滤器回答"哪些算数"，可自由组合：锥形 + 要带 Tag + 8m 内 + 有视线。
 	 */
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Query|Filter")
-	TArray<UAKQueryFilter*> Filters;
+	TArray<TObjectPtr<UAKQueryFilter>> Filters;
 
 	/** 相对于施法者的偏移（会随朝向旋转） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Query")

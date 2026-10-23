@@ -1,27 +1,31 @@
-# 示例工程结构（对照 UnLua）
+# 工程结构（对照 UnLua，宿主是 Lyra）
 
 ## 1. 目录布局
 
 本仓库**本身就是一个可打开的 UE 工程**，UAK 作为插件存在——
-与 [UnLua](https://github.com/Tencent/UnLua) 的组织方式一致：项目即示例，库放 Plugins。
+与 [UnLua](https://github.com/Tencent/UnLua) 的组织方式一致：**库放 `Plugins`，示例随库走**。
+工程宿主是 **Lyra**（`.uproject` 整个从 Lyra 拷来，连文件名一起是 `LyraStarterGame.uproject`），
+见 [lyra-integration.md](lyra-integration.md)。
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
-├─ UAKDemo.uproject                ← 示例工程
+├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，不进 git，由 import_lyra 复现）
 ├─ Source/
-│  ├─ UAKDemo/                     ← 示例游戏模块（属性集 / 角色 / 技能）
-│  ├─ UAKDemo.Target.cs
-│  ├─ UAKDemoEditor.Target.cs
-│  └─ UAKDemoServer.Target.cs
+│  ├─ LyraGame/                     ← 拷进来的 Lyra（不进 git）
+│  └─ LyraAdapt/                    ← 适配层：唯一同时认识 Lyra 与 UAK 的地方
 ├─ Plugins/
-│  └─ UEAbilityKit/                ← UAK 插件（本仓库的主角）
-│     ├─ UEAbilityKit.uplugin
-│     └─ Source/
-│        ├─ UEAbilityKit/          ← Runtime
-│        └─ UEAbilityKitEditor/    ← Editor
-├─ Config/                          ← 工程配置（最小）
-├─ Content/                         ← 内容目录（不提交二进制，见 Content/README.md）
-├─ docs/                            ← 设计文档与示例说明
+│  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
+│  │  ├─ UEAbilityKit.uplugin
+│  │  └─ Source/
+│  │     ├─ UEAbilityKit/           ← Runtime（核心：时间轴 / 任务 / GAS 桥接）
+│  │     ├─ UEAbilityKitEditor/     ← Editor（资产编辑器）
+│  │     ├─ UEAbilityKitTests/      ← 测试
+│  │     └─ UAKDemo/                ← 示例模块（随插件分发，不是独立工程）
+│  └─ UnLuaNova/                    ← 脚本方案（git submodule，见 04）
+│     └─ Plugins/UnLuaNova/         ← 真正的插件嵌在 submodule 的内层
+├─ Content/                         ← 内容目录（含 Script/ 示例脚本，见 Content/README.md）
+├─ Tools/                           ← 唯一的脚本目录：Lyra 导入 / 补丁 / 校验 + 构建 / 测试 / 教程
+├─ docs/
 ├─ README.md
 ├─ NOTICE
 └─ LICENSE
@@ -31,8 +35,8 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 
 | UnLua | UAK |
 |---|---|
-| `UnLuaNovaDemo.uproject` | `UAKDemo.uproject` |
-| `Source/UnLuaNovaDemo/`（示例游戏代码） | `Plugins/UEAbilityKit/Source/UAKDemo/`（示例游戏代码） |
+| `UnLuaNovaDemo.uproject`（自带示例工程） | `LyraStarterGame.uproject`（拿 Lyra 当宿主） |
+| `Source/UnLuaNovaDemo/`（示例游戏代码） | `Plugins/UEAbilityKit/Source/UAKDemo/`（示例模块，**随插件走**） |
 | `Plugins/UnLuaNova/`（库） | `Plugins/UEAbilityKit/`（库） |
 | `Plugins/UnLuaNovaTestSuite/` | ——（暂无，CI 用 `UAKValidateCommandlet` 代替） |
 | `Docs/` | `docs/` |
@@ -42,25 +46,33 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 | 文件 | 内容 |
 |---|---|
 | `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAttributeSet.h/.cpp` | Health / MaxHealth / Mana / MaxMana，含属性复制与夹取 |
-| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能 |
+| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能；实现 `IUnLuaNovaInterface` 把项目逻辑交给 Lua |
 | `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAbility.h/.cpp` | `UAKGameplayAbility` 的最小子类，`CommitAbility` 走冷却与消耗 |
+| `Source/LyraAdapt/LyraAdaptInputCondition.h/.cpp` | 宿主侧扩展：把 Lyra 的 Enhanced Input 接到 UAK 的引导条件上 |
 
 ## 3. 怎么用
 
 ```bash
-git clone https://github.com/HUSTJJD/UEAbilityKit.git
+git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 ```
 
-1. 用 UE 打开 `UAKDemo.uproject`
-   - 若使用**源码版引擎**，把 `EngineAssociation` 改成 `""`
-2. 按 [Content/README.md](https://github.com/HUSTJJD/UEAbilityKit/blob/main/Content/README.md) 的步骤创建资产
-3. 两个客户端 + Listen Server 跑起来验证预测 / 冷却 / 消耗
+1. 导入 Lyra（清 → 拷 → 打补丁 → 校验，一条命令）：
+   `./Tools/import_lyra.ps1 -LyraPath <你的 Lyra 目录> -EngineRoot <你的引擎目录>`
+   详见 [lyra-integration.md](lyra-integration.md)
+2. 编译：`Tools\build.ps1`
+3. 一键生成示例资产 / 蓝图 / 关卡：`-run=UAKDemoSetup`，见 [05-run-the-demo.md](05-run-the-demo.md)
+4. 两个客户端 + Listen Server 跑起来验证预测 / 冷却 / 消耗
 
-只想用插件、不要示例工程：把 `Plugins/UEAbilityKit` 整个目录拷进你自己的项目 `Plugins/` 即可，
-`Source/UAKDemo`、`Config`、`Content` 都不需要。
+只想用插件、不要示例：把 `Plugins/UEAbilityKit` 整个目录拷进你自己的项目 `Plugins/` 即可。
+`UAKDemo` 会跟着一起进去（它只是插件里的一个模块，不用就不引用），
+而 UnLuaNova 是**可选**依赖 —— 没有它插件照样能启用（[04 脚本集成](04-scripting-with-unlua.md)）。
 
 ## 4. 迁移记录
 
-示例最初是 `Samples/UAKSample` 独立插件，后按"项目即示例"的思路
-用 `git mv` 迁成工程模块 `Source/UAKDemo`，类名同步改为 `UAKDemo*` / `AAKDemo*`。
+1. 示例最初是 `Samples/UAKSample` 独立插件，按"项目即示例"的思路用 `git mv` 迁成工程模块 `Source/UAKDemo`，
+   类名同步改为 `UAKDemo*` / `AAKDemo*`
+2. 工程改为以 **Lyra 为宿主**后，`UAKDemo` 降级成插件的一个模块（`UAKDemo.uproject` 与 `*.Target.cs` 已删除），
+   任何项目装上插件都能用这套示例
+3. 脚本方案从"工程自带"改为 submodule：`Plugins/UnLuaNova`
+
 历史保留在 git 记录里。

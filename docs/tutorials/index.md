@@ -18,14 +18,14 @@ Tutorials/*.json  →  UAK.Tutorial.Run  →  Saved/.../run.json + 截图 + 帧�
 ## 本地重录一遍
 
 ```powershell
-./Scripts/generate_tutorials.ps1            # 打开编辑器录制 + 生成文档
-./Scripts/generate_tutorials.ps1 -DocsOnly  # 只用已有产物重新生成文档
-./Scripts/generate_tutorials.ps1 -NoCapture # 只验证步骤，不采素材
+./Tools/generate_tutorials.ps1            # 打开编辑器录制 + 生成文档
+./Tools/generate_tutorials.ps1 -DocsOnly  # 只用已有产物重新生成文档
+./Tools/generate_tutorials.ps1 -NoCapture # 只验证步骤，不采素材
 ```
 
 ```bash
-./Scripts/generate_tutorials.sh
-./Scripts/generate_tutorials.sh --docs-only
+./Tools/generate_tutorials.sh
+./Tools/generate_tutorials.sh --docs-only
 ```
 
 完整流程见 [测试与自动化](../testing.md#教程流水线文档也是自动化的产物)。

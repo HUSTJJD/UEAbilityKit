@@ -108,7 +108,7 @@ void UAKDebugSubsystem::UnregisterInstance(UAKAbilityInstance* Instance)
 TArray<FAKDebugEntry> UAKDebugSubsystem::BuildEntries()
 {
 	// 顺手清理已经结束却没来得及注销的实例（例如技能所在 Actor 被销毁）
-	ActiveInstances.RemoveAll([](const UAKAbilityInstance* Instance)
+	ActiveInstances.RemoveAll([](const TObjectPtr<UAKAbilityInstance>& Instance)
 	{
 		return !IsValid(Instance) || Instance->IsFinished();
 	});

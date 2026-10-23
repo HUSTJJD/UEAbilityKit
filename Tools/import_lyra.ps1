@@ -278,7 +278,7 @@ if (Get-Command $Python -ErrorAction SilentlyContinue) {
 
 Write-Host ""
 Write-Host "[import] 完成。下一步："
-Write-Host "  1) 编译：Scripts\build.ps1（或 UnrealBuildTool 编 LyraGameEditor）"
+Write-Host "  1) 编译：Tools\build.ps1（或 UnrealBuildTool 编 LyraGameEditor）"
 Write-Host "  2) 打开工程，确认 ULyraGameplayAbility 已经能用 UAK 时间轴"
 Write-Host "  3) 把 Lyra 的 BP 技能按 UAK 资产重写（见 docs/examples/lyra-integration.md）"
 Write-Host ""

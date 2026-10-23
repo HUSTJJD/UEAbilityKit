@@ -43,15 +43,15 @@
 需要先设置引擎路径环境变量 `$env:UE_ENGINE_ROOT`（或在脚本参数中显式传 `-EngineRoot`）。
 
 ```powershell
-./Scripts/build.ps1                        # UAKDemoEditor / Win64 / Development
-./Scripts/build.ps1 -Target UAKDemo -Configuration Shipping
-./Scripts/run_tests.ps1                    # 全量：Editor + Game + DS/多客户端，默认带截图/录屏
-./Scripts/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
-./Scripts/run_tests.ps1 -Headless          # 没 GPU：只跑断言，不出素材
-./Scripts/run_tests.ps1 -Commit            # 跑完把结论提交（CI 再发布到 Pages）
+./Tools/build.ps1                        # UAKDemoEditor / Win64 / Development
+./Tools/build.ps1 -Target UAKDemo -Configuration Shipping
+./Tools/run_tests.ps1                    # 全量：Editor + Game + DS/多客户端，默认带截图/录屏
+./Tools/run_tests.ps1 -Stage Editor -Filter UAK.Unit -SkipBuild
+./Tools/run_tests.ps1 -Headless          # 没 GPU：只跑断言，不出素材
+./Tools/run_tests.ps1 -Commit            # 跑完把结论提交（CI 再发布到 Pages）
 ```
 
-Linux / macOS 使用 `Scripts/run_tests.sh`（参数同义）。报告产物落在 `docs/reports/` 与 `docs/showcase.md`。
+Linux / macOS 使用 `Tools/run_tests.sh`（参数同义）。报告产物落在 `docs/reports/` 与 `docs/showcase.md`。
 
 **PR 要求**：编译零新增警告；新增逻辑必须有对应的 UE Automation 测试；报告与文档需一并更新。
 

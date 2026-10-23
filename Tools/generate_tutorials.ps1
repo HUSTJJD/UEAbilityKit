@@ -5,7 +5,7 @@
 .DESCRIPTION
     教程不是手写的。每一步的讲解与"要做什么"写在 Tutorials/*.json 里，
     由编辑器的 `UAK.Tutorial.RunAll` 真实执行一遍并采集素材，
-    再由 Scripts/tutorial/generate_tutorials.py 渲染成 docs/tutorials/*.md。
+    再由 Tools/tutorial/generate_tutorials.py 渲染成 docs/tutorials/*.md。
 
     与 run_tests.ps1 一样：**只在本地跑**（要有 UE、要有真实 RHI 才有像素），
     CI 只负责把生成的文档渲染到 GitHub Pages。
@@ -14,10 +14,10 @@
     教程要截的是资产编辑器面板，需要真实的 Slate 窗口与渲染资源。
 
 .EXAMPLE
-    ./Scripts/generate_tutorials.ps1                 # 录制全部教程并生成文档
-    ./Scripts/generate_tutorials.ps1 -DocsOnly       # 只用已有产物重新生成文档
-    ./Scripts/generate_tutorials.ps1 -NoCapture      # 只验证步骤能不能跑通，不采素材
-    ./Scripts/generate_tutorials.ps1 -Tutorial 01-first-ability
+    ./Tools/generate_tutorials.ps1                 # 录制全部教程并生成文档
+    ./Tools/generate_tutorials.ps1 -DocsOnly       # 只用已有产物重新生成文档
+    ./Tools/generate_tutorials.ps1 -NoCapture      # 只验证步骤能不能跑通，不采素材
+    ./Tools/generate_tutorials.ps1 -Tutorial 01-first-ability
 #>
 [CmdletBinding()]
 param(

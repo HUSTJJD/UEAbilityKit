@@ -81,7 +81,7 @@ public:
 	/** 实例登记表：由 UAKGameplayAbility 在激活/结束时维护 */
 	void RegisterInstance(UAKAbilityInstance* Instance);
 	void UnregisterInstance(UAKAbilityInstance* Instance);
-	const TArray<UAKAbilityInstance*>& GetActiveInstances() const { return ActiveInstances; }
+	const TArray<TObjectPtr<UAKAbilityInstance>>& GetActiveInstances() const { return ActiveInstances; }
 
 	/** 当前快照（面板与 Summary 命令都用它） */
 	TArray<FAKDebugEntry> BuildEntries();
@@ -90,7 +90,7 @@ private:
 	void DrawWorldOverlay();
 
 	UPROPERTY()
-	TArray<UAKAbilityInstance*> ActiveInstances;
+	TArray<TObjectPtr<UAKAbilityInstance>> ActiveInstances;
 
 	/** 快照缓存：复用同一块内存，避免每帧分配 */
 	TArray<FAKDebugEntry> CachedEntries;

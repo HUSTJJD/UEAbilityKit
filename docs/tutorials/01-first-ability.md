@@ -6,7 +6,7 @@
 
 !!! warning "还没有录制产物"
     本页目前只由教程脚本渲染，截图 / 录屏尚未采集。
-    在本机执行 `Scripts/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
+    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
     文档结构与讲解不受影响。
 
 ## 先修
@@ -55,7 +55,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -74,7 +74,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -100,7 +100,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -126,7 +126,7 @@
     
     **引导模式**：做到「轨道数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -158,7 +158,7 @@
     
     **引导模式**：做到「任务数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -184,7 +184,7 @@
     
     **引导模式**：做到「已选中一个任务」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -212,7 +212,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -241,7 +241,7 @@
     
     **引导模式**：做到「任务数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -266,7 +266,7 @@
     
     **引导模式**：做到「光标 ≥ 0.6s」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -285,7 +285,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -304,7 +304,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -323,7 +323,7 @@
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -348,7 +348,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Scripts/generate_tutorials.ps1` 即可补上）。
+    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
     
 
 ---
@@ -359,7 +359,7 @@
 Tutorials/<id>.json      ← 人写的：讲解 + 动作 + 采集声明（唯一事实来源）
    ↓ UAK.Tutorial.Run（编辑器内自动化，真实点一遍）
 Saved/UAKAutomation/Tutorials/<id>/{run.json, *.png, frames/}
-   ↓ Scripts/tutorial/generate_tutorials.py
+   ↓ Tools/tutorial/generate_tutorials.py
 docs/tutorials/<id>.md   ← 你正在看的这页
 ```
 

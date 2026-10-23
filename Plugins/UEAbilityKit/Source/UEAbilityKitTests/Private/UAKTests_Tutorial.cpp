@@ -167,7 +167,7 @@ bool FUAKTutorialScriptsTest::RunTest(const FString& Parameters)
 					break;
 				}
 
-				const TArray<UAKAbilityTaskBase*>& Tasks = Sim.Asset->Tracks[TrackIndex]->Tasks;
+				const TArray<TObjectPtr<UAKAbilityTaskBase>>& Tasks = Sim.Asset->Tracks[TrackIndex]->Tasks;
 				TestTrue(FString::Printf(TEXT("%s 引用的任务存在"), *Where), Tasks.IsValidIndex(TaskIndex));
 				if (!Tasks.IsValidIndex(TaskIndex) || !Tasks[TaskIndex])
 				{

@@ -29,8 +29,8 @@ public:
 	virtual void ImportJson(const FJsonObject& InJson);
 
 	/** 过滤器数组的序列化辅助（供查询类任务复用） */
-	static void ExportFilterArray(const TArray<UAKQueryFilter*>& Filters, TArray<TSharedPtr<FJsonValue>>& OutArray);
-	static void ImportFilterArray(const TArray<TSharedPtr<FJsonValue>>& InArray, UObject* Outer, TArray<UAKQueryFilter*>& OutFilters);
+	static void ExportFilterArray(const TArray<TObjectPtr<UAKQueryFilter>>& Filters, TArray<TSharedPtr<FJsonValue>>& OutArray);
+	static void ImportFilterArray(const TArray<TSharedPtr<FJsonValue>>& InArray, UObject* Outer, TArray<TObjectPtr<UAKQueryFilter>>& OutFilters);
 
 #if WITH_EDITOR
 	virtual FText GetFilterDescription() const;

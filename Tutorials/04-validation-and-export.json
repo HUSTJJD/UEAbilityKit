@@ -172,7 +172,7 @@
       "id": "ci-note",
       "title": "它在 CI 里的位置",
       "say": "`UAKValidateCommandlet` 可以直接加载 Json（或资产）跑一遍校验，不需要打开编辑器、不需要 GPU。所以「配置可 diff」不只是口号——它是真的能被流水线断言的。",
-      "do": "在 CI 里执行 UAKValidateCommandlet；本地则用 Scripts/generate_tutorials.ps1 一键重录教程。",
+      "do": "在 CI 里执行 UAKValidateCommandlet；本地则用 Tools/generate_tutorials.ps1 一键重录教程。",
       "expect": "校验结论以退出码返回，失败即阻断。",
       "action": "Note",
       "capture": { "shot": true }

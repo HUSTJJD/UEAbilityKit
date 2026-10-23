@@ -41,7 +41,7 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
-	USphereComponent* CollisionComponent = nullptr;
+	TObjectPtr<USphereComponent> CollisionComponent = nullptr;
 
 	/** 扫掠半径（同时也是碰撞体半径） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile", meta = (ClampMin = "0.0", UIMin = "0.0"))
@@ -78,10 +78,10 @@ private:
 	void Expire();
 
 	UPROPERTY()
-	AActor* InstigatorActor = nullptr;
+	TObjectPtr<AActor> InstigatorActor = nullptr;
 
 	UPROPERTY()
-	UAbilitySystemComponent* SourceASC = nullptr;
+	TObjectPtr<UAbilitySystemComponent> SourceASC = nullptr;
 
 	UPROPERTY()
 	TSubclassOf<UGameplayEffect> HitEffectClass;
@@ -102,5 +102,5 @@ private:
 	float ElapsedTime = 0.f;
 
 	UPROPERTY()
-	TArray<AActor*> HitActors;
+	TArray<TObjectPtr<AActor>> HitActors;
 };

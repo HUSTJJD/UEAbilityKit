@@ -86,9 +86,10 @@ flowchart LR
 git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 ```
 
-仓库本身就是一个可打开的 UE 工程（`UAKDemo.uproject`），布局参照 [UnLua](https://github.com/Tencent/UnLua)：**项目即示例，库放 Plugins**。
+工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`，先跑 `Tools/import_lyra.ps1` 导入），
+布局参照 [UnLua](https://github.com/Tencent/UnLua)：**库放 Plugins，示例随库走**。
 
-> 必须加 `--recursive`：脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 自身还嵌套了 Lua / Luau 两个子模块。忘了就补 `git submodule update --init --recursive`。
+> 必须加 `--recursive`：脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 自身还嵌套了 Lua / Luau 等子模块。忘了就补 `git submodule update --init --recursive`。
 
 </details>
 
@@ -96,12 +97,12 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 <summary><b>③ 跑测试</b></summary>
 
 ```powershell
-./Scripts/run_tests.ps1      # Windows：编译 + 跑用例 + 出报告
-./Scripts/run_tests.ps1 -Filter UAK.Unit
+./Tools/run_tests.ps1      # Windows：编译 + 跑用例 + 出报告
+./Tools/run_tests.ps1 -Filter UAK.Unit
 ```
 
 ```bash
-./Scripts/run_tests.sh       # Linux / macOS
+./Tools/run_tests.sh       # Linux / macOS
 ```
 
 </details>
@@ -134,7 +135,7 @@ cd Tools
 测试不是附属品，而是随插件发布的 `UEAbilityKitTests` 模块（Editor 类型，不进打包产物）。
 
 **测试在本地一键跑，CI 只负责把结论发布到 Pages**（云端装 UE 跑测试不现实）。
-`./Scripts/run_tests.ps1` 一次跑完三个 stage：
+`./Tools/run_tests.ps1` 一次跑完三个 stage：
 
 | Stage | 进程 | 覆盖 |
 |---|---|---|
@@ -169,16 +170,24 @@ cd Tools
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
-├─ UAKDemo.uproject                 ← 示例工程
-├─ Plugins/UEAbilityKit/Source/UAKDemo/                  ← 示例游戏模块（属性集 / 角色 / 技能）
+├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，由 import_lyra 复现）
+├─ Source/LyraAdapt/                ← 适配层（唯一同时认识 Lyra 与 UAK 的地方）
+├─ Plugins/UEAbilityKit/Source/UAKDemo/                  ← 示例模块（属性集 / 角色 / 技能，随插件分发）
 ├─ Plugins/
 │  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
 │  │  └─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}
 │  └─ UnLuaNova/                    ← 脚本方案（git submodule）
-├─ Scripts/
-│  ├─ run_tests.ps1 / run_tests.sh  ← 测试启动脚本
+├─ Tools/                           ← 唯一的脚本目录（自动化 / 构建 / 测试 / Lyra 工具都在这里）
+│  ├─ import_lyra.ps1 / .sh         ← 导入 Lyra（清 → 拷 → 打补丁 → 校验）
+│  ├─ patch_lyra.py                 ← 打 / 撤销 Lyra 补丁（幂等）
+│  ├─ clean_lyra.ps1 / .sh          ← 清除 Lyra 与补丁痕迹
+│  ├─ verify_lyra.py                ← 校验有没有人手改过 Lyra
+│  ├─ run_tests.ps1 / .sh           ← 测试启动脚本
 │  ├─ build.ps1                     ← 命令行编译（绕过 Build.bat 锁）
-│  └─ report/generate_report.py     ← 报告 / Showcase 生成器
+│  ├─ generate_tutorials.ps1 / .sh  ← 教程录制 + 文档生成
+│  ├─ patches/config/               ← 打进 Lyra ini 的配置片段
+│  ├─ report/generate_report.py     ← 报告 / Showcase 生成器
+│  └─ tutorial/generate_tutorials.py← 教程页渲染器
 ├─ Content/
 │  ├─ AnimationAssets/              ← 角色与动画（来自 UnLuaNova 示例）
 │  └─ Demo/Abilities/*.json         ← 技能资产示例（Json，可 diff）
@@ -211,8 +220,10 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 
 📖 在线文档：<https://hustjjd.github.io/UnLuaNova/>　·　⭐ 仓库：<https://github.com/HUSTJJD/UnLuaNova>
 
-> UAK **不依赖**任何脚本系统：插件里没有 UnLuaNova 的一行依赖，只有示例模块用它。
-> 关掉它照样编译、跑测试、用插件；两者怎么分工见 [UnLua 脚本](docs/examples/04-scripting-with-unlua.md)。
+> UAK **不依赖**任何脚本系统：核心模块没有一行 UnLuaNova 依赖，只有示例模块 `UAKDemo` 用它，
+> 且 `.uplugin` 里那条引用标了 `Optional`（缺了脚本插件也能启用）。
+> 关掉它照样编译、跑测试、用插件；集成方式与分工见 [UnLuaNova 集成](docs/examples/04-scripting-with-unlua.md)
+> 与 [集成契约](docs/design/20-scripting-integration.md)。
 
 ---
 
@@ -238,7 +249,7 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 | **运行时调试器** | 控制台 `UAK.Debug.Enable`（角色头顶浮字）/ `UAK.Debug.Summary`（打到日志）/ `UAK.Debug.Help` |
 | **编辑器调试面板** | 窗口 → 开发者工具 → 调试 → **UAK Debugger**，每 0.1 秒刷新活跃技能与任务 |
 | **溯源命令** | `UAK.Trace.Enable / Dump [N] / Clear / Disable`，血缘树直接打到日志 |
-| **一键搭示例** | `UnrealEditor-Cmd.exe UAKDemo.uproject -run=UAKDemoSetup`：技能资产 + 蓝图 + 关卡 + 默认地图 |
+| **一键搭示例** | `UnrealEditor-Cmd.exe LyraStarterGame.uproject -run=UAKDemoSetup`：技能资产 + 蓝图 + 关卡 + 默认地图 |
 | **新内置任务** | `ApplyLooseTags`（限时 Tag：霸体 / 无敌）、`FaceTarget`（转向目标 / 方向） |
 | **编辑器打磨** | 任务复制 / 粘贴（Ctrl+C / V，剪贴板存 Json）、拖动吸附到 Marker |
 

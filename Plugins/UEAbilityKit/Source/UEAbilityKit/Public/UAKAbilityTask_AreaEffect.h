@@ -71,7 +71,7 @@ public:
 
 	/** 结果过滤器（与形状解耦，可自由组合） */
 	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite, Category = "Area|Filter")
-	TArray<UAKQueryFilter*> Filters;
+	TArray<TObjectPtr<UAKQueryFilter>> Filters;
 
 	/** 每个目标只吃一次（否则每个 Interval 都会吃到） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")

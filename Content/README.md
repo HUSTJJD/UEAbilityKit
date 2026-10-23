@@ -45,15 +45,18 @@ AnimationAssets/
 ## Script/
 
 `Content/Script/UAKDemoCharacter.lua` 是 UnLuaNova 绑定脚本（由 `AAKDemoCharacter::GetModuleName` 指定）。
-脚本只负责项目特定的扩展：输入绑定、UI 联动、自定义引导条件。
+脚本只负责项目特定的扩展：输入按下之后干什么、UI 联动、给引导条件喂"按键还按着吗"。
 详见 [../docs/examples/04-scripting-with-unlua.md](../docs/examples/04-scripting-with-unlua.md)。
+
+> 打包提醒：脚本不是资产，`Content/Script` 必须显式 stage（`DefaultGame.ini` 的
+> `DirectoriesToAlwaysStageAsUFS`），插件自己的 Lua 运行时模块同理 —— 见 04 文档「打包」一节。
 
 ## 还需要在编辑器里创建的资产
 
 **不用了。** 一条命令就能全部生成（技能资产 / 蓝图 / 关卡 / 默认地图）：
 
 ```powershell
-UnrealEditor-Cmd.exe UAKDemo.uproject -run=UAKDemoSetup -unattended -nosplash
+UnrealEditor-Cmd.exe LyraStarterGame.uproject -run=UAKDemoSetup -unattended -nosplash
 ```
 
 详见 [../docs/examples/05-run-the-demo.md](../docs/examples/05-run-the-demo.md)。
