@@ -65,7 +65,7 @@
         "startTime": 0.0,
         "duration": 0.4,
         "taskId": "Windup",
-        "props": { "Tags": "(\"Ability.Windup\")" }
+        "props": { "Tags": "(GameplayTags=((TagName=\"Ability.Windup\")))" }
       },
       "capture": { "shot": true }
     },

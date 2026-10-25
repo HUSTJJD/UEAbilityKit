@@ -11,7 +11,8 @@
 | 脚本的角色 | 只承担**项目特有**部分：输入语义、UI 联动、一次性玩法逻辑、自定义引导条件 |
 | 依赖方向 | 单向：`UAKDemo`（示例模块）→ `UnLuaNova`；`UEAbilityKit`（核心）**一行都不引用** |
 | 可分发性 | `UEAbilityKit.uplugin` 里的 UnLuaNova 引用必须是 `Optional` —— 否则插件无法独立分发 |
-| 扩展点 | 只有两个：`IUnLuaNovaInterface` 绑定（对象级）、引导条件对象（脚本**喂状态**、C++ 判定） |
+| 扩展点 | 只有两个：**数据驱动绑定**（ini 映射 / 绑定组件 / `IUnLuaNovaInterface`，对象级）、引导条件对象（脚本**喂状态**、C++ 判定） |
+| 集成自检 | `Tools/unluanova.ps1 setup` / `doctor`：子模块、后端三处一致性、打包 stage、扩展插件 |
 | 打包 | 脚本不是资产，必须显式 stage：工程 `Content/Script` + 插件运行时模块目录 |
 | 后端 | 编译期选择（Luau 默认），ini 与二进制不得分叉 |
 
@@ -42,16 +43,33 @@
 
 ## 4. 两个扩展点
 
-### 4.1 对象绑定（`IUnLuaNovaInterface`）
+### 4.1 对象绑定（数据驱动，默认）
 
-```cpp
-FString AAKDemoCharacter::GetModuleName_Implementation() const
-{
-    return TEXT("UAKDemoCharacter");   // → Content/Script/UAKDemoCharacter.lua
-}
+绑定粒度是**对象**（一个 Actor 一个 Lua 模块），不是"全局脚本入口"。
+`ULuaModuleLocator_ByBinding` 是默认定位器，按优先级提供三种绑法：
+
+| 方式 | 写法 | 为什么要它 |
+|---|---|---|
+| **ini 映射**（示例用这个） | `DefaultUnLuaNova.ini` 的 `ClassModuleBindings` | **UE 侧一行代码都不用改**；这是"示例模块对脚本零依赖"的前提 |
+| **绑定组件** | 蓝图 Actor 上加 `UUnLuaNovaBindingComponent`，填模块名 | 纯蓝图团队也能用，按资产逐个配 |
+| **实现 `IUnLuaNovaInterface`** | 覆写 `GetModuleName()` | 老项目迁移、模块名要按实例算 |
+
+```ini
+; Config/DefaultUnLuaNova.ini
+[/Script/UnLuaNova.UnLuaNovaSettings]
++ClassModuleBindings=(Class="/Script/UAKDemo.AKDemoCharacter",ModuleName="UAKDemoCharacter")
 ```
 
-- 绑定粒度是**对象**（一个 Actor 一个 Lua 模块），不是"全局脚本入口"
+两条硬约束（写扩展点时别踩）：
+
+- **不是"任何对象都会被绑"**：`UUnLuaNovaSettings::bDataDrivenBinding` 默认 false
+  （配置项，不是代码常量）。关着时只有实现了接口或走动态绑定的对象会被绑，
+  不会让用户在不知情时被绑上脚本
+- **匹配会沿继承链向上找**（绑基类即覆盖蓝图子类），但**不解析 Class 资产**：
+  `TryBind` 是在 UObject 创建过程中调的，那里 `LoadObject` 是自找麻烦
+
+其余约定不变：
+
 - 脚本能接到的都是 C++ 显式暴露的 `UFUNCTION` / `UPROPERTY`（`BlueprintImplementableEvent` 由脚本实现）
 - **输入绑定留在 C++**，脚本只决定"按下去做什么"：绑 `InputComponent` / Enhanced Input 的 API 不是 UFUNCTION，脚本调不到
 
@@ -102,7 +120,7 @@ C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHe
 
 ## 6. 后端是编译期选择
 
-`LuaBackend`（`Config/DefaultUnLuaNovaEditor.ini`）决定编哪个 VM。相关约束：
+`LuaBackend`（`Config/DefaultUnLuaNova.ini`）决定编哪个 VM。相关约束：
 
 - 使用方模块的 `Build.cs` 必须**再列一次**后端模块（`Luau` 或 `Lua`）：
   UnLuaNova 的公共头文件直接调 `lua_*`，模板在使用方实例化，而 UBT 的依赖不递归传递链接项
@@ -123,8 +141,9 @@ C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHe
 
 ## 8. 已知限制
 
-- 示例模块 `UAKDemo` **编译期**依赖 UnLuaNova（不是可选）：想纯 C++ 用示例，见 04 文档 §9
+- 想让某个模块真正依赖 UnLuaNova（写 C++ 扩展），`Build.cs` 里必须**同时**列 `UnLuaNova`
+  和后端模块（`Luau` 或 `Lua`）—— UBT 的依赖不递归传递链接项。列完用 `doctor` 自检
 - 嵌套布局下 UnLuaNova 的扩展插件（`LuaSocket` / `LuaRapidjson` / `LuaProtobuf`）会被一起发现并编译，
-  需要显式关
+  `setup --disable-extensions` 可一键关
 - 脚本路径（示例模块的 Lua 绑定 + Luau 后端）的 PIE 实况仍待人工走查（[06 清单](../examples/06-live-trace-checklist.md)）
 - UAK 不为脚本内容做校验：脚本写错了，框架层没有护栏，只能靠 UnLuaNova 的类型检查与运行时报错

@@ -49,6 +49,57 @@ namespace
 		return (Step.Args.IsValid() && Step.Args->TryGetNumberField(Key, Value)) ? Value : Default;
 	}
 
+	float ArgFloat(const FUAKTutorialStep& Step, const TCHAR* Key, float Default)
+	{
+		double Value = 0.0;
+		return (Step.Args.IsValid() && Step.Args->TryGetNumberField(Key, Value))
+			? static_cast<float>(Value) : Default;
+	}
+
+	/** Json 值 → 属性的导入文本（与 UAKTutorialAutomation::SetPropertyByName 同一套规则） */
+	FString JsonValueToText(const TSharedPtr<FJsonValue>& Value)
+	{
+		if (!Value.IsValid())
+		{
+			return FString();
+		}
+
+		FString Text;
+		switch (Value->Type)
+		{
+		case EJson::Number:  Text = FString::SanitizeFloat(Value->AsNumber()); break;
+		case EJson::Boolean: Text = Value->AsBool() ? TEXT("True") : TEXT("False"); break;
+		default:             Value->TryGetString(Text); break;
+		}
+		return Text;
+	}
+
+	FString ArgValueText(const FUAKTutorialStep& Step, const TCHAR* Key)
+	{
+		return Step.Args.IsValid() ? JsonValueToText(Step.Args->TryGetField(FString(Key))) : FString();
+	}
+
+	/**
+	 * 把脚本声明的值真的写进对象（走 ImportText，与运行时执行器完全一致）。
+	 *
+	 * 为什么必须写进去：Validate 步骤的 expectErrors 是按"这一步改完之后"的资产状态算的
+	 * （04「2 条错误 → 补上 GE / Cue Tag → 0 条错误」就是靠这个数字被断言的）。
+	 * 只检查"属性存在"而不写值，模拟出的资产就永远停在"刚建好、什么都没填"，
+	 * 于是每一次 Validate 都会多出几条错误——用例也就从"证明教程可执行"退化成
+	 * "证明空壳任务会报错"。值的解析规则也必须和运行时一致，否则两边会给出不同的结论。
+	 */
+	bool SetPropertyText(UObject* Object, const FString& Name, const FString& Text)
+	{
+		FProperty* Property = Object ? FindFProperty<FProperty>(Object->GetClass(), *Name) : nullptr;
+		if (!Property)
+		{
+			return false;
+		}
+
+		Property->ImportText_Direct(*Text, Property->ContainerPtrToValuePtr<void>(Object), Object, PPF_None);
+		return true;
+	}
+
 	/** 与运行时同一套解析规则：track 既能写下标也能写名字 */
 	int32 ResolveTrackIndex(const FSimState& Sim, const FUAKTutorialStep& Step)
 	{
@@ -141,7 +192,16 @@ bool FUAKTutorialScriptsTest::RunTest(const FString& Parameters)
 					break;
 				}
 
-				// props 里的每个键都必须是真实属性，否则教程教了一个改不动的参数
+				Task->StartTime = ArgFloat(Step, TEXT("startTime"), 0.f);
+				Task->Duration = ArgFloat(Step, TEXT("duration"), 0.f);
+				const FString TaskId = ArgStr(Step, TEXT("taskId"));
+				if (!TaskId.IsEmpty())
+				{
+					Task->TaskId = FName(*TaskId);
+				}
+
+				// props 里的每个键都必须是真实属性，否则教程教了一个改不动的参数；
+				// 而且值要真的写进去，否则后面的 Validate 断言的是"没配过"的状态。
 				const TSharedPtr<FJsonObject>* Props = nullptr;
 				if (Step.Args->TryGetObjectField(TEXT("props"), Props) && Props && Props->IsValid())
 				{
@@ -149,6 +209,7 @@ bool FUAKTutorialScriptsTest::RunTest(const FString& Parameters)
 					{
 						TestTrue(FString::Printf(TEXT("%s 上能找到属性 %s"), *Where, *Pair.Key),
 							FindFProperty<FProperty>(Task->GetClass(), *Pair.Key) != nullptr);
+						SetPropertyText(Task, Pair.Key, JsonValueToText(Pair.Value));
 					}
 				}
 
@@ -178,6 +239,7 @@ bool FUAKTutorialScriptsTest::RunTest(const FString& Parameters)
 				TestTrue(FString::Printf(TEXT("%s 的属性 %s 存在"), *Where, *Property),
 					!Property.IsEmpty()
 					&& FindFProperty<FProperty>(Tasks[TaskIndex]->GetClass(), *Property) != nullptr);
+				SetPropertyText(Tasks[TaskIndex].Get(), Property, ArgValueText(Step, TEXT("value")));
 				break;
 			}
 
@@ -187,6 +249,7 @@ bool FUAKTutorialScriptsTest::RunTest(const FString& Parameters)
 				TestTrue(FString::Printf(TEXT("%s 的资产属性 %s 存在"), *Where, *Property),
 					!Property.IsEmpty()
 					&& FindFProperty<FProperty>(UAKAbilityAsset::StaticClass(), *Property) != nullptr);
+				SetPropertyText(Sim.Asset, Property, ArgValueText(Step, TEXT("value")));
 				break;
 			}
 

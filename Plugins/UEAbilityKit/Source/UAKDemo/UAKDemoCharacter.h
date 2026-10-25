@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
-#include "UnLuaNovaInterface.h"
 #include "GameFramework/Character.h"
 #include "UAKDemoCharacter.generated.h"
 
@@ -11,7 +10,7 @@ class UAKDemoAttributeSet;
 class UGameplayAbility;
 
 /**
- * 示例角色：自带 ASC 与属性集，并实现 UnLuaNova 接口把逻辑交给 Lua。
+ * 示例角色：自带 ASC 与属性集。
  *
  * 简化起见 ASC 挂在 Character 上。真实项目里**玩家**建议挂 PlayerState
  * （死亡重生后属性与技能保留），AI 挂 Character 即可。
@@ -20,9 +19,15 @@ class UGameplayAbility;
  * 关于脚本：UAK 的核心（执行器、任务、编辑器）是纯 C++，不依赖脚本；
  * 脚本只负责项目特定的扩展（输入按下之后干什么、UI 联动、自定义引导条件）。
  * 见 docs/examples/04-scripting-with-unlua.md。
+ *
+ * 这个类**一行脚本相关代码都没有**：Lua 绑定走 UnLuaNova 的数据驱动方式
+ * （Config/DefaultUnLuaNovaSettings.ini 里把 AKDemoCharacter 映射到
+ * Content/Script/UAKDemoCharacter.lua，蓝图子类一并覆盖），不再靠实现
+ * IUnLuaNovaInterface。换来的是 UAKDemo 模块对脚本方案**零依赖** ——
+ * 把 UnLuaNova 整个删掉，这个模块照样编译。
  */
 UCLASS()
-class UAKDEMO_API AAKDemoCharacter : public ACharacter, public IAbilitySystemInterface, public IUnLuaNovaInterface
+class UAKDEMO_API AAKDemoCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -30,9 +35,6 @@ public:
 	AAKDemoCharacter();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
-
-	/** UnLuaNova：返回绑定的 Lua 模块名（对应 Content/Script/UAKDemoCharacter.lua） */
-	virtual FString GetModuleName_Implementation() const override;
 
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;

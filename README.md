@@ -183,6 +183,7 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 │  ├─ build.ps1 / .sh               ← 命令行编译（绕过 Build.bat 锁）
 │  ├─ run_tests.ps1 / .sh           ← 一键测试（三 stage）
 │  ├─ generate_tutorials.ps1 / .sh  ← 教程录制 + 文档生成
+│  ├─ unluanova.ps1 / .sh           ← 脚本层：setup（一次写对）/ doctor（只读体检）
 │  ├─ common.py                     ← 共用：路径 / 引擎定位 / 子进程
 │  ├─ lyra/                         ← cli.py + import/clean/patch/verify + 补丁清单
 │  ├─ build/                        ← build.py
@@ -211,6 +212,10 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 | ⚡ | **静态绑定** | 构建期为声明类型生成绑定表，绕开反射热路径与运行时查找开销；类型选择是 **opt-out**（默认全导出，不想要的加 `meta=(UnLuaNovaNoExport)`） |
 | 🔁 | **双 Lua 后端** | [Lua 5.5](https://www.lua.org/) 与 [Luau](https://luau.org)（默认），均以子模块引入，共用一套后端抽象层 |
 | 🔍 | **Lua 可观测性** | CPU Profiler 写入 Unreal Insights、`lua.dbg` headless 调试服务、`lua.sandbox` 沙盒、死循环看门狗 |
+| 🧩 | **数据驱动绑定** | 类 → Lua 模块的映射写在 ini 里（或蓝图上加个绑定组件），**UE 侧一行代码都不用改**；不再是"必须实现 `IUnLuaNovaInterface`" |
+| 🐛 | **IDE 里断点 / 单步** | `lua.dap start`：把 headless 的调试服务接成 DAP 服务，VSCode 直接 attach（断点 / 栈 / 局部变量） |
+| 🩺 | **一键自检** | `Tools/unluanova.ps1 setup` / `doctor`：子模块、后端三处一致性、打包路径、扩展插件，机器替你查 |
+| ♻️ | **热更新** | 编辑器内 HotReload、PIE 内非结构性改动热载；**运营期脚本下发**是 Lua 相对静态脚本方案的独占优势 |
 
 **为什么值得试**
 
@@ -219,10 +224,20 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 - 事件覆盖 Replication / Animation / Input，把"项目特有"的那部分逻辑留在脚本里迭代
 - 从 UnLua 迁移只需把全局名 `UnLua` 批量换成 `UnLuaNova`
 
+**和 AngelScript 怎么选**（一句话边界）：能接受**源码引擎分支** + 主机/PC 单机 + 不需要运营期热更，
+Hazelight 的 UE-AngelScript 体验更完整（静态类型、VSCode LSP、断点单步一等公民）；
+**不能 fork 引擎 / 要热更 / 团队已会 Lua**，UnLuaNova 是唯一现实解 —— 它是纯插件，零引擎改动。
+
+```powershell
+./Tools/unluanova.ps1 setup     # 一次把集成写对（幂等）
+./Tools/unluanova.ps1 doctor    # 只读体检，有 error 退出码 1（可当 CI 门禁）
+```
+
 📖 在线文档：<https://hustjjd.github.io/UnLuaNova/>　·　⭐ 仓库：<https://github.com/HUSTJJD/UnLuaNova>
 
-> UAK **不依赖**任何脚本系统：核心模块没有一行 UnLuaNova 依赖，只有示例模块 `UAKDemo` 用它，
-> 且 `.uplugin` 里那条引用标了 `Optional`（缺了脚本插件也能启用）。
+> UAK **不依赖**任何脚本系统：核心模块没有一行 UnLuaNova 依赖，示例模块 `UAKDemo` 也没有 ——
+> 示例的 Lua 绑定是**配置**出来的（ini 里的类→模块映射），所以删掉 `Plugins/UnLuaNova` 整个目录
+> 照样编译、照样跑测试。`.uplugin` 里那条引用仍标 `Optional`（缺了脚本插件也能启用）。
 > 关掉它照样编译、跑测试、用插件；集成方式与分工见 [UnLuaNova 集成](docs/examples/04-scripting-with-unlua.md)
 > 与 [集成契约](docs/design/20-scripting-integration.md)。
 

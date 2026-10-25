@@ -104,17 +104,21 @@ UAK.Trace.Dump          # 导出血缘树：技能 → 任务 → GE → SetByCa
 
 ## 7. 不想用脚本
 
-示例模块对 UnLuaNova 的依赖集中在三处（`AAKDemoCharacter` 实现 `IUnLuaNovaInterface` + Build.cs + 工程脚本）：
+**删掉目录就行，不用改代码**。示例的 Lua 绑定是配置出来的（ini 里的类→模块映射），
+不是编译出来的，所以 `UAKDemo.Build.cs` 与 `AAKDemoCharacter` 里一个脚本相关的字都没有。
 
-1. 从 `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemo.Build.cs` 去掉 `"UnLuaNova"`
-   **和后端模块那一项**（`Luau` / `Lua`，见文件里的注释）
-2. `AAKDemoCharacter` 去掉 `IUnLuaNovaInterface` 与 `GetModuleName_Implementation`
-3. 把 `K2_OnAbilityInput` 改成 C++ 实现（直接调 `TryActivateAbilityByIndex`）；
+1. 删除 `Plugins/UnLuaNova/`（submodule）与工程 `Content/Script/`
+2. 宿主 `.uproject` 里 `UnLuaNova` 设为 `false`（嵌套的 `LuaSocket` / `LuaRapidjson` /
+   `LuaProtobuf` 同理，或跑 `Tools/unluanova.ps1 setup --disable-extensions`）
+3. `Config/DefaultGame.ini` 里的 `DirectoriesToAlwaysStageAsUFS`、
+   `Config/DefaultUnLuaNova.ini` 可以去掉
+4. 输入链路会退回 C++：`K2_OnAbilityInput` 是 `BlueprintImplementableEvent`，没有脚本实现
+   时它就是个空事件 —— 想保留"按键激活技能"，在蓝图里实现它并直接调 `TryActivateAbilityByIndex`。
    引导条件的"按住"语义本来就是 C++ 读角色状态（`UAKDemoChanneling_InputHeld`），
    去掉脚本后默认成立，不会把示例卡死
-4. 删除工程 `Content/Script/`；宿主 `.uproject` 里 `UnLuaNova` 设为 `false`
-   （嵌套的 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 同理，见 [04](04-scripting-with-unlua.md) §2）
-5. `Config/DefaultGame.ini` 里那两条 `DirectoriesToAlwaysStageAsUFS` 可以去掉
+
+> 反过来，想启用脚本：拉 submodule → `./Tools/unluanova.ps1 setup` → `doctor` 复检。
+> 中途任何一步"忘了"，`doctor` 会直接告诉你缺哪条。
 
 插件侧不用动：`UEAbilityKit.uplugin` 里的 UnLuaNova 引用本来就是 `Optional`，
 **UAK 插件核心不依赖任何脚本系统**，不受影响。

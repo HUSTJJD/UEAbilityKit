@@ -46,7 +46,7 @@ UEAbilityKit/                       ← 仓库根 = UE 工程根
 | 文件 | 内容 |
 |---|---|
 | `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAttributeSet.h/.cpp` | Health / MaxHealth / Mana / MaxMana，含属性复制与夹取 |
-| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能；实现 `IUnLuaNovaInterface` 把项目逻辑交给 Lua |
+| `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoCharacter.h/.cpp` | 自带 ASC + 属性集，`PossessedBy` 时授予默认技能；**不依赖脚本** —— Lua 绑定由 `Config/DefaultUnLuaNova.ini` 映射过去 |
 | `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemoAbility.h/.cpp` | `UAKGameplayAbility` 的最小子类，`CommitAbility` 走冷却与消耗 |
 | `Source/LyraAdapt/LyraAdaptInputCondition.h/.cpp` | 宿主侧扩展：把 Lyra 的 Enhanced Input 接到 UAK 的引导条件上 |
 

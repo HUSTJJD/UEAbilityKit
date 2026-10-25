@@ -1,6 +1,7 @@
 -- UAKDemoCharacter.lua
 --
--- UnLuaNova 绑定脚本（由 AAKDemoCharacter::GetModuleName 指定）。
+-- UnLuaNova 绑定脚本（由 Config/DefaultUnLuaNova.ini 的 ClassModuleBindings 指定：
+-- AKDemoCharacter → UAKDemoCharacter，蓝图子类一并覆盖）。
 --
 -- 分工原则：
 --   UAK 的核心（执行器、任务、编辑器、序列化）是纯 C++，不依赖任何脚本系统；

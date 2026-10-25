@@ -134,7 +134,7 @@ docs/reports/media/**           # 只有 mp4 + 少量关键 png 入库（走 LFS
 | `UAK.Tutorial.Run` | 编辑器内自动化，把教程**真实点一遍**：建资产、加轨道、加任务、改属性、播、校验、导出；同时逐步骤截图 / 采帧序列 |
 | `UAK.Tutorial.Guided` | 把同一份脚本转成引擎原生的引导教程（运行时构造 `UEditorTutorial`，不落盘 `.uasset`），按 `advance` 判定读者做对了没 |
 | `generate_tutorials.py` | 把「脚本 + 录制产物」渲染成 `docs/tutorials/*.md`：分步讲解 + 截图 + mp4 + 每步的执行结果 |
-| `UAK.Tutorial.Scripts` | Automation 用例：不打开任何窗口，纯数据层模拟一遍，断言每一步引用的轨道 / 任务 / 属性都真实存在 |
+| `UAK.Tutorial.Scripts` | Automation 用例：不打开任何窗口，纯数据层按脚本**模拟一遍**（建轨道 / 建任务 / 把 props 与 value 真的写进去 / 跑校验），断言每一步引用的轨道 / 任务 / 属性都真实存在，且 `Validate` 步骤的错误数与脚本声明的 `expectErrors` 一致 |
 
 同源，所以**录制过程即文档、引导过程也出自同一份脚本**：改了编辑器行为就必须改脚本，否则用例会失败，两条链路也同时对不上。
 

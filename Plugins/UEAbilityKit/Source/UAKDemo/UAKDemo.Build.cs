@@ -1,10 +1,3 @@
-using System;
-using System.IO;
-#if UE_5_0_OR_LATER
-using EpicGames.Core;
-#else
-using Tools.DotNETCommon;
-#endif
 using UnrealBuildTool;
 
 public class UAKDemo : ModuleRules
@@ -13,6 +6,18 @@ public class UAKDemo : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// 这里**故意不列 UnLuaNova**。
+		//
+		// 示例的 Lua 绑定走 UnLuaNova 的数据驱动路线：Config/DefaultUnLuaNova.ini
+		// 里把 AKDemoCharacter 映射到 Content/Script/UAKDemoCharacter.lua
+		// （见 ULuaModuleLocator_ByBinding）。不再由 AAKDemoCharacter 实现
+		// IUnLuaNovaInterface，于是示例模块对脚本方案**零依赖**：
+		// 把 Plugins/UnLuaNova 整个删掉，本模块照样编译、照样跑。
+		//
+		// 顺带也躲开了一个坑：以前这里还得"再列一次 Lua 后端模块"
+		// （UBT 的依赖不递归传递链接项，少列就 LNK2019）。现在没有脚本依赖，也就没有后端。
+		// 真正要用 UnLuaNova 写 C++ 扩展的模块，照着 docs/examples/04 做，并跑
+		// Tools/unluanova.ps1 doctor 自检。
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
@@ -20,44 +25,11 @@ public class UAKDemo : ModuleRules
 			"Engine",
 			"GameplayAbilities",
 			"GameplayTags",
-			"UEAbilityKit",
-
-			// 脚本方案（git submodule：Plugins/UnLuaNova）
-			// 仅示例模块依赖它；UAK 插件本身不依赖任何脚本系统
-			"UnLuaNova"
+			"UEAbilityKit"
 		});
-
-		// Lua 后端必须在这里再列一次，哪怕 UnLuaNova 自己已经依赖它。
-		//
-		// UnLuaNova 的公共头文件直接调用 lua_*（LuaBackend.h 以及基于它的模板
-		// FLuaFunction::Call / TConstructor<>::Register 等）——这些模板是在**本模块**
-		// 里实例化的，所以对 lua_gettop 等符号的引用出现在 UAKDemo 自己的目标文件里。
-		// 而 UEBuildModule.GetDependencies() 不是递归的：一个模块的依赖不会进入
-		// 它消费者的链接命令行，只有 include 路径会传递。
-		// 结果就是 UnrealEditor-Luau.lib 只在 UnLuaNova 的链接行上，不在 UAKDemo 的，
-		// 于是 lua_* 全变成未解析符号（LNK2019，或运行期踩到错误实现而崩溃）。
-		//
-		// 用哪个后端是 UnLuaNova 的编译期选择，这里读同一个配置项，保证两边不会不一致。
-		// 不能把 Lua 和 Luau 同时列进来：两者都提供同名 lua.h / lualib.h，
-		// 会同时进 include 路径，并触发 LuaBackend.h 的"一个构建里出现两个后端"检查。
-		// 配置文件不存在时 ConfigFile 为空，GetString 返回 false，走默认 Luau。
-		var configFile = new FileReference(
-			Path.Combine(Target.ProjectFile.Directory.FullName, "Config", "DefaultUnLuaNovaEditor.ini"));
-		var config = new ConfigHierarchy(new[]
-		{
-			FileReference.Exists(configFile) ? new ConfigFile(configFile) : new ConfigFile()
-		});
-		const string section = "/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings";
-
-		string backend;
-		if (!config.GetString(section, "LuaBackend", out backend))
-		{
-			backend = "Luau";
-		}
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			string.Equals(backend, "Lua", StringComparison.OrdinalIgnoreCase) ? "Lua" : "Luau",
 			"Projects"        // IPluginManager（示例资产写到插件自己的 Content 目录）
 		});
 

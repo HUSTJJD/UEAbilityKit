@@ -18,17 +18,44 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 | 项 | 现状 |
 |---|---|
 | 引入方式 | git submodule，挂在项目 `Plugins/UnLuaNova/` |
-| 版本 | **1.0.0**（2026-10-23，第一个正式版本） |
+| 版本 | **1.0.0**（2026-10-23，第一个正式版本）+ 本工程回迁的数据驱动绑定 / DAP / 自动 IntelliSense |
 | 宿主工程 | `LyraStarterGame.uproject`（Lyra 打底，见 [lyra-integration.md](lyra-integration.md)） |
 | 插件发现 | UE 递归扫描项目 `Plugins/`，**不需要** `AdditionalPluginDirectories`；日志可见 `Mounting Project plugin UnLuaNova` |
-| 谁依赖它 | 只有**示例模块** `UAKDemo`（插件内 `Plugins/UEAbilityKit/Source/UAKDemo/`） |
+| 谁依赖它 | **没有模块依赖它**：示例的 Lua 绑定走 ini 映射（数据驱动），`UAKDemo.Build.cs` 里一个 `UnLuaNova` 字都没有（见 §3） |
 | UAK 插件本体 | 不依赖任何脚本系统；`.uplugin` 里的 UnLuaNova 引用标了 `"Optional": true` |
-| Lua 后端 | **Luau**（默认），由 `Config/DefaultUnLuaNovaEditor.ini` 显式钉住 |
+| Lua 后端 | **Luau**（默认），由 `Config/DefaultUnLuaNova.ini` 显式钉住 |
 | 脚本落点 | 工程 `Content/Script/`（示例：`UAKDemoCharacter.lua`） |
-| 打包 | `DirectoriesToAlwaysStageAsUFS` 两条（工程脚本 + 插件运行时模块），见 §6 |
-| 静态检查 / 智能提示 | 产物在 `Plugins/UnLuaNova/IntelliSense/{EmmyLua,Luau}`（v1.0.0 起，不在 `Intermediate/`） |
+| 打包 | `DirectoriesToAlwaysStageAsUFS`（工程脚本 + 插件运行时模块），见 §6；上游已改为按插件实例自动补 |
+| 静态检查 / 智能提示 | 产物在 `Plugins/UnLuaNova/IntelliSense/{EmmyLua,Luau}`；**首次启动编辑器自动生成**（见 §7） |
+| 一键自检 | `./Tools/unluanova.ps1 setup` / `doctor`（见 §2.1） |
 
-一句话：**UAK 是纯 C++ 的产品插件，脚本只服务示例与项目扩展；两者通过 submodule + 可选依赖接在一起。**
+一句话：**UAK 是纯 C++ 的产品插件，脚本只服务示例与项目扩展；想接就接，不想接删掉目录也能编译。**
+
+## 2.1 setup / doctor：把"知道才会写对"变成机器可查
+
+集成里最贵的从来不是写代码，是"忘了某一处、然后在打包后炸"。这两条命令就是为它准备的：
+
+```powershell
+./Tools/unluanova.ps1 setup      # 子模块 / 后端 ini / stage 路径 / 扩展插件，一次写对
+./Tools/unluanova.ps1 doctor     # 只读体检，有 error 就退出码 1（可直接当 CI 门禁）
+```
+
+`doctor` 查的正是历史上真实踩过的坑：
+
+| 检查 | 抓的是什么 |
+|---|---|
+| `submodule` / `third-party` | 子模块没拉全（嵌套的 Lua / Luau 最容易忘） |
+| `backend-ini` / `backend-binary` / `build-cs` | **ini ↔ 二进制 ↔ Build.cs 三处后端是否分叉**（分叉的表现是"目录叫 lua、跑的是 Luau"） |
+| `stage` | 打包 stage 路径有没有漏插件运行时模块那条 |
+| `extensions` | 嵌套布局下被一起编译的 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` |
+| `intellisense` | 有没有产物（没产物 = 没补全 = "这方案不好用"的错觉） |
+
+`setup` 逐条修，且是**幂等**的：已经对了就只报告。
+
+```powershell
+./Tools/unluanova.ps1 setup --backend Lua   # 切后端（之后必须重编）
+./Tools/unluanova.ps1 setup --disable-extensions --dry-run
+```
 
 ## 2. 为什么是 submodule，目录怎么摆
 
@@ -75,17 +102,35 @@ Plugins/UnLuaNova/                                ← submodule 根（= UnLuaNov
 
 ## 3. 依赖声明
 
-只有**示例模块**依赖脚本系统，UAK 插件本身不依赖任何脚本：
+**现在没有任何模块依赖脚本系统** —— 连示例模块也没有：
 
 ```csharp
 // Plugins/UEAbilityKit/Source/UAKDemo/UAKDemo.Build.cs
 PublicDependencyModuleNames.AddRange(new[] {
     "Core", "CoreUObject", "Engine",
     "GameplayAbilities", "GameplayTags",
-    "UEAbilityKit",
-    "UnLuaNova"     // 仅示例模块使用
+    "UEAbilityKit"
+    // 没有 "UnLuaNova"：绑定是配置出来的，不是编译出来的（见 §4）
 });
 ```
+
+之所以能做到，是因为 Lua 绑定从"实现 `IUnLuaNovaInterface`"改成了**数据驱动**（§4），
+`AAKDemoCharacter` 里一行脚本相关代码都没有。收益有两个：
+
+1. 删掉 `Plugins/UnLuaNova` 整个目录，工程照样编译、照样跑测试（§9 从"改三处代码"缩成"删一个目录"）
+2. 顺带躲开"使用方 Build.cs 必须再列一次 Lua 后端模块"那个坑（UBT 的依赖不递归传递链接项，
+   少列就 LNK2019）—— 没有脚本依赖，也就没有后端
+
+!!! note "要写 C++ 扩展时才需要依赖"
+    只有当你的模块要 include UnLuaNova 的头文件（比如自己实现 ModuleLocator、调 `FLuaEnv`）时，
+    才需要把 `"UnLuaNova"` **和后端模块**一起列进 `Build.cs`，两者缺一不可：
+
+    ```csharp
+    PublicDependencyModuleNames.Add("UnLuaNova");
+    PrivateDependencyModuleNames.Add("Luau");   // 或 "Lua"，须与 ini 的 LuaBackend 一致
+    ```
+
+    列完跑一次 `./Tools/unluanova.ps1 doctor`，它会替你核对三处后端是否一致。
 
 `UEAbilityKit.uplugin` 里那条 UnLuaNova 引用是**可选**的：
 
@@ -115,10 +160,35 @@ PublicDependencyModuleNames.AddRange(new[] {
 
 UAK 留出的**脚本扩展点**目前有两个：
 
-1. **`IUnLuaNovaInterface` 绑定**：`AAKDemoCharacter::GetModuleName_Implementation()` 返回
-   `"UAKDemoCharacter"`，对应 `Content/Script/UAKDemoCharacter.lua`；
-   该脚本实现的是 C++ 上的 `BlueprintImplementableEvent`
-   （`K2_OnAbilityInput` / `K2_OnAbilityStarted` / `K2_OnAbilityEnded`），也就是项目侧逻辑。
+1. **数据驱动绑定**（默认路径，示例就用它）：类到模块的映射写在配置里，UE 侧一行代码都不用改。
+   `Config/DefaultUnLuaNova.ini`：
+
+   ```ini
+   [/Script/UnLuaNova.UnLuaNovaSettings]
+   ; 数据驱动绑定默认**关**：不配置就绝不给"没实现 IUnLuaNovaInterface"的对象绑脚本。
+   ; 这是一条安全边界（开着时凡是匹配上映射表或绑定组件的对象都会被绑），不是性能开关。
+   bDataDrivenBinding=true
+   +ClassModuleBindings=(Class="/Script/UAKDemo.AKDemoCharacter",ModuleName="UAKDemoCharacter")
+   ```
+
+   !!! warning "只写映射表不会生效"
+      少了 `bDataDrivenBinding=true`，映射表配了也不绑 —— 定位器给出模块名之后
+      **要不要真的绑**由这个开关决定（默认关，与旧版本行为逐字一致）。
+
+   示例里这一条把 `AKDemoCharacter`（以及它的蓝图子类 `BP_DemoCharacter`，匹配会沿继承链向上找）
+   指到 `Content/Script/UAKDemoCharacter.lua`；该脚本实现的是 C++ 上的
+   `BlueprintImplementableEvent`（`K2_OnAbilityInput` / `K2_OnAbilityStarted` / `K2_OnAbilityEnded`），
+   也就是项目侧逻辑。
+
+   三种绑法任选，优先级从高到低（都在 `ULuaModuleLocator_ByBinding` 里，是默认定位器）：
+
+   | 方式 | 怎么用 | 适合 |
+   |---|---|---|
+   | **ini 映射**（示例用这个） | 上面那条配置 | 不改 UE 侧代码，改配置就生效；**基类能覆盖蓝图子类** |
+   | **绑定组件** | 蓝图 Actor 上加 `UnLuaNova Binding` 组件，填模块名 | 纯蓝图团队，按资产逐个配 |
+   | **实现 `IUnLuaNovaInterface`** | C++ 或蓝图里覆写 `GetModuleName()` | 老项目迁移、模块名要按实例算的场景 |
+
+   前两种都不需要碰 C++，这也是"示例模块对脚本零依赖"的前提。
 2. **引导条件的"状态喂给 C++"**：脚本调 `SetChannelingInputHeld(Slot, bPressed)` 把"按键还按着吗"
    写进角色；C++ 侧的条件对象 `UAKDemoChanneling_InputHeld`（派生 `UAKChannelingCondition`）
    每帧读这个状态来判定引导是否成立。
@@ -151,12 +221,12 @@ UAK 只给出一个类型安全的扩展点 —— 框架不会被任何一种�
 | | Lua 5.5 | Luau（默认） |
 |---|---|---|
 | 定位 | plain Lua，第三方库生态最好 | 原生 `vector` / `buffer`、沙盒、原生断点与单步 |
-| UAK 现状 | 可用，未作为默认 | 默认；`Config/DefaultUnLuaNovaEditor.ini` 里钉住 |
+| UAK 现状 | 可用，未作为默认 | 默认；`Config/DefaultUnLuaNova.ini` 里钉住 |
 
 切换方式（改完必须重新编译，不能只重启编辑器）：
 
 ```ini
-; Config/DefaultUnLuaNovaEditor.ini（由 Tools/lyra/patches/config 下的片段生成）
+; Config/DefaultUnLuaNova.ini（由 Tools/lyra/patches/config 下的片段生成）
 [/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings]
 LuaBackend=Luau      ; 或 Lua
 ```
@@ -187,11 +257,15 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
 | `Script` | 工程自己的脚本（`Content/Script/**`） |
 | `../Plugins/UnLuaNova/Plugins/UnLuaNova/Content/Script` | 插件随包发布的运行时模块（`UnLuaNova.StringEx` 等） |
 
-!!! danger "第二条不能写成 `../Plugins/UnLuaNova/Content/Script`"
-    那是 submodule 里**示例工程**的脚本（Tutorials / Benchmark），不是插件的运行时模块。
-    UnLuaNova 编辑器模块启动时会自己补 `Script` 与 `../Plugins/UnLuaNova/Content/Script`
-    （它硬编码的旧路径），但**不会**补插件目录这一条 —— 少了它，打包后
-    `require('UnLuaNova.Vector')` 直接失败，而编辑器里一切正常（最容易漏的就是这条）。
+!!! note "这条以前最容易写错，现在上游会自动补"
+    曾经这里必须手写成 `../Plugins/UnLuaNova/Plugins/UnLuaNova/Content/Script`
+    （submodule 是"工程套插件"，真正的插件在内层）。写成 `../Plugins/UnLuaNova/Content/Script`
+    会指向 submodule 里**示例工程**的脚本（Tutorials / Benchmark），编辑器里一切正常、
+    打包后 `require('UnLuaNova.Vector')` 才失败。
+
+    现在 UnLuaNova 编辑器模块按**插件实例**枚举（凡是名字以 `UnLuaNova` 开头、
+    且带 `Content/Script` 的插件都补上），工程套插件 / 插件套插件都不会漏。
+    仍建议跑一次 `./Tools/unluanova.ps1 doctor` 确认，别靠肉眼。
 
 `Config/` 不进 git：这些行由 `Tools/lyra/patches/config/*.append` 打进 Lyra 的 ini
 （`python Tools/lyra/cli.py patch`）。已经打过的 ini 不会重复追加（有 `UAK-PATCH` 标记），
@@ -199,7 +273,11 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
 
 ## 7. 智能提示与静态检查
 
-编辑器工具栏导出（或 `UnrealEditor-Cmd.exe <uproject> -run=UnLuaNovaIntelliSense -BP=1`）后，
+**产物目录不存在时，编辑器启动会自动导出一次**（`bAutoGenerateIntelliSenseOnStartup`，默认开）。
+这一步省掉的是"装完插件还得知道要去工具栏点一下" —— 没产物就没有补全，而"没有补全"
+往往被误判成"这个方案不好用"。已经生成过就交给工具栏 / 目录监听做增量，不会拖慢每次启动。
+
+手动触发仍然是编辑器工具栏导出（或 `UnrealEditor-Cmd.exe <uproject> -run=UnLuaNovaIntelliSense -BP=1`），
 产物落在 **`Plugins/UnLuaNova/IntelliSense/`**：
 
 ```
@@ -220,36 +298,77 @@ Plugins/UnLuaNova/IntelliSense/
 | 运行时实例快照 | `UAK.Debug.Enable / Summary`（见 [05-run-the-demo.md](05-run-the-demo.md)） |
 | Lua 侧 CPU 热点 | `lua.profiler on`（写入 Unreal Insights） |
 | Lua 内存 | `lua.memstats [on|off|reset]` |
-| 断点 / 单步 | `lua.dbg`（headless 调试服务） |
+| **IDE 里断点 / 单步 / 看变量** | **`lua.dap start [port]`**（DAP 服务，见 §8.1） |
+| 命令行断点 / 单步 | `lua.dbg`（headless 调试服务，DAP 的下层） |
 | 强制 GC / 执行一段代码 | `lua.gc`、`lua.do <code>`、`lua.dofile <module>` |
 | 沙盒（限制脚本改写引擎类型） | `lua.sandbox`（**启动期 CVar**，不是运行时命令） |
 
 定位"脚本把技能玩坏了"时，典型顺序是：`UAK.Trace.Dump` 找到可疑任务 →
-`lua.profiler` 看是不是脚本热点 → `lua.dbg` 下断点。
+`lua.profiler` 看是不是脚本热点 → `lua.dap start` 后在 IDE 里下断点。
+
+### 8.1 DAP：把 headless 调试接到 IDE 上
+
+`FLuaDebugService` 刻意不带 socket、不定义线协议（"that belongs in the DAP layer"），
+于是"能调试"和"能在 VSCode 里调试"之间一直缺一层。`lua.dap` 就是那一层：
+
+```
+VSCode ──DAP/JSON──► lua.dap（编辑器进程内，自带线程）──► FLuaDebugService
+```
+
+```text
+lua.dap start [port]     # 默认 5699；起服务，等 IDE 来 attach
+lua.dap status
+lua.dap stop
+```
+
+VSCode 侧用 attach 方式连 `127.0.0.1:5699` 即可（`request: "attach"`）。已实现的请求：
+`initialize` / `attach` / `setBreakpoints` / `threads` / `stackTrace` / `scopes` /
+`variables` / `continue` / `next` / `stepIn` / `stepOut` / `disconnect`。
+
+| 行为 | 说明 |
+|---|---|
+| 命中断点 | 游戏线程**阻塞自旋**等 `Continue()`（DAP 的 blocking 模式），IDE 才有机会看栈与变量 |
+| 暂停中改断点 | 要等 `Continue()` 之后才生效（游戏线程阻塞着，排不进去） |
+| 不支持 | `pause`（服务没有强制中断接口）、`evaluate`（求值要跑在 Lua 所在线程） |
 
 ## 9. 不使用脚本时的取舍
 
-脚本依赖集中在三处，关掉它不影响 UAK 本体：
+**删掉目录就行，不用改代码**（示例的绑定是配置出来的，不是编译出来的）：
 
-1. `Plugins/UEAbilityKit/Source/UAKDemo/UAKDemo.Build.cs`：移除 `"UnLuaNova"` 与后端那一项
-2. `AAKDemoCharacter`：去掉 `IUnLuaNovaInterface` 与 `GetModuleName_Implementation`，
-   `K2_OnAbilityInput` 改成 C++ 实现（直接调 `TryActivateAbilityByIndex`）
-3. 删除工程 `Content/Script/`；宿主 `.uproject` 里把 `UnLuaNova`（及三个扩展插件）设为 `false`；
-   `Config/DefaultGame.ini` 里那两条 stage 路径也可以去掉
+1. 删除 `Plugins/UnLuaNova/`（submodule）与工程 `Content/Script/`
+2. 宿主 `.uproject` 里把 `UnLuaNova`（及三个扩展插件）设为 `false`；
+   `Config/DefaultGame.ini` 里的 stage 路径、`Config/DefaultUnLuaNova.ini` 也可以去掉
 
-插件侧的 `Optional` 依赖不用动 —— 缺了脚本插件它本来也不会拦你。
+`UAKDemo` 的 `Build.cs` 与 `AAKDemoCharacter` **都不用动** —— 它们本来就没有脚本依赖。
+插件侧的 `Optional` 依赖也不用动 —— 缺了脚本插件它本来也不会拦你。
 
-## 10. 已知限制
+## 10. 热更新：这是选 Lua 而不是别的脚本方案的核心理由
+
+编辑器里改完 `.lua` 直接生效（工具栏 HotReload，或 `EHotReloadMode=Auto` 的目录监听）；
+运营期则是另一回事：**脚本下发**是 Lua 相对静态脚本方案（如 AngelScript）唯一的独占优势，
+值得按一等能力来对待，而不是当成一条 feature。
+
+| 场景 | 机制 |
+|---|---|
+| 编辑器内迭代 | HotReload：`IUnLuaNovaModule::HotReload()` → `Lua.HotReload()` → 重 require 模块 |
+| PIE 内 | 非结构性改动可不退出播放会话直接重载 |
+| 运营期下发 | 脚本不在 cooked 资产里，走 `DirectoriesToAlwaysStageAsUFS` 之外的内容分发通道即可 |
+
+配套的安全边界：`lua.sandbox`（限制脚本改写引擎类型）、死循环看门狗（`DeadLoopCheck`）、
+`lua.profiler` 兜住"下发了一段慢脚本"。**下发链路本身要项目自己建**，UAK 不提供也不约束。
+
+## 11. 已知限制
 
 | 限制 | 说明 |
 |---|---|
-| 示例模块硬依赖 | `UAKDemo` 编译期依赖 UnLuaNova；UAK 核心不受影响 |
-| 扩展插件默认开 | 嵌套布局下 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 会被一起编译；不需要就在 `.uproject` 里关 |
-| 后端切换要重编 | 见 §5；ini 与二进制分叉会导致"跑的是另一个后端" |
+| 扩展插件默认开 | 嵌套布局下 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 会被一起编译；`setup --disable-extensions` 可一键关 |
+| 后端切换要重编 | 见 §5；ini 与二进制分叉会导致"跑的是另一个后端"（`doctor` 会抓） |
 | 打包路径 | 见 §6；插件运行时模块那条必须写对 |
+| DAP 只覆盖 attach | 不支持 launch（调试目标是编辑器 / PIE 进程，不是独立进程） |
+| 数据驱动绑定的缓存 | 打包构建里"这个类没绑"的结论会缓存；编辑器里不缓存，改配置/组件即时生效 |
 | 脚本路径待人工走查 | 示例脚本与 Luau 后端的 PIE 实况按 [06 清单](06-live-trace-checklist.md) 逐条确认（UnLuaNova 1.0.0 自带 518 条 Luau 用例全绿，但那是它自己的用例） |
 
-## 11. 延伸阅读
+## 12. 延伸阅读
 
 | 内容 | 入口 |
 |---|---|

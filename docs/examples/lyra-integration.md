@@ -190,7 +190,7 @@ Lyra 全都有，按 copy → patch 原则：Lyra 的拷进去，我们真正需
 | `ProjectID` / `ProjectName` | Lyra 的（宿主就是 Lyra） |
 | 旧式 `+ActionMappings`（UAK_Ability1/2） | **我们的** → `Tools/lyra/patches/config/DefaultInput.ini.append` |
 | `+DirectoriesToAlwaysStageAsUFS`（UnLuaNova 脚本） | **我们的** → `Tools/lyra/patches/config/DefaultGame.ini.append` |
-| `DefaultUnLuaNovaEditor.ini`（Lua 后端） | **我们的** —— Lyra 没这个 ini，由片段生成 → `Tools/lyra/patches/config/DefaultUnLuaNovaEditor.ini.append` |
+| `DefaultUnLuaNova.ini`（Lua 后端） | **我们的** —— Lyra 没这个 ini，由片段生成 → `Tools/lyra/patches/config/DefaultUnLuaNova.ini.append` |
 | 打包一堆样板设置 | Lyra 的 |
 
 追加是幂等的（带 `UAK-PATCH` 标记，重复跑不会叠加）；Lyra 没有的 ini 则由片段直接生成。

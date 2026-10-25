@@ -40,7 +40,7 @@
 | 投射物与区域 | [17-projectile-and-area.md](17-projectile-and-area.md) | 只负责"飞、撞到谁、把 GE+Cue 打上去"；持续与周期交给 GE，物理交给引擎 |
 | 打断传播 | [18-interrupt.md](18-interrupt.md) | 三条规则：结束顺序 `EAKInterruptOrder` / 轨道停用=取消 / `bAlwaysExecute` 保证执行 |
 | 引导 / 吟唱 | [19-channeling.md](19-channeling.md) | 条件**不满足**就打断；与 WaitUntil（满足才继续）语义相反；失败动作三种 |
-| 脚本集成 | [20-scripting-integration.md](20-scripting-integration.md) | UAK 核心不依赖任何脚本系统；UnLuaNova 仅示例模块依赖且 `.uplugin` 引用标 `Optional`；扩展点只有两个（对象绑定 / 条件转发）；脚本打包需显式 stage |
+| 脚本集成 | [20-scripting-integration.md](20-scripting-integration.md) | UAK 核心不依赖任何脚本系统，**示例模块也不依赖**（绑定走 ini 映射）；`.uplugin` 引用标 `Optional`；扩展点只有两个（数据驱动对象绑定 / 条件转发）；脚本打包需显式 stage；`Tools/unluanova.ps1 setup\|doctor` 负责自检 |
 
 ## 待定稿（M5 及以后）
 

@@ -20,12 +20,15 @@
 | `build.ps1` / `build.sh` | `build/build.py` | 命令行编译（绕开 Build.bat 的锁） |
 | `run_tests.ps1` / `run_tests.sh` | `test/run.py` | 一键测试：三 stage + 报告 + 素材 |
 | `generate_tutorials.ps1` / `.sh` | `tutorial/run.py` | 教程录制 + 文档生成 |
+| `unluanova.ps1` / `.sh` | `unluanova/cli.py` | 脚本层：`setup` 一次写对 / `doctor` 只读体检（子命令） |
 
 ```powershell
 ./Tools/lyra.ps1 import --lyra-path <Lyra 目录> --engine-root <引擎目录>
 ./Tools/build.ps1
 ./Tools/run_tests.ps1 --stage editor --filter UAK.Unit
 ./Tools/generate_tutorials.ps1 --docs-only
+./Tools/unluanova.ps1 setup
+./Tools/unluanova.ps1 doctor --strict     # 警告也算失败（新机器接入用）
 ```
 
 ```bash

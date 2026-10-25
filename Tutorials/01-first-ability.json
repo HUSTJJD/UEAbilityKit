@@ -73,7 +73,7 @@
         "startTime": 0.0,
         "duration": 1.2,
         "taskId": "Cast",
-        "props": { "Tags": "(\"Ability.Casting\")" }
+        "props": { "Tags": "(GameplayTags=((TagName=\"Ability.Casting\")))" }
       },
       "capture": { "shot": true }
     },

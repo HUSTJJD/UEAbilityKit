@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  项目：UEAbilityKit（UAK）—— 基于 GAS 的 UE5 技能时间轴编排插件，宿主工程是 Lyra 5.8。
+  引擎：UE 5.8 源码构建（路径由 UE_ENGINE_ROOT 或注册表解析，不写进仓库）。
+
+  模块划分（Plugins/UEAbilityKit/Source/）：
+    UEAbilityKit        Runtime，执行器与任务
+    UEAbilityKitEditor  编辑器（时间轴 / 血缘 / 校验 / 预览）与 commandlet
+    UEAbilityKitTests   Editor 类型测试模块（UAK.* 自动化用例）
+    UAKDemo             Runtime 示例模块（C++ GE / 角色 / 技能）
+
+  核心类型：
+    UAKAbilityAsset        技能资产（轨道 + 任务，纯数据，Json 双向）
+    UAKAbilityInstance     一次施放的执行器（执行计划 + 时钟 + 中断 + 门控 + 引导）
+    UAKAbilityTaskBase     任务基类，四契约：生命周期 / Validate / GetGASImpact / Json
+    FAKAbilityContext      运行时上下文（Owner / Targets / SourceASC / Trace / ScratchPads）
+    UAKTrace               血缘树，供编辑器与 CI 消费
+
+  三条硬约束（写 spec / design 时必须遵守）：
+    1. UAK 不自建网络同步：所有副作用必须落在 GAS 原语（GE / Tag / Cue）上，
+       网络正确性由 ASC 的复制与 FPredictionKey 回滚保证。
+    2. 零宿主改动：能力必须在插件内完成，Lyra 等宿主不必修改其 UGameplayAbility / ASC 基类。
+    3. 向后兼容：存量技能资产与任务行为不变，新能力默认 opt-in。
+
+  既有工程实践：
+    - 任务自带 Validate()，错误"无法被配置出来"，而不是事后报错。
+    - 校验条常驻编辑器底栏；UAKValidateCommandlet 可在 CI 无 GPU 环境做门禁。
+    - 测试只在本地跑（需要 UE）：./Tools/run_tests.ps1（editor / game / net 三阶段）。
+    - 文档在 docs/design/*.md（已定稿设计）与 docs/roadmap.md（分 M1..M6 的完成度）。
+
+rules:
+  proposal:
+    - 用中文书写
+    - 必须显式区分 Goals / Non-Goals，并说明对既有三条硬约束的影响
+    - 涉及规模问题时，优先"让机器检查"而非"让人检查"
+  specs:
+    - 用中文书写
+    - 每个 Requirement 至少 1 个 Scenario，Scenario 用 4 个 # 且含 WHEN / THEN
+    - 用 SHALL / MUST 表达规范性要求，避免 should / may
+    - Scenario 要可测：能直接对应一个自动化用例
+    - 必须覆盖失败路径与向后兼容路径，不只写happy path
+  design:
+    - 用中文书写
+    - 每个决策必须写"替代方案 + 否决理由"，不能只给结论
+    - 风险用 [风险] → 缓解 的形式成对给出
+    - 必须包含可独立回滚的分阶段迁移计划
+  tasks:
+    - 用中文书写
+    - 每个任务必须可验证（完成时能明确判断 done）
+    - 按依赖顺序排列，并标注所属阶段（P0 / P1 / P2 / P3）
+    - 涉及行为变更的任务必须附带回归基线验证

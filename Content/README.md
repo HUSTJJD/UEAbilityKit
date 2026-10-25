@@ -44,7 +44,9 @@ AnimationAssets/
 
 ## Script/
 
-`Content/Script/UAKDemoCharacter.lua` 是 UnLuaNova 绑定脚本（由 `AAKDemoCharacter::GetModuleName` 指定）。
+`Content/Script/UAKDemoCharacter.lua` 是 UnLuaNova 绑定脚本（由
+`Config/DefaultUnLuaNova.ini` 里的 `ClassModuleBindings` 把 `AKDemoCharacter`
+映射到它 —— 改配置就能绑，不需要动 C++）。
 脚本只负责项目特定的扩展：输入按下之后干什么、UI 联动、给引导条件喂"按键还按着吗"。
 详见 [../docs/examples/04-scripting-with-unlua.md](../docs/examples/04-scripting-with-unlua.md)。
 

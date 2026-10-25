@@ -129,7 +129,7 @@
   "duration": 0.4,
   "taskId": "Windup",
   "props": {
-    "Tags": "(\"Ability.Windup\")"
+    "Tags": "(GameplayTags=((TagName=\"Ability.Windup\")))"
   }
 }
     ```
@@ -340,5 +340,5 @@ docs/tutorials/<id>.md   ← 你正在看的这页
 每一步的讲解与每一步的动作写在同一个对象里，改了编辑器行为就必须改脚本，
 否则 `Automation RunTests UAK.Tutorial` 会失败。
 
-_生成时间：2026-10-22 17:58:19_
+_生成时间：2026-10-24 00:42:31_
 

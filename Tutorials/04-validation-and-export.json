@@ -107,7 +107,7 @@
         "track": "Effect",
         "task": 0,
         "property": "EffectClass",
-        "value": "/Script/UAKDemo.UAKDemoGE_MeleeDamage"
+        "value": "/Script/UAKDemo.AKDemoGE_MeleeDamage"
       },
       "capture": { "shot": true, "region": "Details" }
     },

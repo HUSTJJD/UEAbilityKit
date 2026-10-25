@@ -123,13 +123,35 @@
 
 - [x] **依赖可分发**：`UEAbilityKit.uplugin` 里的 UnLuaNova 引用标 `"Optional": true`
       —— 没有它，把插件单独拷进无脚本项目会被"引用了不存在的插件"拦住
-- [x] **后端显式化**：新增 `Tools/lyra/patches/config/DefaultUnLuaNovaEditor.ini.append`，钉住
+- [x] **后端显式化**：新增 `Tools/lyra/patches/config/DefaultUnLuaNova.ini.append`，钉住
       `LuaBackend=Luau`；`UAKDemo.Build.cs` 读的是同一个键，ini 与二进制不会分叉
 - [x] **打包路径修正**：`DirectoriesToAlwaysStageAsUFS` 第二条改为
       `../Plugins/UnLuaNova/Plugins/UnLuaNova/Content/Script`（插件运行时 Lua 模块）。
       原先指向 submodule **示例工程**的脚本，编辑器里一切正常、打包后 `require` 才失败
 - [x] **文档对齐**：04 重写（v1.0.0、嵌套布局与自动发现、后端切换、打包、IntelliSense、`lua.*` 命令、关停步骤）；
       新增设计页 `design/20-scripting-integration.md`（集成契约与所有权边界）
+
+## 脚本层易用性（UnLuaNova 集成收口之后）
+
+目标：把"能用"推进到"好用"，重点是**减少必须手写两处的地方**与**补齐 IDE 体验**。
+
+- [x] **一键 setup / 只读 doctor**：`Tools/unluanova.ps1 setup|doctor`（子模块、后端三处一致性、
+      打包 stage、扩展插件、IntelliSense 产物）；`doctor` 有 error 退出码 1，可直接当 CI 门禁
+- [x] **示例模块零脚本依赖**：Lua 绑定改走 ini 映射（数据驱动），`UAKDemo.Build.cs` 与
+      `AAKDemoCharacter` 都不再提 UnLuaNova；删掉插件目录照样编译
+- [x] **数据驱动绑定**（UnLuaNova 侧）：`ULuaModuleLocator_ByBinding` 为默认定位器，
+      支持 ini 的 `ClassModuleBindings` + `UUnLuaNovaBindingComponent`；
+      绑定开关是配置项 `bDataDrivenBinding`（默认关），不是代码里的虚函数 —— 保持"不配置就绝不自动绑"
+- [x] **IntelliSense 首次启动自动生成**（`bAutoGenerateIntelliSenseOnStartup`）：
+      没产物就没补全，而"没补全"常被误判成"方案不好用"
+- [x] **DAP 适配器**：`lua.dap start [port]`，把 headless 的 `FLuaDebugService` 接成 DAP 服务，
+      VSCode attach 后断点 / 单步 / 看局部变量
+- [x] **打包路径按插件实例枚举**：不再只认 `UnLuaNovaExtensions`，工程套插件 / 插件套插件都不漏
+- [ ] **示例脚本补 DAP 与数据驱动绑定的实况走查**（并入 06 清单）
+- [ ] **热更新当一等卖点**：最小可跑的下发示例 + 沙盒安全模型（当前只有编辑器内 HotReload 文档）
+
+> 许可（PolyForm Small Business）是当前最大的采用门槛，但不在本轮范围：
+> 它卡的是法务而不是工程。真要扩大采用面，建议把绑定层与工具链（IntelliSense / DAP）单独降级成 MIT。
 
 ## 剩余工作
 
