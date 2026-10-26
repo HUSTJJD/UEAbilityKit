@@ -33,9 +33,14 @@ function M:ReceiveEndPlay()
 end
 
 --- C++ 侧把输入绑定到这个事件（BlueprintImplementableEvent）。
+--
+-- 函数名必须**与 UFUNCTION 同名**：覆写是按 UFunction 的名字去 Lua 表里找的
+-- （UUnLuaNovaManager::Bind 里的 UEFunctions.Find(LuaFuncName)），`K2_` 前缀不会被去掉。
+-- 所以这里叫 K2_OnAbilityInput，不是 OnAbilityInput —— 写错了不会报错，只是永远不触发。
+--
 -- 为什么输入绑定不放 Lua：绑定 InputComponent / EnhancedInput 的 API 不是 UFUNCTION，
 -- 脚本调不到；而"按下去该干什么"是项目逻辑，正应该留在脚本里。
-function M:OnAbilityInput(SlotIndex, bPressed)
+function M:K2_OnAbilityInput(SlotIndex, bPressed)
     HeldSlots[SlotIndex] = bPressed
 
     -- 告诉 C++ 这个槽位是否还按着：UAKDemoChanneling_InputHeld 会来问它
@@ -53,7 +58,11 @@ function M:OnAbilityInput(SlotIndex, bPressed)
 end
 
 --- UAK 不内置输入系统，引导维持条件由项目自己回答。
--- C++ 侧用 UAKChanneling_CustomCondition 转发到这里。
+--
+-- 注意方向：真正被每帧问的是 **C++ 的条件对象** `UAKDemoChanneling_InputHeld`，
+-- 它读的是角色上的 C++ 状态（由上面的 SetChannelingInputHeld 写入），**不经过 Lua**。
+-- 下面这个函数只是把同一份判断在 Lua 侧留了个可读的副本（不是 UFUNCTION，不会被覆写），
+-- 去掉它引导照样工作 —— 判定留在 C++，是为了能校验、能进 Json、缺脚本时也不会卡死示例。
 function M:IsChannelingInputHeld(SlotIndex)
     -- 槽 0（近战）不需要维持；槽 1（火球）要求按住不放
     if SlotIndex == 0 then
@@ -74,14 +83,14 @@ function M:ActivateAbility(AbilityClass)
     return ASC:TryActivateAbilityByClass(AbilityClass)
 end
 
---- 技能开始 / 结束的 Lua 钩子，便于做 UI 与音效联动
-function M:OnAbilityStarted(AbilityName)
+--- 技能开始 / 结束的 Lua 钩子，便于做 UI 与音效联动（同样按 UFUNCTION 名，K2_ 前缀要保留）
+function M:K2_OnAbilityStarted(AbilityName)
     ActivatedCount = ActivatedCount + 1
     -- 例如：显示读条 UI
     print(string.format("[UAKDemo] Started: %s (第 %d 次)", tostring(AbilityName), ActivatedCount))
 end
 
-function M:OnAbilityEnded(AbilityName, bWasCancelled)
+function M:K2_OnAbilityEnded(AbilityName, bWasCancelled)
     -- 例如：隐藏读条 UI；bWasCancelled 为真时播放"被打断"反馈
     if bWasCancelled then
         print(string.format("[UAKDemo] Cancelled: %s", tostring(AbilityName)))

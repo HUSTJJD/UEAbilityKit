@@ -37,13 +37,14 @@ UNLUANOVA_INI = REPO_ROOT / "Config" / "DefaultUnLuaNova.ini"
 EDITOR_INI = UNLUANOVA_INI
 GAME_INI = REPO_ROOT / "Config" / "DefaultGame.ini"
 INI_SECTION = "/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings"
+RUNTIME_INI_SECTION = "/Script/UnLuaNova.UnLuaNovaSettings"
 
 INTELLISENSE_DIR = PLUGIN_ROOT / "IntelliSense"
 
 BACKENDS = ("Luau", "Lua")
 DEFAULT_BACKEND = "Luau"
 
-# 嵌套布局下会被一起发现并编译的扩展插件（不需要就要显式关）
+# 扩展插件：上游 .uplugin 的 EnabledByDefault 是 false，宿主 .uproject 里没写就是**没开**
 EXTENSION_PLUGINS = ("LuaSocket", "LuaRapidjson", "LuaProtobuf")
 
 # 打包时必须 stage 的两条（相对工程 Content 目录）
@@ -80,6 +81,22 @@ def read_ini_key(path: Path, section: str, key: str) -> str | None:
 
 def backend_from_ini() -> str | None:
     return read_ini_key(UNLUANOVA_INI, INI_SECTION, "LuaBackend")
+
+
+# ── 数据驱动绑定 ───────────────────────────────────────────────────────────
+# 两个键必须成对出现才生效：定位器给出模块名之后，"要不要真的绑"由 bDataDrivenBinding 决定。
+# 少了开关，映射表配了也不会绑 —— 不报错、不警告，是最容易白忙一场的一处。
+def has_class_module_bindings() -> bool:
+    try:
+        text = UNLUANOVA_INI.read_text(encoding="utf-8-sig")
+    except OSError:
+        return False
+    return re.search(r"^\s*\+?ClassModuleBindings\s*=", text, re.MULTILINE) is not None
+
+
+def data_driven_binding_enabled() -> bool:
+    value = read_ini_key(UNLUANOVA_INI, RUNTIME_INI_SECTION, "bDataDrivenBinding")
+    return value is not None and value.lower() in ("true", "1", "yes")
 
 
 # ── 二进制 ─────────────────────────────────────────────────────────────────

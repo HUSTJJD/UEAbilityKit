@@ -12,6 +12,7 @@
 | 依赖方向 | 单向：`UAKDemo`（示例模块）→ `UnLuaNova`；`UEAbilityKit`（核心）**一行都不引用** |
 | 可分发性 | `UEAbilityKit.uplugin` 里的 UnLuaNova 引用必须是 `Optional` —— 否则插件无法独立分发 |
 | 扩展点 | 只有两个：**数据驱动绑定**（ini 映射 / 绑定组件 / `IUnLuaNovaInterface`，对象级）、引导条件对象（脚本**喂状态**、C++ 判定） |
+| 版本 | 跟随 UnLuaNova **master**（`v1.0.0` 之后的开发线）：数据驱动绑定、DAP、StdLib、静态绑定都由上游提供 |
 | 集成自检 | `Tools/unluanova.ps1 setup` / `doctor`：子模块、后端三处一致性、打包 stage、扩展插件 |
 | 打包 | 脚本不是资产，必须显式 stage：工程 `Content/Script` + 插件运行时模块目录 |
 | 后端 | 编译期选择（Luau 默认），ini 与二进制不得分叉 |
@@ -50,7 +51,7 @@
 
 | 方式 | 写法 | 为什么要它 |
 |---|---|---|
-| **ini 映射**（示例用这个） | `DefaultUnLuaNova.ini` 的 `ClassModuleBindings` | **UE 侧一行代码都不用改**；这是"示例模块对脚本零依赖"的前提 |
+| **ini 映射**（示例用这个） | `DefaultUnLuaNova.ini` 的 `ClassModuleBindings`（可写完整 `Class=` 路径，也可写 `ClassName=` 短名） | **UE 侧一行代码都不用改**；这是"示例模块对脚本零依赖"的前提 |
 | **绑定组件** | 蓝图 Actor 上加 `UUnLuaNovaBindingComponent`，填模块名 | 纯蓝图团队也能用，按资产逐个配 |
 | **实现 `IUnLuaNovaInterface`** | 覆写 `GetModuleName()` | 老项目迁移、模块名要按实例算 |
 
@@ -66,7 +67,9 @@
   （配置项，不是代码常量）。关着时只有实现了接口或走动态绑定的对象会被绑，
   不会让用户在不知情时被绑上脚本
 - **匹配会沿继承链向上找**（绑基类即覆盖蓝图子类），但**不解析 Class 资产**：
-  `TryBind` 是在 UObject 创建过程中调的，那里 `LoadObject` 是自找麻烦
+  `TryBind` 是在 UObject 创建过程中调的，那里只比字符串，`LoadObject` 是自找麻烦
+- **Lua 里的函数名必须与 UFUNCTION 同名**：覆写按 UFunction 名在 Lua 表里查找，
+  `K2_` 前缀不会被去掉。写错不报错、只是永远不触发（`K2_OnAbilityInput` 才是示例里的正确写法）
 
 其余约定不变：
 
@@ -135,6 +138,8 @@ C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHe
 
 - [ ] 核心模块（`UEAbilityKit` / `UEAbilityKitEditor`）没有新增任何脚本相关 include
 - [ ] `UEAbilityKit.uplugin` 的 UnLuaNova 引用仍然是 `Optional`
+- [ ] 数据驱动绑定是**成对**的（映射表 + `bDataDrivenBinding=true`），`doctor` 的 `binding` 不报警
+- [ ] Lua 里新增的覆写函数名与 UFUNCTION 同名（含 `K2_` 前缀）
 - [ ] 新增的 Lua 脚本在打包路径覆盖范围内（工程脚本 / 插件模块）
 - [ ] 切过后端的话，`Config` 的 ini 与编译产物是同一个后端
 - [ ] 新增宿主适配代码放在适配层（`Source/LyraAdapt/`），没进插件
@@ -143,7 +148,9 @@ C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHe
 
 - 想让某个模块真正依赖 UnLuaNova（写 C++ 扩展），`Build.cs` 里必须**同时**列 `UnLuaNova`
   和后端模块（`Luau` 或 `Lua`）—— UBT 的依赖不递归传递链接项。列完用 `doctor` 自检
-- 嵌套布局下 UnLuaNova 的扩展插件（`LuaSocket` / `LuaRapidjson` / `LuaProtobuf`）会被一起发现并编译，
-  `setup --disable-extensions` 可一键关
+- 扩展插件（`LuaSocket` / `LuaRapidjson` / `LuaProtobuf`）上游 `EnabledByDefault=false`：
+  默认不会进构建，要用就在宿主 `.uproject` 里显式开
+- 内置库开关（`bTimer` / `bEvent` / `bOOP`）是**编译期**的：改完 ini 必须重编
+- 网络（声明式 RPC / 复制属性）是实验能力，RPC 不可覆写；实例级隔离尚未支持
 - 脚本路径（示例模块的 Lua 绑定 + Luau 后端）的 PIE 实况仍待人工走查（[06 清单](../examples/06-live-trace-checklist.md)）
 - UAK 不为脚本内容做校验：脚本写错了，框架层没有护栏，只能靠 UnLuaNova 的类型检查与运行时报错

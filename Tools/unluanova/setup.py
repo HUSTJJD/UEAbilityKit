@@ -187,6 +187,11 @@ def ensure_build_cs_backend(plan: Planner, backend: str) -> None:
 
 # ── 5) 扩展插件 ────────────────────────────────────────────────────────────
 def disable_extensions(plan: Planner) -> None:
+    """把三个扩展插件在 .uproject 里显式写成 false。
+
+    上游 .uplugin 的 EnabledByDefault 现在就是 false（没写 = 没开），所以这一条是
+    "钉死"而不是"救火"：防止别处（模板工程、同事的分支）把它们带起来。
+    """
     path = state.uproject_path()
     text = path.read_text(encoding="utf-8-sig")
     new = text
@@ -219,7 +224,8 @@ USAGE = """用法：unluanova setup [选项]
 
   --backend Luau|Lua   指定后端（默认沿用现有 ini，没有就 Luau）；切完必须重编
   --no-submodule       跳过子模块初始化
-  --disable-extensions 把 LuaSocket / LuaRapidjson / LuaProtobuf 在 .uproject 里关掉
+  --disable-extensions 把 LuaSocket / LuaRapidjson / LuaProtobuf 在 .uproject 里显式关掉
+                       （上游默认就是关的；这条是"钉死"，防止别处把它们带起来）
   --dry-run            只打印要做什么，不改文件
 
 例：

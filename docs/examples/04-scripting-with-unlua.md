@@ -1,4 +1,4 @@
-# 脚本方案：UnLuaNova 集成（git submodule，v1.0.0）
+# 脚本方案：UnLuaNova 集成（git submodule，跟随 master）
 
 > **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)** —— 面向 Unreal Engine 的 Lua 脚本方案，[Tencent/UnLua](https://github.com/Tencent/UnLua) 的社区续作。
 > UnLua 官方发布线冻结在 v2.3.6（2023-11）后无人维护，UnLuaNova 把散落的社区成果收敛成一条有人维护的发行线，
@@ -18,7 +18,7 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 | 项 | 现状 |
 |---|---|
 | 引入方式 | git submodule，挂在项目 `Plugins/UnLuaNova/` |
-| 版本 | **1.0.0**（2026-10-23，第一个正式版本）+ 本工程回迁的数据驱动绑定 / DAP / 自动 IntelliSense |
+| 版本 | 跟随 **master**（`v1.0.0` 之后的开发线；v1.0.0 = 2026-10-23 的首个正式版）。后端 pin 见插件 `Source/ThirdParty/VERSIONS.md`：**Lua 5.5.1** / **Luau 0.743+1** |
 | 宿主工程 | `LyraStarterGame.uproject`（Lyra 打底，见 [lyra-integration.md](lyra-integration.md)） |
 | 插件发现 | UE 递归扫描项目 `Plugins/`，**不需要** `AdditionalPluginDirectories`；日志可见 `Mounting Project plugin UnLuaNova` |
 | 谁依赖它 | **没有模块依赖它**：示例的 Lua 绑定走 ini 映射（数据驱动），`UAKDemo.Build.cs` 里一个 `UnLuaNova` 字都没有（见 §3） |
@@ -26,7 +26,7 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 | Lua 后端 | **Luau**（默认），由 `Config/DefaultUnLuaNova.ini` 显式钉住 |
 | 脚本落点 | 工程 `Content/Script/`（示例：`UAKDemoCharacter.lua`） |
 | 打包 | `DirectoriesToAlwaysStageAsUFS`（工程脚本 + 插件运行时模块），见 §6；上游已改为按插件实例自动补 |
-| 静态检查 / 智能提示 | 产物在 `Plugins/UnLuaNova/IntelliSense/{EmmyLua,Luau}`；**首次启动编辑器自动生成**（见 §7） |
+| 静态检查 / 智能提示 | 产物在 `Plugins/UnLuaNova/Plugins/UnLuaNova/IntelliSense/{EmmyLua,Luau}`；首次启动编辑器自动生成（见 §7） |
 | 一键自检 | `./Tools/unluanova.ps1 setup` / `doctor`（见 §2.1） |
 
 一句话：**UAK 是纯 C++ 的产品插件，脚本只服务示例与项目扩展；想接就接，不想接删掉目录也能编译。**
@@ -47,7 +47,8 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 | `submodule` / `third-party` | 子模块没拉全（嵌套的 Lua / Luau 最容易忘） |
 | `backend-ini` / `backend-binary` / `build-cs` | **ini ↔ 二进制 ↔ Build.cs 三处后端是否分叉**（分叉的表现是"目录叫 lua、跑的是 Luau"） |
 | `stage` | 打包 stage 路径有没有漏插件运行时模块那条 |
-| `extensions` | 嵌套布局下被一起编译的 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` |
+| `binding` | 数据驱动绑定是否**成对**：只配 `ClassModuleBindings` 而没开 `bDataDrivenBinding` → error（不报错、不生效，最容易白忙一场的一处） |
+| `extensions` | `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 的启用状态（上游 `EnabledByDefault=false`，没写就是没开） |
 | `intellisense` | 有没有产物（没产物 = 没补全 = "这方案不好用"的错觉） |
 
 `setup` 逐条修，且是**幂等**的：已经对了就只报告。
@@ -94,11 +95,17 @@ Plugins/UnLuaNova/                                ← submodule 根（= UnLuaNov
 `.uproject` 里既没有 `AdditionalPluginDirectories`、也没有 UnLuaNova 的开关条目 ——
 编辑器启动时日志里有 `Mounting Project plugin UnLuaNova` 就是证据。
 
-推论（也是代价）：**内层的扩展插件会被一起发现**。
-`LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 的 `EnabledByDefault` 都是 `true`，
-所以在本工程里它们会被编译并加载（日志可见三个 DLL 的 `InternalLoadLibrary`）。
-不需要就在**宿主的 `.uproject`** 里显式写 `"Enabled": false` 关掉；
-`UnLuaNovaTestSuite` 上游已经设了 `EnabledByDefault: false`，不用管。
+关于内层的扩展插件：**它们现在默认是关的**。
+`LuaSocket` / `LuaRapidjson` / `LuaProtobuf`（都在 `Plugins/UnLuaNovaExtensions/` 下）
+的 `.uplugin` 里 `EnabledByDefault` 是 `false` —— 宿主 `.uproject` 里没写就是没开，
+要用就在 `.uproject` 里显式写 `"Enabled": true`（三者互不依赖，可以只开一个）。
+脚本侧 `require("socket.core")` / `require("rapidjson")` / `require("pb")` 才能用。
+`UnLuaNovaTestSuite` 同样是关的，不用管。
+
+!!! note "被这条文档骗过的人不少"
+    早先的 UnLuaNova 把三个扩展插件的 `EnabledByDefault` 设成 `true`，于是"嵌套布局下会被
+    一起编译"。现在反过来了：`setup --disable-extensions` 存在的意义也从"救火"变成"钉死"
+    —— 防止别处（模板工程、同事的分支）把它们带起来。
 
 ## 3. 依赖声明
 
@@ -169,6 +176,8 @@ UAK 留出的**脚本扩展点**目前有两个：
    ; 这是一条安全边界（开着时凡是匹配上映射表或绑定组件的对象都会被绑），不是性能开关。
    bDataDrivenBinding=true
    +ClassModuleBindings=(Class="/Script/UAKDemo.AKDemoCharacter",ModuleName="UAKDemoCharacter")
+   ; 原生类也可以只写短名（同样沿父类链匹配，蓝图子类一并覆盖）：
+   ; +ClassModuleBindings=(ClassName="AKDemoCharacter",ModuleName="UAKDemoCharacter")
    ```
 
    !!! warning "只写映射表不会生效"
@@ -189,6 +198,20 @@ UAK 留出的**脚本扩展点**目前有两个：
    | **实现 `IUnLuaNovaInterface`** | C++ 或蓝图里覆写 `GetModuleName()` | 老项目迁移、模块名要按实例算的场景 |
 
    前两种都不需要碰 C++，这也是"示例模块对脚本零依赖"的前提。
+
+   !!! warning "Lua 里的函数名必须与 UFUNCTION **同名**"
+       覆写是按 UFunction 的名字去 Lua 表里找的（`UUnLuaNovaManager::Bind` 里的
+       `UEFunctions.Find(LuaFuncName)`），**`K2_` 前缀不会被去掉**。所以示例里写的是
+
+       ```lua
+       function M:K2_OnAbilityInput(SlotIndex, bPressed)   -- 不是 OnAbilityInput
+       ```
+
+       写错不会报错，只是永远不触发 —— 这比报错更难查。`ReceiveBeginPlay` / `ReceiveEndPlay`
+       这类引擎自带事件名本身就是 UFUNCTION 名，照抄即可。
+
+   绑定完成后的钩子也有现成的：`UUnLuaNovaManager::Bind` 会调用模块里的 `Initialize`
+   （比 `ReceiveBeginPlay` 更早，且不需要 C++ 侧再加回调接口）。
 2. **引导条件的"状态喂给 C++"**：脚本调 `SetChannelingInputHeld(Slot, bPressed)` 把"按键还按着吗"
    写进角色；C++ 侧的条件对象 `UAKDemoChanneling_InputHeld`（派生 `UAKChannelingCondition`）
    每帧读这个状态来判定引导是否成立。
@@ -357,18 +380,83 @@ VSCode 侧用 attach 方式连 `127.0.0.1:5699` 即可（`request: "attach"`）�
 配套的安全边界：`lua.sandbox`（限制脚本改写引擎类型）、死循环看门狗（`DeadLoopCheck`）、
 `lua.profiler` 兜住"下发了一段慢脚本"。**下发链路本身要项目自己建**，UAK 不提供也不约束。
 
-## 11. 已知限制
+## 11. 内置库、特性开关与静态绑定
+
+这三件事上游都有了，接入时只要知道它们**在哪儿开关、改了要不要重编**。
+
+### 11.1 内置库（StdLib）
+
+随插件发布在 `Content/Script/UnLuaNova/`（已被 §6 那条 stage 路径覆盖），`require` 直接用：
+
+```lua
+local Timer = require('UnLuaNova.Timer')   -- C++ 实现：走世界时间，暂停 / 时间膨胀 / PIE 生命周期都对
+local Event = require('UnLuaNova.Event')   -- 纯 Lua：事件总线（广播中增删也安全）
+local OOP   = require('UnLuaNova.OOP')     -- 纯 Lua：脚本面向对象
+```
+
+上游的取舍标准值得抄：**只放"机制"，不放"策略"**。一旦发布 `UnLuaNova.X` 就承诺了 API 稳定，
+所以"每个项目都要重写一遍且都会写错"的（计时器、事件总线、热重载）进库，
+"一半人会重写"的（UI 栈、HTTP、Model 层）不进。同理，别为了性能把东西下沉 C++ ——
+回调还在 Lua 就省不掉那次跨界，`Timer` 下沉是因为正确性只能由引擎给。
+
+### 11.2 特性开关：全插件只有一处定义
+
+`Config/DefaultUnLuaNova.ini` 的 `[/Script/UnLuaNova.UnLuaNovaSettings]`，规则固定三条：
+
+1. 键名一律 `b<CamelCase>`，查询名就是去掉 `b` 的小写形式（`bTimer` → `HasFeature('timer')`）
+2. 一个入口：脚本侧 `UnLuaNova.HasFeature('<名>')`，C++ 侧 `UnLuaNovaLib` 那张表 —— 没有第二处
+3. 大小写不敏感（`oop` 与 `OOP` 同义）
+
+```ini
+[/Script/UnLuaNova.UnLuaNovaSettings]
+bDataDrivenBinding=true   ; 数据驱动绑定（默认关，见 §4）
+bTimer=true               ; 内置库开关是**编译期**的：改完必须重编
+bDebugAdapter=true        ; lua.dap
+DebugAdapterPort=5699     ; lua.dap 默认端口
+```
+
+!!! warning "内置库开关要重编"
+    `bTimer` / `bEvent` / `bOOP` 同时由 `UnLuaNova.Build.cs` 读**同一份 ini** 生成
+    `UNLUANOVA_HAS_STDLIB_*` 宏 —— 关掉的代码不进二进制。这是"编译期 vs 运行时"的唯一例外，
+    其余特性（含 `bDataDrivenBinding`）都是运行时的。
+
+### 11.3 静态绑定：编辑器会自动生成，产物是 C++
+
+`bStaticBinding` / `bAutoGenerateStaticBinding` 默认都是开：编辑器启动时比对产物里的类型集合指纹，
+缺失或类型有增删就**自动**重新生成，不用手动跑 Commandlet。产物是 C++，**生成之后要重编译一次**才生效。
+
+代价要知道：默认范围（`ExportedReflected`）下重编很轻；把 `StaticBindingSelection` 切到 `All`
+之后类型增删会频繁触发大重编译 —— 那种场景更适合关掉自动、交给 CI 生成。
+
+### 11.4 C++ 调 Lua：上游给了入口，但判定我们仍留在 C++
+
+现在可以从 C++ 直接调某个对象上的 Lua 成员函数：
+
+```cpp
+#include "UnLuaNovaOverrider.h"
+bool bEnabled = UnLuaNova::CallLuaFunction<bool>(MyActor, TEXT("IsTestEnable"), 1, 2);
+```
+
+这让"引导条件由脚本回答"在技术上可行了。**UAK 仍然不这么用**（§4 第 2 点）：条件对象是可校验、
+能进 Json、缺脚本时默认成立的类型安全扩展点；一旦把判定搬进 Lua，这三条一起失效。
+要不要用它由项目自己决定 —— 入口在那儿，不是我们故意不给你。
+
+## 12. 已知限制
 
 | 限制 | 说明 |
 |---|---|
-| 扩展插件默认开 | 嵌套布局下 `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 会被一起编译；`setup --disable-extensions` 可一键关 |
+| 扩展插件默认**关** | `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 的 `EnabledByDefault=false`，要用就在 `.uproject` 里显式开（见 §2） |
 | 后端切换要重编 | 见 §5；ini 与二进制分叉会导致"跑的是另一个后端"（`doctor` 会抓） |
+| 改内置库开关要重编 | `bTimer` / `bEvent` / `bOOP` 是编译期开关（见 §11.2） |
 | 打包路径 | 见 §6；插件运行时模块那条必须写对 |
 | DAP 只覆盖 attach | 不支持 launch（调试目标是编辑器 / PIE 进程，不是独立进程） |
+| 覆写函数名 | 必须与 UFUNCTION 同名（`K2_` 前缀不去），写错静默不触发（见 §4） |
 | 数据驱动绑定的缓存 | 打包构建里"这个类没绑"的结论会缓存；编辑器里不缓存，改配置/组件即时生效 |
-| 脚本路径待人工走查 | 示例脚本与 Luau 后端的 PIE 实况按 [06 清单](06-live-trace-checklist.md) 逐条确认（UnLuaNova 1.0.0 自带 518 条 Luau 用例全绿，但那是它自己的用例） |
+| 实例级绑定未支持 | `UnLuaNovaManager::Classes` 仍按类缓存，同一个类的不同实例不能绑不同模块（上游 BIND-01） |
+| 网络是实验的 | 声明式 RPC / 复制属性已有实现但仍有阻塞项；**普通覆写与声明 RPC 是不同路径**，别从 `IsOverridable` 一个分支推导全部网络能力 |
+| 脚本路径待人工走查 | 示例脚本与 Luau 后端的 PIE 实况按 [06 清单](06-live-trace-checklist.md) 逐条确认 |
 
-## 12. 延伸阅读
+## 13. 延伸阅读
 
 | 内容 | 入口 |
 |---|---|
@@ -376,5 +464,10 @@ VSCode 侧用 attach 方式连 `127.0.0.1:5699` 即可（`request: "attach"`）�
 | UnLuaNova 在线文档 | <https://hustjjd.github.io/UnLuaNova/> |
 | UnLuaNova 仓库 | <https://github.com/HUSTJJD/UnLuaNova> |
 | 编程指南 / 设置 / 控制台命令 / 智能提示 | 见其仓库 `Docs/CN/`（UnLuaNova 侧） |
+| Lua 驱动对象（ini 映射 / 绑定组件 / 接口三条路） | `Docs/CN/LuaDrivenObjects.md`（UnLuaNova 侧） |
+| 内置库与特性开关 | `Docs/CN/StdLib.md` |
+| 静态导出与静态绑定 | `Docs/CN/StaticExportBinding.md` |
+| 网络（实验） | `Docs/CN/LuaNetworking.md` |
+| 后端 pin 版本 | `Plugins/UnLuaNova/Source/ThirdParty/VERSIONS.md` |
 | 从 UnLua 迁移 | 全局名 `UnLua` → `UnLuaNova`，UCLASS 改名需 resave 资产并迁移 ini section |
 | 宿主工程是怎么拼起来的 | [lyra-integration.md](lyra-integration.md) |

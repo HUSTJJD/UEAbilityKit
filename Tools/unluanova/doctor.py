@@ -104,22 +104,31 @@ def inspect() -> Report:
     else:
         r.add("stage", OK, f"stage 路径齐全（{len(state.REQUIRED_STAGE_PATHS)} 条必需）")
 
-    # 7) 扩展插件（嵌套布局会被一起发现并编译）
-    plugins = state.uproject_plugins()
-    enabled_ext = [p for p in state.EXTENSION_PLUGINS if plugins.get(p, True)]
-    if enabled_ext:
-        r.add("extensions", WARN, f"扩展插件会被一起编译：{', '.join(enabled_ext)}",
-              "不需要就在 .uproject 里设 \"Enabled\": false，或跑 setup --disable-extensions")
+    # 7) 数据驱动绑定：映射表与开关必须成对，缺开关 = 静默不绑
+    if state.has_class_module_bindings() and not state.data_driven_binding_enabled():
+        r.add("binding", ERROR,
+              "配了 ClassModuleBindings 但 bDataDrivenBinding 没开：映射表不会生效",
+              "定位器给出模块名之后，要不要真的绑由 bDataDrivenBinding 决定（默认关）")
+    elif state.has_class_module_bindings():
+        r.add("binding", OK, "数据驱动绑定已开启（ini 映射）")
     else:
-        r.add("extensions", OK, "扩展插件已关闭")
+        r.add("binding", OK, "没有 ini 映射；绑定走 IUnLuaNovaInterface / 绑定组件")
 
-    # 8) 工程脚本目录
+    # 8) 扩展插件（上游 EnabledByDefault=false，宿主没写就是没开）
+    plugins = state.uproject_plugins()
+    enabled_ext = [p for p in state.EXTENSION_PLUGINS if plugins.get(p, False)]
+    if enabled_ext:
+        r.add("extensions", OK, f"已启用的扩展插件：{', '.join(enabled_ext)}")
+    else:
+        r.add("extensions", OK, "扩展插件都没开（上游默认关，需要就在 .uproject 里设 \"Enabled\": true）")
+
+    # 9) 工程脚本目录
     if state.has_script_dir():
         r.add("script-dir", OK, "Content/Script 存在")
     else:
         r.add("script-dir", WARN, "没有 Content/Script", "脚本落点缺省是工程 Content/Script/")
 
-    # 9) IntelliSense 产物（编辑器里导出过一次才会有）
+    # 10) IntelliSense 产物（编辑器首次启动会自动导出一次）
     if state.intellisense_generated():
         r.add("intellisense", OK, "IntelliSense 产物已生成")
     else:
