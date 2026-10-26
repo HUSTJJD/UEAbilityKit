@@ -9,11 +9,11 @@ Tutorials/*.json  →  UAK.Tutorial.Run  →  Saved/.../run.json + 截图 + 帧�
 
 | 教程 | 难度 | 步骤 | 最近录制 | 状态 |
 | --- | --- | --- | --- | --- |
-| [第一个技能：从新建资产到跑起来](01-first-ability.md) | 入门 | 13 | - | ⚪ 待录制 |
-| [轨道与复合编排：Sequence / Parallel / Repeat](02-tracks-and-composite.md) | 入门 | 11 | - | ⚪ 待录制 |
-| [血缘视图：回答「这 120 伤害是哪来的」](03-bloodline-explain.md) | 进阶 | 10 | - | ⚪ 待录制 |
-| [校验治理与 Json 往返：让错误无法被配置出来](04-validation-and-export.md) | 进阶 | 13 | - | ⚪ 待录制 |
-| [实况联调：让编辑器跟着 PIE 一起动](05-live-debug-pie.md) | 高阶 | 9 | - | ⚪ 待录制 |
+| [第一个技能：从新建资产到跑起来](01-first-ability.md) | 入门 | 13 | 2026-10-26 20:15:37 | ✅ 已录制 |
+| [轨道与复合编排：Sequence / Parallel / Repeat](02-tracks-and-composite.md) | 入门 | 11 | 2026-10-26 20:15:42 | ✅ 已录制 |
+| [血缘视图：回答「这 120 伤害是哪来的」](03-bloodline-explain.md) | 进阶 | 10 | 2026-10-26 20:15:46 | ✅ 已录制 |
+| [校验治理与 Json 往返：让错误无法被配置出来](04-validation-and-export.md) | 进阶 | 13 | 2026-10-26 20:15:51 | ✅ 已录制 |
+| [实况联调：让编辑器跟着 PIE 一起动](05-live-debug-pie.md) | 高阶 | 9 | 2026-10-26 20:15:55 | ✅ 已录制 |
 
 ## 本地重录一遍
 
@@ -30,5 +30,5 @@ Tutorials/*.json  →  UAK.Tutorial.Run  →  Saved/.../run.json + 截图 + 帧�
 
 完整流程见 [测试与自动化](../testing.md#教程流水线文档也是自动化的产物)。
 
-_生成时间：2026-10-24 00:42:31_
+_生成时间：2026-10-26 20:16:00_
 

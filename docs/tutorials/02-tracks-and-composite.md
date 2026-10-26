@@ -4,10 +4,9 @@
 
 **难度**：入门　**预计**：10 min　**步骤**：11
 
-!!! warning "还没有录制产物"
-    本页目前只由教程脚本渲染，截图 / 录屏尚未采集。
-    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
-    文档结构与讲解不受影响。
+> 本页由 `Tools/tutorial/generate_tutorials.py` 自动生成，素材来自 `UAK.Tutorial.Run` 的真实录制（2026-10-26 20:15:42）。请勿手改。
+
+录制结论：11/11 步通过　引擎 UE5-CL-0
 
 ## 先修
 
@@ -24,17 +23,17 @@
 
 | # | 步骤 | 动作 | 状态 |
 | --- | --- | --- | --- |
-| 1 | [新建并打开一条 3 秒的技能](#step-1) | `OpenAsset` | ⚪ |
-| 2 | [加一条 Effect 轨道（逻辑）](#step-2) | `AddTrack` | ⚪ |
-| 3 | [再加一条 Presentation 轨道（表现）](#step-3) | `AddTrack` | ⚪ |
-| 4 | [在 Effect 上放第一个逻辑任务](#step-4) | `AddTask` | ⚪ |
-| 5 | [放第二个逻辑任务（故意重叠）](#step-5) | `AddTask` | ⚪ |
-| 6 | [把 Effect 轨道切成 Sequence](#step-6) | `SetTrackMode` | ⚪ |
-| 7 | [在表现轨道上放一个 Cue](#step-7) | `AddTask` | ⚪ |
-| 8 | [把表现轨道切成 Parallel 并重复 3 次](#step-8) | `SetTrackMode` | ⚪ |
-| 9 | [整体静音表现轨道](#step-9) | `SetTrackMode` | ⚪ |
-| 10 | [校验：逻辑轨道仍然成立](#step-10) | `Validate` | ⚪ |
-| 11 | [导出，看 Json 里怎么记这三种模式](#step-11) | `ExportJson` | ⚪ |
+| 1 | [新建并打开一条 3 秒的技能](#step-1) | `OpenAsset` | ✅ |
+| 2 | [加一条 Effect 轨道（逻辑）](#step-2) | `AddTrack` | ✅ |
+| 3 | [再加一条 Presentation 轨道（表现）](#step-3) | `AddTrack` | ✅ |
+| 4 | [在 Effect 上放第一个逻辑任务](#step-4) | `AddTask` | ✅ |
+| 5 | [放第二个逻辑任务（故意重叠）](#step-5) | `AddTask` | ✅ |
+| 6 | [把 Effect 轨道切成 Sequence](#step-6) | `SetTrackMode` | ✅ |
+| 7 | [在表现轨道上放一个 Cue](#step-7) | `AddTask` | ✅ |
+| 8 | [把表现轨道切成 Parallel 并重复 3 次](#step-8) | `SetTrackMode` | ✅ |
+| 9 | [整体静音表现轨道](#step-9) | `SetTrackMode` | ✅ |
+| 10 | [校验：逻辑轨道仍然成立](#step-10) | `Validate` | ✅ |
+| 11 | [导出，看 Json 里怎么记这三种模式](#step-11) | `ExportJson` | ✅ |
 
 ---
 
@@ -46,13 +45,15 @@
 
 **应该看到**：空的时间轴，标尺 0.0 → 3.0。
 
+![新建并打开一条 3 秒的技能](media/02-tracks-and-composite/step_01_open.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`OpenAsset`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.76s　轨道 0　任务 0
     
 
 ---
@@ -64,6 +65,8 @@
 **操作**：工具条 → +轨道 → TrackName = Effect，TrackType = Effect。
 
 **应该看到**：左栏出现 Effect 轨道。
+
+![加一条 Effect 轨道（逻辑）](media/02-tracks-and-composite/step_02_add-effect-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -78,7 +81,7 @@
     
     **引导模式**：做到「轨道数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.38s　轨道 1　任务 0
     
 
 ---
@@ -90,6 +93,8 @@
 **操作**：工具条 → +轨道 → TrackName = Presentation，TrackType = Presentation。
 
 **应该看到**：左栏出现第二条轨道。
+
+![再加一条 Presentation 轨道（表现）](media/02-tracks-and-composite/step_03_add-presentation-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -104,7 +109,7 @@
     
     **引导模式**：做到「轨道数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.40s　轨道 2　任务 0
     
 
 ---
@@ -116,6 +121,8 @@
 **操作**：右键 Effect 轨道 → 添加任务 → Apply Loose Tags，0.0 – 0.4。
 
 **应该看到**：Effect 轨道上出现第一个片段。
+
+![在 Effect 上放第一个逻辑任务](media/02-tracks-and-composite/step_04_add-effect-a.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -136,7 +143,7 @@
     
     **引导模式**：做到「任务数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 2　任务 1
     
 
 ---
@@ -148,6 +155,8 @@
 **操作**：右键 Effect 轨道 → 添加任务 → Wait Until，0.0 – 0.5。
 
 **应该看到**：两个片段在时间上互相重叠。
+
+![放第二个逻辑任务（故意重叠）](media/02-tracks-and-composite/step_05_add-effect-b.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -165,7 +174,7 @@
     
     **引导模式**：做到「任务数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 2
     
 
 ---
@@ -177,6 +186,8 @@
 **操作**：左栏点轨道名 → Inspector → Composite → CompositeMode = Sequence。
 
 **应该看到**：画布上两个片段被重新排成首尾相接，而不是重叠。
+
+![把 Effect 轨道切成 Sequence](media/02-tracks-and-composite/step_06_switch-sequence.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -191,7 +202,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.38s　轨道 2　任务 2
     
 
 ---
@@ -203,6 +214,8 @@
 **操作**：右键 Presentation 轨道 → 添加任务 → Send Gameplay Cue，0.2 – 0.0；Cue Tag 填 GameplayCue.Demo.Hit。
 
 **应该看到**：Presentation 轨道上出现一个单帧片段。
+
+![在表现轨道上放一个 Cue](media/02-tracks-and-composite/step_07_add-cue.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -223,7 +236,7 @@
     
     **引导模式**：做到「任务数 ≥ 3」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 2　任务 3
     
 
 ---
@@ -235,6 +248,8 @@
 **操作**：选中 Presentation 轨道 → CompositeMode = Parallel，RepeatCount = 3，RepeatInterval = 0.2。
 
 **应该看到**：画布上出现三段落错开的片段。
+
+![把表现轨道切成 Parallel 并重复 3 次](media/02-tracks-and-composite/step_08_switch-parallel.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -251,7 +266,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 2　任务 3
     
 
 ---
@@ -263,6 +278,8 @@
 **操作**：点 Presentation 轨道头的勾选框，取消勾选。
 
 **应该看到**：该轨道变灰；执行计划里不再包含它的任务。
+
+![整体静音表现轨道](media/02-tracks-and-composite/step_09_mute-presentation.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -277,7 +294,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 3
     
 
 ---
@@ -290,13 +307,19 @@
 
 **应该看到**：0 错误。
 
+![校验：逻辑轨道仍然成立](media/02-tracks-and-composite/step_10_validate.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.40s　轨道 2　任务 3
+    
+    > 校验：错误 0 · 警告 1
+    
+    - WaitUntil 没有配置条件，等价于纯等待（Delay）。
     
 
 ---
@@ -308,6 +331,8 @@
 **操作**：工具条 → 导出 Json。
 
 **应该看到**：Json 里 tracks[i].compositeMode 分别为 Sequence / Parallel。
+
+![导出，看 Json 里怎么记这三种模式](media/02-tracks-and-composite/step_11_export.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -321,7 +346,9 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.42s　轨道 2　任务 3
+    
+    - 导出 composite.json
     
 
 ---
@@ -340,5 +367,5 @@ docs/tutorials/<id>.md   ← 你正在看的这页
 每一步的讲解与每一步的动作写在同一个对象里，改了编辑器行为就必须改脚本，
 否则 `Automation RunTests UAK.Tutorial` 会失败。
 
-_生成时间：2026-10-24 00:42:31_
+_生成时间：2026-10-26 20:16:00_
 

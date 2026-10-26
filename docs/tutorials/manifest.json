@@ -1,50 +1,50 @@
 {
-  "stamp": "2026-10-24 00:42:31",
+  "stamp": "2026-10-26 20:16:00",
   "tutorials": [
     {
       "id": "01-first-ability",
       "title": "第一个技能：从新建资产到跑起来",
       "level": "beginner",
       "steps": 13,
-      "recorded": false,
-      "stamp": "-",
-      "passed": 0
+      "recorded": true,
+      "stamp": "2026-10-26 20:15:37",
+      "passed": 13
     },
     {
       "id": "02-tracks-and-composite",
       "title": "轨道与复合编排：Sequence / Parallel / Repeat",
       "level": "beginner",
       "steps": 11,
-      "recorded": false,
-      "stamp": "-",
-      "passed": 0
+      "recorded": true,
+      "stamp": "2026-10-26 20:15:42",
+      "passed": 11
     },
     {
       "id": "03-bloodline-explain",
       "title": "血缘视图：回答「这 120 伤害是哪来的」",
       "level": "intermediate",
       "steps": 10,
-      "recorded": false,
-      "stamp": "-",
-      "passed": 0
+      "recorded": true,
+      "stamp": "2026-10-26 20:15:46",
+      "passed": 10
     },
     {
       "id": "04-validation-and-export",
       "title": "校验治理与 Json 往返：让错误无法被配置出来",
       "level": "intermediate",
       "steps": 13,
-      "recorded": false,
-      "stamp": "-",
-      "passed": 0
+      "recorded": true,
+      "stamp": "2026-10-26 20:15:51",
+      "passed": 13
     },
     {
       "id": "05-live-debug-pie",
       "title": "实况联调：让编辑器跟着 PIE 一起动",
       "level": "advanced",
       "steps": 9,
-      "recorded": false,
-      "stamp": "-",
-      "passed": 0
+      "recorded": true,
+      "stamp": "2026-10-26 20:15:55",
+      "passed": 9
     }
   ]
 }

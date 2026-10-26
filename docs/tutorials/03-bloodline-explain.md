@@ -4,10 +4,9 @@
 
 **难度**：进阶　**预计**：10 min　**步骤**：10
 
-!!! warning "还没有录制产物"
-    本页目前只由教程脚本渲染，截图 / 录屏尚未采集。
-    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
-    文档结构与讲解不受影响。
+> 本页由 `Tools/tutorial/generate_tutorials.py` 自动生成，素材来自 `UAK.Tutorial.Run` 的真实录制（2026-10-26 20:15:46）。请勿手改。
+
+录制结论：10/10 步通过　引擎 UE5-CL-0
 
 ## 先修
 
@@ -24,16 +23,16 @@
 
 | # | 步骤 | 动作 | 状态 |
 | --- | --- | --- | --- |
-| 1 | [新建并打开技能](#step-1) | `OpenAsset` | ⚪ |
-| 2 | [加一条 Effect 轨道](#step-2) | `AddTrack` | ⚪ |
-| 3 | [放一个 ApplyGameplayEffect，先不填 GE](#step-3) | `AddTask` | ⚪ |
-| 4 | [校验：1 条错误](#step-4) | `Validate` | ⚪ |
-| 5 | [补上 GE 类](#step-5) | `SetTaskProp` | ⚪ |
-| 6 | [再校验：0 错误](#step-6) | `Validate` | ⚪ |
-| 7 | [切到血缘视图](#step-7) | `FocusTab` | ⚪ |
-| 8 | [把光标移到 0.35 秒](#step-8) | `SetCursor` | ⚪ |
-| 9 | [下钻到任务节点](#step-9) | `SelectTask` | ⚪ |
-| 10 | [导出血缘树文本](#step-10) | `Exec` | ⚪ |
+| 1 | [新建并打开技能](#step-1) | `OpenAsset` | ✅ |
+| 2 | [加一条 Effect 轨道](#step-2) | `AddTrack` | ✅ |
+| 3 | [放一个 ApplyGameplayEffect，先不填 GE](#step-3) | `AddTask` | ✅ |
+| 4 | [校验：1 条错误](#step-4) | `Validate` | ✅ |
+| 5 | [补上 GE 类](#step-5) | `SetTaskProp` | ✅ |
+| 6 | [再校验：0 错误](#step-6) | `Validate` | ✅ |
+| 7 | [切到血缘视图](#step-7) | `FocusTab` | ✅ |
+| 8 | [把光标移到 0.35 秒](#step-8) | `SetCursor` | ✅ |
+| 9 | [下钻到任务节点](#step-9) | `SelectTask` | ✅ |
+| 10 | [导出血缘树文本](#step-10) | `Exec` | ✅ |
 
 ---
 
@@ -45,13 +44,15 @@
 
 **应该看到**：空的资产编辑器。
 
+![新建并打开技能](media/03-bloodline-explain/step_01_open.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`OpenAsset`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.74s　轨道 0　任务 0
     
 
 ---
@@ -63,6 +64,8 @@
 **操作**：工具条 → +轨道 → Effect。
 
 **应该看到**：左栏出现 Effect 轨道。
+
+![加一条 Effect 轨道](media/03-bloodline-explain/step_02_add-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -77,7 +80,7 @@
     
     **引导模式**：做到「轨道数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 1　任务 0
     
 
 ---
@@ -89,6 +92,8 @@
 **操作**：右键 → 添加任务 → Apply Gameplay Effect，0.3 – 0.1。
 
 **应该看到**：片段出现，但底部校验条立刻冒出 1 条错误。
+
+![放一个 ApplyGameplayEffect，先不填 GE](media/03-bloodline-explain/step_03_add-damage.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -106,7 +111,7 @@
     
     **引导模式**：做到「任务数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.38s　轨道 1　任务 1
     
 
 ---
@@ -119,13 +124,19 @@
 
 **应该看到**：1 条错误：ApplyGameplayEffect 未指定 GE。
 
+![校验：1 条错误](media/03-bloodline-explain/step_04_validate-before.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 1；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 1　任务 1
+    
+    > 校验：错误 1 · 警告 0
+    
+    - ApplyGameplayEffect 任务未指定 GE。
     
 
 ---
@@ -137,6 +148,8 @@
 **操作**：Inspector → Effect 分类 → EffectClass 选 GE_MeleeDamage（或你的项目里的伤害 GE）。
 
 **应该看到**：校验条上的错误消失。
+
+![补上 GE 类](media/03-bloodline-explain/step_05_fix-effect.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -153,7 +166,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.35s　轨道 1　任务 1
     
 
 ---
@@ -166,13 +179,17 @@
 
 **应该看到**：0 错误。
 
+![再校验：0 错误](media/03-bloodline-explain/step_06_validate-after.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 1　任务 1
+    
+    > 校验：错误 0 · 警告 0
     
 
 ---
@@ -184,6 +201,8 @@
 **操作**：左栏视图切换 → 血缘（Explain）。
 
 **应该看到**：视图变成一棵树：技能 → 任务 → GE → SetByCaller / 目标。
+
+![切到血缘视图](media/03-bloodline-explain/step_07_open-bloodline.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -197,7 +216,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 1　任务 1
     
 
 ---
@@ -209,6 +228,8 @@
 **操作**：拖动光标到伤害片段中间。
 
 **应该看到**：GAS 影响条与血缘树上都高亮这一段。
+
+![把光标移到 0.35 秒](media/03-bloodline-explain/step_08_cursor-on-hit.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -222,7 +243,7 @@
     
     **引导模式**：做到「光标 ≥ 0.35s」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.36s　轨道 1　任务 1
     
 
 ---
@@ -234,6 +255,8 @@
 **操作**：在时间轴里选中伤害任务，再看血缘视图。
 
 **应该看到**：血缘树定位到该任务节点，展开可见 GE 类与 SetByCaller 数值。
+
+![下钻到任务节点](media/03-bloodline-explain/step_09_select-node.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -248,7 +271,7 @@
     
     **引导模式**：做到「已选中一个任务」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.41s　轨道 1　任务 1
     
 
 ---
@@ -260,6 +283,8 @@
 **操作**：控制台执行 UAK.Trace.Dump。
 
 **应该看到**：日志里出现技能 → 任务 → GE → SetByCaller → 目标 → 属性的树形文本。
+
+![导出血缘树文本](media/03-bloodline-explain/step_10_dump-trace.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -273,7 +298,9 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 1　任务 1
+    
+    - UAK.Trace.Dump
     
 
 ---
@@ -292,5 +319,5 @@ docs/tutorials/<id>.md   ← 你正在看的这页
 每一步的讲解与每一步的动作写在同一个对象里，改了编辑器行为就必须改脚本，
 否则 `Automation RunTests UAK.Tutorial` 会失败。
 
-_生成时间：2026-10-24 00:42:31_
+_生成时间：2026-10-26 20:16:00_
 

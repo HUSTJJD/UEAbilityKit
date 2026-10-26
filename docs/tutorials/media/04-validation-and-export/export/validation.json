@@ -1,0 +1,72 @@
+{
+	"version": 1,
+	"asset": "TA_Validation",
+	"displayName": "",
+	"description": "",
+	"assetVersion": 1,
+	"length": 0.25,
+	"playRate": 1,
+	"frameRate": 60,
+	"loop": false,
+	"loopStartTime": 0,
+	"maxLoops": 0,
+	"abilityTags": "(GameplayTags=)",
+	"cancelAbilitiesWithTag": "(GameplayTags=)",
+	"blockAbilitiesWithTag": "(GameplayTags=)",
+	"requiredTags": "(GameplayTags=)",
+	"markers": [],
+	"channeled": false,
+	"channelingStartTime": 0,
+	"channelingEndTime": -1,
+	"channelFailureAction": "CancelAbility",
+	"evaluateChannelingOnAuthorityOnly": true,
+	"channelingConditions": [],
+	"tracks": [
+		{
+			"name": "Effect",
+			"type": "Effect",
+			"enabled": true,
+			"compositeMode": "Timeline",
+			"repeatCount": 1,
+			"repeatInterval": 0,
+			"startDelay": 0,
+			"tasks": [
+				{
+					"$type": "AKAbilityTask_ApplyGameplayEffect",
+					"taskId": "Unfilled",
+					"startTime": 0.20000000298023224,
+					"duration": 0.10000000149011612,
+					"needsTick": false,
+					"netMode": "Both",
+					"effectClass": "/Script/UAKDemo.AKDemoGE_MeleeDamage",
+					"level": 1,
+					"applyToSelfIfNoTarget": true,
+					"setByCaller":
+					{
+					}
+				}
+			]
+		},
+		{
+			"name": "Presentation",
+			"type": "Presentation",
+			"enabled": true,
+			"compositeMode": "Timeline",
+			"repeatCount": 1,
+			"repeatInterval": 0,
+			"startDelay": 0,
+			"tasks": [
+				{
+					"$type": "AKAbilityTask_SendGameplayCue",
+					"taskId": "UnfilledCue",
+					"startTime": 0.25,
+					"duration": 0,
+					"needsTick": false,
+					"netMode": "ClientOnly",
+					"cueTag": "GameplayCue.Demo.Hit",
+					"operation": "Execute"
+				}
+			]
+		}
+	]
+}

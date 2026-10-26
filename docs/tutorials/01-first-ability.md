@@ -4,10 +4,9 @@
 
 **难度**：入门　**预计**：8 min　**步骤**：13
 
-!!! warning "还没有录制产物"
-    本页目前只由教程脚本渲染，截图 / 录屏尚未采集。
-    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
-    文档结构与讲解不受影响。
+> 本页由 `Tools/tutorial/generate_tutorials.py` 自动生成，素材来自 `UAK.Tutorial.Run` 的真实录制（2026-10-26 20:15:37）。请勿手改。
+
+录制结论：13/13 步通过　引擎 UE5-CL-0
 
 ## 先修
 
@@ -25,19 +24,19 @@
 
 | # | 步骤 | 动作 | 状态 |
 | --- | --- | --- | --- |
-| 1 | [新建一条技能资产](#step-1) | `CreateAsset` | ⚪ |
-| 2 | [打开资产编辑器](#step-2) | `OpenAsset` | ⚪ |
-| 3 | [把技能长度改成 2 秒](#step-3) | `SetAssetProp` | ⚪ |
-| 4 | [加一条 Main 轨道](#step-4) | `AddTrack` | ⚪ |
-| 5 | [在 Main 轨道上放一个「挂 Tag」任务](#step-5) | `AddTask` | ⚪ |
-| 6 | [选中它，看 Inspector](#step-6) | `SelectTask` | ⚪ |
-| 7 | [打开「门控时间轴」](#step-7) | `SetTaskProp` | ⚪ |
-| 8 | [再放一个「等待」任务收尾](#step-8) | `AddTask` | ⚪ |
-| 9 | [把光标拖到 0.6 秒](#step-9) | `SetCursor` | ⚪ |
-| 10 | [播一遍](#step-10) | `Play` | ⚪ |
-| 11 | [停回起点](#step-11) | `Stop` | ⚪ |
-| 12 | [看校验条：0 错误](#step-12) | `Validate` | ⚪ |
-| 13 | [导出成 Json 看一眼](#step-13) | `ExportJson` | ⚪ |
+| 1 | [新建一条技能资产](#step-1) | `CreateAsset` | ✅ |
+| 2 | [打开资产编辑器](#step-2) | `OpenAsset` | ✅ |
+| 3 | [把技能长度改成 2 秒](#step-3) | `SetAssetProp` | ✅ |
+| 4 | [加一条 Main 轨道](#step-4) | `AddTrack` | ✅ |
+| 5 | [在 Main 轨道上放一个「挂 Tag」任务](#step-5) | `AddTask` | ✅ |
+| 6 | [选中它，看 Inspector](#step-6) | `SelectTask` | ✅ |
+| 7 | [打开「门控时间轴」](#step-7) | `SetTaskProp` | ✅ |
+| 8 | [再放一个「等待」任务收尾](#step-8) | `AddTask` | ✅ |
+| 9 | [把光标拖到 0.6 秒](#step-9) | `SetCursor` | ✅ |
+| 10 | [播一遍](#step-10) | `Play` | ✅ |
+| 11 | [停回起点](#step-11) | `Stop` | ✅ |
+| 12 | [看校验条：0 错误](#step-12) | `Validate` | ✅ |
+| 13 | [导出成 Json 看一眼](#step-13) | `ExportJson` | ✅ |
 
 ---
 
@@ -55,7 +54,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 1.50s　轨道 0　任务 0
     
 
 ---
@@ -68,13 +67,15 @@
 
 **应该看到**：标题栏显示资产名，左栏是轨道列表，中央是空的时间轴画布，底部是常驻校验条。
 
+![打开资产编辑器](media/01-first-ability/step_02_open-editor.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`OpenAsset`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 1.17s　轨道 0　任务 0
     
 
 ---
@@ -86,6 +87,8 @@
 **操作**：工具条 → 资产属性 → Timing → Length = 2.0。
 
 **应该看到**：标尺从 0.0 拉到 2.0，末尾多出一段空白。
+
+![把技能长度改成 2 秒](media/01-first-ability/step_03_set-length.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -100,7 +103,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.45s　轨道 0　任务 0
     
 
 ---
@@ -112,6 +115,8 @@
 **操作**：工具条 → +轨道 → 在 Inspector 里把 TrackName 改成 Main、TrackType 选 Main。
 
 **应该看到**：左栏轨道列表出现 Main，中央画布多出一行。
+
+![加一条 Main 轨道](media/01-first-ability/step_04_add-main-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -126,7 +131,7 @@
     
     **引导模式**：做到「轨道数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.44s　轨道 1　任务 0
     
 
 ---
@@ -138,6 +143,8 @@
 **操作**：右键时间轴 → 添加任务 → Apply Loose Tags，起点 0.0，时长 1.2；在 Inspector 的 Tags 里加一个 Ability.Casting。
 
 **应该看到**：Main 轨道上出现一个从 0.0 到 1.2 的片段；GAS 影响条上能看到这个 Tag。
+
+![在 Main 轨道上放一个「挂 Tag」任务](media/01-first-ability/step_05_add-cast-tags.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -158,7 +165,7 @@
     
     **引导模式**：做到「任务数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.42s　轨道 1　任务 1
     
 
 ---
@@ -170,6 +177,8 @@
 **操作**：单击刚建的任务片段。
 
 **应该看到**：右栏切换成这个任务的卡片，时间一栏显示 Start 0.00 / Dur 1.20。
+
+![选中它，看 Inspector](media/01-first-ability/step_06_select-task.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -184,7 +193,7 @@
     
     **引导模式**：做到「已选中一个任务」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.40s　轨道 1　任务 1
     
 
 ---
@@ -196,6 +205,8 @@
 **操作**：Inspector → Task 分类 → 勾选 bGateTimeline。
 
 **应该看到**：任务片段上多出门控标记；播放时时间会在这一段停住。
+
+![打开「门控时间轴」](media/01-first-ability/step_07_set-gate.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -212,7 +223,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.40s　轨道 1　任务 1
     
 
 ---
@@ -224,6 +235,8 @@
 **操作**：右键 → 添加任务 → Wait Until，起点 1.2，时长 0.5。
 
 **应该看到**：Main 轨道上出现第二个片段，两条片段首尾相接。
+
+![再放一个「等待」任务收尾](media/01-first-ability/step_08_add-recover.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -241,7 +254,7 @@
     
     **引导模式**：做到「任务数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.41s　轨道 1　任务 2
     
 
 ---
@@ -253,6 +266,8 @@
 **操作**：拖动时间轴光标，或按 → 单帧步进（按住 Ctrl 为十帧）。
 
 **应该看到**：影响条上出现 Cast 任务带来的 Tag 摘要。
+
+![把光标拖到 0.6 秒](media/01-first-ability/step_09_move-cursor.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -266,7 +281,7 @@
     
     **引导模式**：做到「光标 ≥ 0.6s」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.40s　轨道 1　任务 2
     
 
 ---
@@ -279,13 +294,17 @@
 
 **应该看到**：光标从 0 走到 2.0；经过 0.0–1.2 时因为门控会停一下。
 
+![播一遍](media/01-first-ability/step_10_play.png)
+
+> 已采集 60 帧，本机缺 ffmpeg，未合成 mp4。
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Play`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 2.35s　轨道 1　任务 2
     
 
 ---
@@ -298,13 +317,15 @@
 
 **应该看到**：光标回到 0.0。
 
+![停回起点](media/01-first-ability/step_11_stop.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Stop`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 1　任务 2
     
 
 ---
@@ -317,13 +338,19 @@
 
 **应该看到**：显示 0 错误（可能有 0~2 条警告：Tag / 条件还没配，属于正常的教学中间态）。
 
+![看校验条：0 错误](media/01-first-ability/step_12_validate.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.41s　轨道 1　任务 2
+    
+    > 校验：错误 0 · 警告 1
+    
+    - WaitUntil 没有配置条件，等价于纯等待（Delay）。
     
 
 ---
@@ -335,6 +362,8 @@
 **操作**：工具条 → 导出 Json。
 
 **应该看到**：产出一个含 version / length / tracks / tasks 的文本文件，字段名和代码里的强类型字段一致。
+
+![导出成 Json 看一眼](media/01-first-ability/step_13_export-json.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -348,7 +377,9 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.41s　轨道 1　任务 2
+    
+    - 导出 first-ability.json
     
 
 ---
@@ -367,5 +398,5 @@ docs/tutorials/<id>.md   ← 你正在看的这页
 每一步的讲解与每一步的动作写在同一个对象里，改了编辑器行为就必须改脚本，
 否则 `Automation RunTests UAK.Tutorial` 会失败。
 
-_生成时间：2026-10-24 00:42:31_
+_生成时间：2026-10-26 20:16:00_
 

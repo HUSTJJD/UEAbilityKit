@@ -29,6 +29,9 @@ public class UEAbilityKitEditor : ModuleRules
 			"AssetRegistry",
 			"Json",
 			"JsonUtilities",
+			// 预览默认值：读 /Script/EngineSettings.GameMapsSettings 的 GlobalDefaultGameMode，
+			// 好让预览角色不必在每个资产上手填。
+			"EngineSettings",
 			// 教程自动化：FWidgetRenderer 把面板渲成 PNG（UMG / RenderCore / ImageWrapper）
 			"UMG",
 			"RenderCore",

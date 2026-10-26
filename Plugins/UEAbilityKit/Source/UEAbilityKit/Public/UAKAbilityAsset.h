@@ -121,10 +121,17 @@ public:
 
 #if WITH_EDITORONLY_DATA
 	// ── 预览（不参与运行时，也不会被 Json 导出）────────────────────────────
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Preview")
+	/**
+	 * 预览角色。留空 = 自动：项目默认 GameMode 的 DefaultPawnClass → 插件自带的示例角色。
+	 * 填了才是"我要覆盖"，绝大多数资产不需要填。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Preview",
+		meta = (DisplayName = "预览角色（留空自动）"))
 	TSoftClassPtr<AActor> PreviewCharacterClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Preview")
+	/** 预览 Montage。留空 = 自动：取资产里第一个 PlayMontage 任务的 Montage。 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Preview",
+		meta = (DisplayName = "预览 Montage（留空自动）"))
 	TSoftObjectPtr<UAnimMontage> PreviewMontage;
 #endif
 

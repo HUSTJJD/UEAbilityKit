@@ -1123,7 +1123,20 @@ namespace
 
 	void CmdRunAll(const TArray<FString>& Args)
 	{
-		const FString Dir = Args.Num() > 0 ? Args[0] : FUAKTutorialAutomation::GetScriptDir();
+		// 开关（以 - 开头，如 -Quit）不是目录：早期实现把 Args[0] 直接当目录，
+		// 于是 "UAK.Tutorial.RunAll -Quit" 会去找一个叫 -Quit 的目录。
+		FString Dir;
+		for (const FString& Arg : Args)
+		{
+			if (!Arg.StartsWith(TEXT("-")) && Dir.IsEmpty())
+			{
+				Dir = Arg;
+			}
+		}
+		if (Dir.IsEmpty())
+		{
+			Dir = FUAKTutorialAutomation::GetScriptDir();
+		}
 
 		TArray<FUAKTutorialScript> Scripts;
 		for (const FString& File : FindScripts(Dir))

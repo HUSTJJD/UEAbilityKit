@@ -4,10 +4,9 @@
 
 **难度**：进阶　**预计**：9 min　**步骤**：13
 
-!!! warning "还没有录制产物"
-    本页目前只由教程脚本渲染，截图 / 录屏尚未采集。
-    在本机执行 `Tools/generate_tutorials.ps1`（需要 UE 与非 NullRHI）即可补齐素材，
-    文档结构与讲解不受影响。
+> 本页由 `Tools/tutorial/generate_tutorials.py` 自动生成，素材来自 `UAK.Tutorial.Run` 的真实录制（2026-10-26 20:15:51）。请勿手改。
+
+录制结论：13/13 步通过　引擎 UE5-CL-0
 
 ## 先修
 
@@ -24,19 +23,19 @@
 
 | # | 步骤 | 动作 | 状态 |
 | --- | --- | --- | --- |
-| 1 | [新建并打开技能](#step-1) | `OpenAsset` | ⚪ |
-| 2 | [加 Effect 轨道并放一个空壳 GE 任务](#step-2) | `AddTrack` | ⚪ |
-| 3 | [空壳 GE 任务已就位](#step-3) | `AddTask` | ⚪ |
-| 4 | [再放一个空壳 Cue 任务](#step-4) | `AddTrack` | ⚪ |
-| 5 | [空壳 Cue 任务已就位](#step-5) | `AddTask` | ⚪ |
-| 6 | [校验：2 条错误](#step-6) | `Validate` | ⚪ |
-| 7 | [补上 GE 类](#step-7) | `SetTaskProp` | ⚪ |
-| 8 | [补上 Cue Tag](#step-8) | `SetTaskProp` | ⚪ |
-| 9 | [校验：0 错误](#step-9) | `Validate` | ⚪ |
-| 10 | [故意把技能长度改小，制造警告](#step-10) | `SetAssetProp` | ⚪ |
-| 11 | [校验：0 错误 + 若干警告](#step-11) | `Validate` | ⚪ |
-| 12 | [导出 Json](#step-12) | `ExportJson` | ⚪ |
-| 13 | [它在 CI 里的位置](#step-13) | `Note` | ⚪ |
+| 1 | [新建并打开技能](#step-1) | `OpenAsset` | ✅ |
+| 2 | [加 Effect 轨道并放一个空壳 GE 任务](#step-2) | `AddTrack` | ✅ |
+| 3 | [空壳 GE 任务已就位](#step-3) | `AddTask` | ✅ |
+| 4 | [再放一个空壳 Cue 任务](#step-4) | `AddTrack` | ✅ |
+| 5 | [空壳 Cue 任务已就位](#step-5) | `AddTask` | ✅ |
+| 6 | [校验：2 条错误](#step-6) | `Validate` | ✅ |
+| 7 | [补上 GE 类](#step-7) | `SetTaskProp` | ✅ |
+| 8 | [补上 Cue Tag](#step-8) | `SetTaskProp` | ✅ |
+| 9 | [校验：0 错误](#step-9) | `Validate` | ✅ |
+| 10 | [故意把技能长度改小，制造警告](#step-10) | `SetAssetProp` | ✅ |
+| 11 | [校验：0 错误 + 若干警告](#step-11) | `Validate` | ✅ |
+| 12 | [导出 Json](#step-12) | `ExportJson` | ✅ |
+| 13 | [它在 CI 里的位置](#step-13) | `Note` | ✅ |
 
 ---
 
@@ -48,13 +47,15 @@
 
 **应该看到**：底部出现常驻校验条（当前显示 0 警告 · 0 错误）。
 
+![新建并打开技能](media/04-validation-and-export/step_01_open.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`OpenAsset`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.77s　轨道 0　任务 0
     
 
 ---
@@ -66,6 +67,8 @@
 **操作**：工具条 → +轨道 → TrackName = Effect，TrackType = Effect。
 
 **应该看到**：左栏出现 Effect 轨道。
+
+![加 Effect 轨道并放一个空壳 GE 任务](media/04-validation-and-export/step_02_add-effect-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -80,7 +83,7 @@
     
     **引导模式**：做到「轨道数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 1　任务 0
     
 
 ---
@@ -92,6 +95,8 @@
 **操作**：确认片段在 Effect 轨道上。
 
 **应该看到**：片段可见。
+
+![空壳 GE 任务已就位](media/04-validation-and-export/step_03_add-ge-empty.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -109,7 +114,7 @@
     
     **引导模式**：做到「任务数 ≥ 1」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.36s　轨道 1　任务 1
     
 
 ---
@@ -121,6 +126,8 @@
 **操作**：工具条 → +轨道 → TrackName = Presentation，TrackType = Presentation。
 
 **应该看到**：左栏出现第二条轨道。
+
+![再放一个空壳 Cue 任务](media/04-validation-and-export/step_04_add-presentation-track.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -135,7 +142,7 @@
     
     **引导模式**：做到「轨道数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.36s　轨道 2　任务 1
     
 
 ---
@@ -147,6 +154,8 @@
 **操作**：右键 Presentation 轨道 → 添加任务 → Send Gameplay Cue，0.25 – 0.0，不填 Cue Tag。
 
 **应该看到**：片段可见，校验条变成 2 条错误。
+
+![空壳 Cue 任务已就位](media/04-validation-and-export/step_05_add-cue-empty.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -164,7 +173,7 @@
     
     **引导模式**：做到「任务数 ≥ 2」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 2
     
 
 ---
@@ -177,13 +186,21 @@
 
 **应该看到**：2 条错误，分别指向两个任务。
 
+![校验：2 条错误](media/04-validation-and-export/step_06_validate-two.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 2；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 2　任务 2
+    
+    > 校验：错误 2 · 警告 0
+    
+    - ApplyGameplayEffect 任务未指定 GE。
+    
+    - SendGameplayCue 任务未指定 Cue Tag。
     
 
 ---
@@ -195,6 +212,8 @@
 **操作**：选中 GE 任务 → Inspector → EffectClass 选 GE_MeleeDamage。
 
 **应该看到**：1 条错误消失。
+
+![补上 GE 类](media/04-validation-and-export/step_07_fix-ge.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -211,7 +230,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.36s　轨道 2　任务 2
     
 
 ---
@@ -223,6 +242,8 @@
 **操作**：选中 Cue 任务 → Inspector → CueTag 填 GameplayCue.Demo.Hit。
 
 **应该看到**：第 2 条错误消失。
+
+![补上 Cue Tag](media/04-validation-and-export/step_08_fix-cue.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -239,7 +260,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 2
     
 
 ---
@@ -252,13 +273,17 @@
 
 **应该看到**：0 错误。
 
+![校验：0 错误](media/04-validation-and-export/step_09_validate-zero.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.39s　轨道 2　任务 2
+    
+    > 校验：错误 0 · 警告 0
     
 
 ---
@@ -270,6 +295,8 @@
 **操作**：工具条 → 资产属性 → Length = 0.25。
 
 **应该看到**：校验条出现「任务结束时间超出技能长度」的警告。
+
+![故意把技能长度改小，制造警告](media/04-validation-and-export/step_10_shrink-length.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -284,7 +311,7 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 2
     
 
 ---
@@ -297,13 +324,19 @@
 
 **应该看到**：0 错误，至少 1 条警告。
 
+![校验：0 错误 + 若干警告](media/04-validation-and-export/step_11_validate-warning.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Validate`
     
     **引导模式**：做到「校验错误数 == 0；超时 120s 自动放行」就自动进入下一步。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.38s　轨道 2　任务 2
+    
+    > 校验：错误 0 · 警告 1
+    
+    - 任务结束时间 0.3s 超出了技能长度 0.25s。
     
 
 ---
@@ -315,6 +348,8 @@
 **操作**：工具条 → 导出 Json。
 
 **应该看到**：得到一个含 version / length / tracks[] / tasks[] 的文本文件。
+
+![导出 Json](media/04-validation-and-export/step_12_export.png)
 
 ??? note "自动化是怎么做这一步的"
 
@@ -328,7 +363,9 @@
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.37s　轨道 2　任务 2
+    
+    - 导出 validation.json
     
 
 ---
@@ -341,13 +378,15 @@
 
 **应该看到**：校验结论以退出码返回，失败即阻断。
 
+![它在 CI 里的位置](media/04-validation-and-export/step_13_ci-note.png)
+
 ??? note "自动化是怎么做这一步的"
 
     **动作**：`Note`
     
     **引导模式**：这一步没有可自动判定的目标状态，由读者点「下一步」。
     
-    > 这一步还没有录制产物（跑一次 `Tools/generate_tutorials.ps1` 即可补上）。
+    **执行结果**：✅ OK　耗时 0.36s　轨道 2　任务 2
     
 
 ---
@@ -366,5 +405,5 @@ docs/tutorials/<id>.md   ← 你正在看的这页
 每一步的讲解与每一步的动作写在同一个对象里，改了编辑器行为就必须改脚本，
 否则 `Automation RunTests UAK.Tutorial` 会失败。
 
-_生成时间：2026-10-24 00:42:31_
+_生成时间：2026-10-26 20:16:00_
 

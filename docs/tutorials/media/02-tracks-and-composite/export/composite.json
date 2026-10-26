@@ -1,0 +1,92 @@
+{
+	"version": 1,
+	"asset": "TA_Composite",
+	"displayName": "",
+	"description": "",
+	"assetVersion": 1,
+	"length": 3,
+	"playRate": 1,
+	"frameRate": 60,
+	"loop": false,
+	"loopStartTime": 0,
+	"maxLoops": 0,
+	"abilityTags": "(GameplayTags=)",
+	"cancelAbilitiesWithTag": "(GameplayTags=)",
+	"blockAbilitiesWithTag": "(GameplayTags=)",
+	"requiredTags": "(GameplayTags=)",
+	"markers": [],
+	"channeled": false,
+	"channelingStartTime": 0,
+	"channelingEndTime": -1,
+	"channelFailureAction": "CancelAbility",
+	"evaluateChannelingOnAuthorityOnly": true,
+	"channelingConditions": [],
+	"tracks": [
+		{
+			"name": "Effect",
+			"type": "Effect",
+			"enabled": true,
+			"compositeMode": "Sequence",
+			"repeatCount": 1,
+			"repeatInterval": 0,
+			"startDelay": 0,
+			"tasks": [
+				{
+					"$type": "AKAbilityTask_ApplyLooseTags",
+					"taskId": "Windup",
+					"startTime": 0,
+					"duration": 0.40000000596046448,
+					"needsTick": false,
+					"netMode": "ServerOnly",
+					"tags": [
+						"Ability.Windup"
+					],
+					"replicate": true,
+					"removeOnInterrupt": true
+				},
+				{
+					"$type": "AKAbilityTask_WaitUntil",
+					"taskId": "Hold",
+					"startTime": 0,
+					"duration": 0.5,
+					"needsTick": false,
+					"netMode": "Both",
+					"condition":
+					{
+						"requiredTags": "(GameplayTags=)",
+						"blockedTags": "(GameplayTags=)",
+						"attribute": "none",
+						"comparison": "GreaterOrEqual",
+						"threshold": 0,
+						"evaluateOnFirstTarget": false,
+						"invert": false
+					},
+					"timeout": 1,
+					"gateTimeline": true,
+					"treatTimeoutAsFailure": false
+				}
+			]
+		},
+		{
+			"name": "Presentation",
+			"type": "Presentation",
+			"enabled": false,
+			"compositeMode": "Timeline",
+			"repeatCount": 1,
+			"repeatInterval": 0,
+			"startDelay": 0,
+			"tasks": [
+				{
+					"$type": "AKAbilityTask_SendGameplayCue",
+					"taskId": "HitSpark",
+					"startTime": 0.20000000298023224,
+					"duration": 0,
+					"needsTick": false,
+					"netMode": "ClientOnly",
+					"cueTag": "GameplayCue.Demo.Hit",
+					"operation": "Execute"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,71 @@
+{
+	"version": 1,
+	"asset": "TA_FirstAbility",
+	"displayName": "",
+	"description": "",
+	"assetVersion": 1,
+	"length": 2,
+	"playRate": 1,
+	"frameRate": 60,
+	"loop": false,
+	"loopStartTime": 0,
+	"maxLoops": 0,
+	"abilityTags": "(GameplayTags=)",
+	"cancelAbilitiesWithTag": "(GameplayTags=)",
+	"blockAbilitiesWithTag": "(GameplayTags=)",
+	"requiredTags": "(GameplayTags=)",
+	"markers": [],
+	"channeled": false,
+	"channelingStartTime": 0,
+	"channelingEndTime": -1,
+	"channelFailureAction": "CancelAbility",
+	"evaluateChannelingOnAuthorityOnly": true,
+	"channelingConditions": [],
+	"tracks": [
+		{
+			"name": "Main",
+			"type": "Main",
+			"enabled": true,
+			"compositeMode": "Timeline",
+			"repeatCount": 1,
+			"repeatInterval": 0,
+			"startDelay": 0,
+			"tasks": [
+				{
+					"$type": "AKAbilityTask_ApplyLooseTags",
+					"taskId": "Cast",
+					"startTime": 0,
+					"duration": 1.2000000476837158,
+					"needsTick": false,
+					"netMode": "ServerOnly",
+					"tags": [
+						"Ability.Casting"
+					],
+					"replicate": true,
+					"removeOnInterrupt": true
+				},
+				{
+					"$type": "AKAbilityTask_WaitUntil",
+					"taskId": "Recover",
+					"startTime": 1.2000000476837158,
+					"duration": 0.5,
+					"needsTick": false,
+					"netMode": "Both",
+					"condition":
+					{
+						"requiredTags": "(GameplayTags=)",
+						"blockedTags": "(GameplayTags=)",
+						"attribute": "none",
+						"comparison": "GreaterOrEqual",
+						"threshold": 0,
+						"evaluateOnFirstTarget": false,
+						"invert": false
+					},
+					"timeout": 1,
+					"gateTimeline": true,
+					"treatTimeoutAsFailure": false
+				}
+			]
+		}
+	]
+}
