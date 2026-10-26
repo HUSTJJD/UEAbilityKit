@@ -109,6 +109,7 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Bloodline(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Preview(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_Validation(const FSpawnTabArgs& Args);
 
 	void OnTaskSelected(UAKAbilityTaskBase* Task);
 	void OnTrackSelected(class UAKAbilityTrack* Track, int32 TrackIndex);
@@ -146,6 +147,15 @@ private:
 	FReply OnPreviewStopClicked();
 	FReply OnPreviewLoopClicked();
 
+	/** 预览角色下拉（转发给预览视口） */
+	TSharedRef<SWidget> MakePreviewCharacterMenu();
+
+	/** 顶部工具条（Save 那一行）：播放 / 停止 / 循环 / 角色 */
+	void FillToolbar(class FToolBarBuilder& Builder);
+
+	/** Inspector 顶部的面包屑：当前在编辑资产还是某个任务 */
+	FText GetInspectedObjectLabel() const;
+
 	/** PIE 联动：光标跟随 + 血缘视图切实况数据 */
 	bool TickPIELink(float DeltaTime);
 
@@ -176,4 +186,5 @@ public:
 	static const FName DetailsTabId;
 	static const FName BloodlineTabId;
 	static const FName PreviewTabId;
+	static const FName ValidationTabId;
 };

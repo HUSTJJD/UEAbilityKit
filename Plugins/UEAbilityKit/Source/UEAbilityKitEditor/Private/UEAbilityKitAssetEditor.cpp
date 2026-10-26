@@ -9,6 +9,17 @@
 #include "SUAKValidationBar.h"
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityJsonSerializer.h"
+
+#include "Framework/Commands/UIAction.h"
+#include "Framework/MultiBox/Extender/MultiBoxExtender.h"
+#include "Framework/MultiBox/ToolBarBuilder.h"
+#include "IDetailsView.h"
+#include "Styling/SlateIcon.h"
+#include "UObject/UnrealType.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SComboButton.h"
+#include "Widgets/SNullWidget.h"
+#include "Widgets/Text/STextBlock.h"
 #include "UAKAbilityTaskBase.h"
 #include "UAKAbilityTask_PlayMontage.h"
 #include "UAKAbilityTrack.h"
@@ -40,6 +51,7 @@ const FName FUEAbilityKitAssetEditor::TimelineTabId(TEXT("UAKTimeline"));
 const FName FUEAbilityKitAssetEditor::DetailsTabId(TEXT("UAKDetails"));
 const FName FUEAbilityKitAssetEditor::BloodlineTabId(TEXT("UAKBloodline"));
 const FName FUEAbilityKitAssetEditor::PreviewTabId(TEXT("UAKPreview"));
+const FName FUEAbilityKitAssetEditor::ValidationTabId(TEXT("UAKValidation"));
 
 TArray<TWeakPtr<FUEAbilityKitAssetEditor>> FUEAbilityKitAssetEditor::OpenEditors;
 
@@ -55,34 +67,79 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 	DetailsArgs.NameAreaSettings = FDetailsViewArgs::HideNameArea;
 	DetailsView = PropertyModule.CreateDetailView(DetailsArgs);
 
-	const TSharedRef<FTabManager::FLayout> Layout = FTabManager::NewLayout("UAKAbilityEditor_Layout_v1")
+	// 属性面板改完：预览角色 / 预览 Montage 变了要立刻重建预览。
+	// 不挂这个回调的话，改完得重开编辑器才看得到新角色。
+	DetailsView->SetOnFinishedChangingProperties(FOnFinishedChangingProperties::CreateLambda(
+		[this](const FPropertyChangedEvent& InEvent)
+		{
+			static const FName PreviewCharacterClass(TEXT("PreviewCharacterClass"));
+			static const FName PreviewMontage(TEXT("PreviewMontage"));
+
+			const FName PropertyName = InEvent.GetPropertyName();
+			if ((PropertyName == PreviewCharacterClass || PropertyName == PreviewMontage) && PreviewWidget.IsValid())
+			{
+				PreviewWidget->OnAssetChanged(Asset.Get());
+			}
+		}));
+
+	// 布局对齐 Sequencer 的心智：
+	//   中间 —— 上预览、下时间轴（预览要跟着时间轴看，所以同列上下叠）
+	//   右侧 —— Inspector 通高（改参数不必来回切标签）
+	//   底部 —— 验证 / GAS 影响常驻（问题始终看得见；血缘同 Stack，切过去看因果）
+	//
+	// 布局名带版本号：TabManager 会把用户拖过的布局持久化，改名才能让这份新布局生效
+	// （想恢复默认：Window → Reset Layout）。
+	const TSharedRef<FTabManager::FLayout> Layout = FTabManager::NewLayout("UAKAbilityEditor_Layout_v4")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()->SetOrientation(Orient_Vertical)
 			->Split
 			(
-				FTabManager::NewSplitter()->SetOrientation(Orient_Horizontal)->SetSizeCoefficient(0.72f)
+				FTabManager::NewSplitter()->SetOrientation(Orient_Horizontal)->SetSizeCoefficient(0.82f)
 				->Split
 				(
-					FTabManager::NewStack()->SetSizeCoefficient(0.75f)
-					->AddTab(TimelineTabId, ETabState::OpenedTab)
+					FTabManager::NewSplitter()->SetOrientation(Orient_Vertical)->SetSizeCoefficient(0.78f)
+					->Split
+					(
+						FTabManager::NewStack()->SetSizeCoefficient(0.56f)
+						->AddTab(PreviewTabId, ETabState::OpenedTab)
+					)
+					->Split
+					(
+						FTabManager::NewStack()->SetSizeCoefficient(0.44f)
+						->AddTab(TimelineTabId, ETabState::OpenedTab)
+					)
 				)
 				->Split
 				(
-					FTabManager::NewStack()->SetSizeCoefficient(0.25f)
+					FTabManager::NewStack()->SetSizeCoefficient(0.22f)
 					->AddTab(DetailsTabId, ETabState::OpenedTab)
-					->AddTab(PreviewTabId, ETabState::ClosedTab)
 				)
 			)
 			->Split
 			(
-				FTabManager::NewStack()->SetSizeCoefficient(0.28f)
+				FTabManager::NewStack()->SetSizeCoefficient(0.18f)
+				->AddTab(ValidationTabId, ETabState::OpenedTab)
 				->AddTab(BloodlineTabId, ETabState::OpenedTab)
 			)
 		);
 
 	InitAssetEditor(Mode, InitToolkitHost, FName(TEXT("UAKAbilityEditorApp")), Layout,
 		/*bCreateDefaultStandaloneMenu=*/true, /*bCreateDefaultToolbar=*/true, InAsset);
+
+	// 顶部工具条（Save 那一行右侧本来空着一大片）：把预览控制放到那儿，
+	// 预览面板里就不再单占一条控制条了。
+	TSharedPtr<FExtender> ToolbarExtender = MakeShared<FExtender>();
+	ToolbarExtender->AddToolBarExtension(
+		"Asset",
+		EExtensionHook::After,
+		GetToolkitCommands(),
+		FToolBarExtensionDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::FillToolbar));
+	AddToolbarExtender(ToolbarExtender);
+
+	// 打开就先显示资产本身：长度 / 播放速率 / 循环 / 标记 / 标签都在这一层。
+	// 以前默认是一片空白，得先在时间轴里点一下"选中资产"才看得到。
+	SelectAssetInInspector();
 
 	// PIE 联动：每 0.1s 检查一次正在运行的技能，让光标与血缘视图跟随
 	PIETickerHandle = FTSTicker::GetCoreTicker().AddTicker(
@@ -236,6 +293,10 @@ void FUEAbilityKitAssetEditor::RegisterTabSpawners(const TSharedRef<FTabManager>
 	InTabManager->RegisterTabSpawner(PreviewTabId,
 		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Preview))
 		.SetDisplayName(LOCTEXT("PreviewTab", "预览"));
+
+	InTabManager->RegisterTabSpawner(ValidationTabId,
+		FOnSpawnTab::CreateRaw(this, &FUEAbilityKitAssetEditor::SpawnTab_Validation))
+		.SetDisplayName(LOCTEXT("ValidationTab", "验证 / GAS 影响"));
 }
 
 void FUEAbilityKitAssetEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
@@ -246,6 +307,7 @@ void FUEAbilityKitAssetEditor::UnregisterTabSpawners(const TSharedRef<FTabManage
 	InTabManager->UnregisterTabSpawner(DetailsTabId);
 	InTabManager->UnregisterTabSpawner(BloodlineTabId);
 	InTabManager->UnregisterTabSpawner(PreviewTabId);
+	InTabManager->UnregisterTabSpawner(ValidationTabId);
 }
 
 FName FUEAbilityKitAssetEditor::GetToolkitFName() const { return FName(TEXT("UEAbilityKitAssetEditor")); }
@@ -278,17 +340,8 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.Timeline(Timeline)
 		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 
-	TSharedRef<SUAKGASImpactBar> ImpactBar = SNew(SUAKGASImpactBar)
-		.Asset(Asset)
-		.CursorTime(this, &FUEAbilityKitAssetEditor::GetCursorTime);
-	ImpactBarWidget = ImpactBar;
-
-	ValidationBarWidget = SNew(SUAKValidationBar).Asset(Asset);
-
 	// 引导高亮锚点：官方教程按 SWidget::GetTag() 找控件
 	ApplyTutorialTags(TimelineWidget, EUAKTutorialRegion::Timeline);
-	ApplyTutorialTags(ImpactBarWidget, EUAKTutorialRegion::Validation);
-	ApplyTutorialTags(ValidationBarWidget, EUAKTutorialRegion::Validation);
 
 	return SNew(SDockTab)
 		.Label(LOCTEXT("TimelineTabLabel", "时间轴"))
@@ -304,16 +357,39 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 			[
 				Timeline
 			]
+		];
+}
+
+TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Validation(const FSpawnTabArgs& Args)
+{
+	check(Args.GetTabId() == ValidationTabId);
+
+	// 校验与 GAS 影响移到独立的底部面板（Sequencer 里"问题始终看得见"的位置）。
+	// 以前塞在时间轴 Tab 里，一旦切到别的标签就看不到了。
+	TSharedRef<SUAKGASImpactBar> ImpactBar = SNew(SUAKGASImpactBar)
+		.Asset(Asset)
+		.CursorTime(this, &FUEAbilityKitAssetEditor::GetCursorTime);
+	ImpactBarWidget = ImpactBar;
+
+	ValidationBarWidget = SNew(SUAKValidationBar).Asset(Asset);
+
+	ApplyTutorialTags(ImpactBarWidget, EUAKTutorialRegion::Validation);
+	ApplyTutorialTags(ValidationBarWidget, EUAKTutorialRegion::Validation);
+
+	return SNew(SDockTab)
+		.Label(LOCTEXT("ValidationTabLabel", "验证 / GAS 影响"))
+		[
+			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight()
 			[
-				SNew(SBorder).Padding(4.f)
+				SNew(SBorder).Padding(2.f)
 				[
 					ImpactBar
 				]
 			]
-			+ SVerticalBox::Slot().AutoHeight().MaxHeight(140.f)
+			+ SVerticalBox::Slot().FillHeight(1.f)
 			[
-				SNew(SBorder).Padding(4.f)
+				SNew(SBorder).Padding(2.f)
 				[
 					ValidationBarWidget.ToSharedRef()
 				]
@@ -339,6 +415,33 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Details(const FSpawnTabA
 		.Label(LOCTEXT("DetailsTabLabel", "Inspector"))
 		[
 			SNew(SVerticalBox)
+			// 面包屑：说清"现在在改谁"，并给一条随时回到资产属性的路
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(2.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth()
+				[
+					SNew(SButton)
+					.Text(LOCTEXT("InspectAssetBtn", "技能资产"))
+					.ToolTipText(LOCTEXT("InspectAssetBtnTip",
+						"编辑技能本身：长度 / 播放速率 / 循环 / 标记 / 标签 / 中断顺序 / 预览角色"))
+					.OnClicked_Lambda([this]()
+					{
+						SelectAssetInInspector();
+						return FReply::Handled();
+					})
+				]
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.f)
+				.Padding(6.f, 0.f, 0.f)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(this, &FUEAbilityKitAssetEditor::GetInspectedObjectLabel)
+				]
+			]
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.MaxHeight(280.f)
@@ -359,39 +462,11 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Preview(const FSpawnTabA
 
 	PreviewWidget = SNew(SUAKEditorViewport).Asset(Asset);
 
+	// 只留视口：播放 / 停止 / 循环 / 角色都在顶部工具条，面板里不再重复占一条
 	return SNew(SDockTab)
 		.Label(LOCTEXT("PreviewTabLabel", "预览"))
 		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(2.f)
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("PreviewPlay", "播放"))
-					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewPlayClicked)
-				]
-				+ SHorizontalBox::Slot().AutoWidth()
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("PreviewStop", "停止"))
-					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewStopClicked)
-				]
-				+ SHorizontalBox::Slot().AutoWidth()
-				[
-					SNew(SButton)
-					.Text(LOCTEXT("PreviewLoop", "循环"))
-					.OnClicked(this, &FUEAbilityKitAssetEditor::OnPreviewLoopClicked)
-				]
-			]
-			+ SVerticalBox::Slot()
-			.FillHeight(1.f)
-			[
-				PreviewWidget.ToSharedRef()
-			]
+			PreviewWidget.ToSharedRef()
 		];
 }
 
@@ -414,7 +489,8 @@ void FUEAbilityKitAssetEditor::OnTaskSelected(UAKAbilityTaskBase* Task)
 	SelectedTask = Task;
 	if (DetailsView.IsValid())
 	{
-		DetailsView->SetObject(Task);
+		// 没选中任务（点了空白处）就回到资产属性，而不是留一片空白的面板
+		DetailsView->SetObject(Task ? static_cast<UObject*>(Task) : static_cast<UObject*>(Asset.Get()));
 	}
 }
 
@@ -424,8 +500,18 @@ void FUEAbilityKitAssetEditor::OnTrackSelected(UAKAbilityTrack* Track, int32 Tra
 	SelectedTrackIndex = TrackIndex;
 	if (DetailsView.IsValid())
 	{
-		DetailsView->SetObject(Track);
+		DetailsView->SetObject(Track ? static_cast<UObject*>(Track) : static_cast<UObject*>(Asset.Get()));
 	}
+}
+
+FText FUEAbilityKitAssetEditor::GetInspectedObjectLabel() const
+{
+	if (const UAKAbilityTaskBase* Task = SelectedTask.Get())
+	{
+		return FText::Format(LOCTEXT("InspectedTask", "任务：{0}"), FText::FromString(Task->GetName()));
+	}
+
+	return LOCTEXT("InspectedAsset", "技能资产");
 }
 
 void FUEAbilityKitAssetEditor::DeleteSelectedTask()
@@ -454,7 +540,8 @@ void FUEAbilityKitAssetEditor::DeleteSelectedTask()
 	SelectedTask = nullptr;
 	if (DetailsView.IsValid())
 	{
-		DetailsView->SetObject(nullptr);
+		// 回到资产属性，别把面板留空
+		DetailsView->SetObject(Asset.Get());
 	}
 }
 
@@ -621,7 +708,8 @@ void FUEAbilityKitAssetEditor::RemoveSelectedTrack()
 
 	if (DetailsView.IsValid())
 	{
-		DetailsView->SetObject(nullptr);
+		// 回到资产属性，别把面板留空
+		DetailsView->SetObject(Asset.Get());
 	}
 	if (TaskPickerWidget.IsValid())
 	{
@@ -871,7 +959,8 @@ void FUEAbilityKitAssetEditor::RefreshAfterUndo()
 		SelectedTask = nullptr;
 		if (DetailsView.IsValid())
 		{
-			DetailsView->SetObject(nullptr);
+			// 没有选中项时显示资产本身
+			DetailsView->SetObject(Asset.Get());
 		}
 	}
 	else if (DetailsView.IsValid())
@@ -887,6 +976,53 @@ FReply FUEAbilityKitAssetEditor::OnPreviewLoopClicked()
 		PreviewWidget->ToggleLooping();
 	}
 	return FReply::Handled();
+}
+
+TSharedRef<SWidget> FUEAbilityKitAssetEditor::MakePreviewCharacterMenu()
+{
+	if (PreviewWidget.IsValid())
+	{
+		return PreviewWidget->MakePreviewCharacterMenu();
+	}
+	return SNullWidget::NullWidget;
+}
+
+void FUEAbilityKitAssetEditor::FillToolbar(FToolBarBuilder& Builder)
+{
+	Builder.BeginSection(TEXT("UAKPreview"));
+	{
+		Builder.AddToolBarButton(
+			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewPlayClicked)),
+			NAME_None,
+			LOCTEXT("ToolbarPlay", "播放"),
+			LOCTEXT("ToolbarPlayTip", "从 0 跑一次这个技能：Montage / GameplayCue / 位移都真的发生，跑到结束自动停"),
+			FSlateIcon());
+
+		Builder.AddToolBarButton(
+			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewStopClicked)),
+			NAME_None,
+			LOCTEXT("ToolbarStop", "停止"),
+			LOCTEXT("ToolbarStopTip", "中断这次施放，并收掉残留的 Montage 与 Cue"),
+			FSlateIcon());
+
+		Builder.AddToolBarButton(
+			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewLoopClicked)),
+			NAME_None,
+			LOCTEXT("ToolbarLoop", "循环"),
+			LOCTEXT("ToolbarLoopTip", "跑完自动重开一次（属性不清零，连放会累积）"),
+			FSlateIcon());
+
+		Builder.AddComboButton(
+			FUIAction(),
+			FOnGetContent::CreateRaw(this, &FUEAbilityKitAssetEditor::MakePreviewCharacterMenu),
+			TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateLambda([this]()
+			{
+				return PreviewWidget.IsValid() ? PreviewWidget->GetPreviewCharacterLabel() : FText::GetEmpty();
+			})),
+			LOCTEXT("ToolbarCharTip", "这个技能用哪只角色预览；不指定就跟随工程默认"),
+			FSlateIcon());
+	}
+	Builder.EndSection();
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -925,6 +1061,7 @@ FName FUEAbilityKitAssetEditor::GetTabIdForName(const FString& Name)
 	if (Name.Equals(TEXT("Details"), ESearchCase::IgnoreCase)
 		|| Name.Equals(TEXT("Inspector"), ESearchCase::IgnoreCase)) { return DetailsTabId; }
 	if (Name.Equals(TEXT("Preview"), ESearchCase::IgnoreCase)) { return PreviewTabId; }
+	if (Name.Equals(TEXT("Validation"), ESearchCase::IgnoreCase)) { return ValidationTabId; }
 	return TimelineTabId;
 }
 

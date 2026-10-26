@@ -22,7 +22,7 @@ void FUEAbilityKitEditorModule::StartupModule()
 {
 	IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 
-	// 注册资产类型：内容浏览器右键 → Miscellaneous → Ability Asset
+	// 注册资产类型：内容浏览器右键 → Gameplay → Ability Asset
 	RegisteredAssetTypeActions.Add(MakeShared<FUAKAbilityAssetTypeActions>());
 	for (const TSharedPtr<IAssetTypeActions>& Action : RegisteredAssetTypeActions)
 	{

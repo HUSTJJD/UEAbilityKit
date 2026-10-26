@@ -4,9 +4,11 @@
 #include "PreviewScene.h"
 #include "SEditorViewport.h"
 #include "EditorViewportClient.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 
 class UAKAbilityAsset;
+class UUAKPreviewRunner;
 
 /**
  * 预览视口客户端：在独立的 FPreviewScene 中驱动预览角色与 Montage。
@@ -27,6 +29,13 @@ public:
 	/** 重建预览角色（切换资产或预览类时） */
 	void RefreshPreviewActor(class UAKAbilityAsset* Asset);
 
+	/**
+	 * 真跑一次施放：重建角色 → 装 ASC → 从 0 跑到资产结束（Montage / Cue / 位移都算）。
+	 *
+	 * 返回 false 表示没跑起来（没有角色或没有资产），调用方回退到只播 Montage。
+	 */
+	bool PlayPreviewAbility(class UAKAbilityAsset* Asset);
+
 	/** 播放 / 停止预览 Montage */
 	void PlayPreviewMontage(class UAnimMontage* Montage);
 	void StopPreview();
@@ -38,6 +47,10 @@ public:
 private:
 	FPreviewScene* PreviewScene = nullptr;
 	TWeakObjectPtr<AActor> PreviewActor;
+
+	/** 一次施放的执行器（预览专用；用强引用持有，避免被 GC 收走） */
+	TStrongObjectPtr<UUAKPreviewRunner> Runner;
+
 	float PreviewTime = 0.f;
 	bool bPlaying = false;
 	bool bLooping = false;
@@ -58,6 +71,17 @@ public:
 	virtual TSharedRef<FEditorViewportClient> MakeEditorViewportClient() override;
 
 	void OnAssetChanged(UAKAbilityAsset* Asset);
+
+	/** 预览角色：当前那只是谁（资产没指定就显示"默认（XXX）"） */
+	FText GetPreviewCharacterLabel() const;
+
+	/**
+	 * 预览角色下拉：跟随工程默认 / 指定一只。
+	 * 选中的类写进资产的 PreviewCharacterClass —— 每个技能可以自己指定，
+	 * 跟着资产一起保存，别人打开这个技能看到的就是同一只角色。
+	 */
+	TSharedRef<SWidget> MakePreviewCharacterMenu();
+	void OnPreviewCharacterPicked(UClass* PickedClass);
 
 	/** 预览控制（由外层 Tab 的工具条调用） */
 	FReply OnPlayClicked();

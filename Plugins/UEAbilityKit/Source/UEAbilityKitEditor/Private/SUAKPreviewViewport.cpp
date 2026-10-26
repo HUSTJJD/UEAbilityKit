@@ -2,6 +2,8 @@
 
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTask_PlayMontage.h"
+#include "UAKPreviewRunner.h"
+#include "UAKSettings.h"
 
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -9,6 +11,15 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameMapsSettings.h"
+#include "UObject/UObjectGlobals.h"
+
+#include "ClassViewerModule.h"
+#include "Framework/Commands/UIAction.h"
+#include "Framework/MultiBox/MenuBuilder.h"
+#include "ScopedTransaction.h"
+#include "Styling/SlateIcon.h"
+#include "Widgets/Input/SComboButton.h"
+#include "Widgets/Text/STextBlock.h"
 #include "Editor.h"           // GLevelEditorModeTools
 #include "SlateOptMacros.h"
 #include "Styling/AppStyle.h"
@@ -39,9 +50,26 @@ namespace
 			}
 		}
 
-		if (const UGameMapsSettings* MapsSettings = GetDefault<UGameMapsSettings>())
+		// 宿主工程显式配置（Config/DefaultUEAbilityKit.ini）：配一次，全工程的技能资产通用。
+		// 它排在"按 GameMode 推断"之前 —— 推断出来的常常是 C++ 基类（Lyra 下是
+		// ALyraCharacter，没配网格），看得见胶囊看不见人。
+		if (const UUAKSettings* Settings = GetDefault<UUAKSettings>())
 		{
-			if (UClass* GameModeClass = MapsSettings->GlobalDefaultGameMode.TryLoadClass<AGameModeBase>())
+			if (UClass* Configured = Settings->DefaultPreviewCharacterClass.TryLoadClass<AActor>())
+			{
+				return Configured;
+			}
+		}
+
+		// 从项目设置推断：GlobalDefaultGameMode → DefaultPawnClass。
+		// 那个 UPROPERTY 是 private，只能走静态访问器拿路径字符串。
+		FString GameModePath = UGameMapsSettings::GetGlobalDefaultGameMode();
+		if (!GameModePath.IsEmpty())
+		{
+			// 值可能是别名（GameModeClassAliases），解析一次再加载
+			GameModePath = UGameMapsSettings::GetGameModeForName(GameModePath);
+
+			if (UClass* GameModeClass = LoadClass<AGameModeBase>(nullptr, *GameModePath))
 			{
 				if (const AGameModeBase* GameModeCDO = Cast<AGameModeBase>(GameModeClass->GetDefaultObject()))
 				{
@@ -53,21 +81,10 @@ namespace
 			}
 		}
 
-		// 插件自带的示例，全部软加载 —— 不为了一个默认值硬依赖示例模块。
-		// 先是 commandlet 生成的蓝图角色（网格 + 默认技能都在里面），再退到 C++ 基类。
-		static const TCHAR* FallbackPaths[] =
-		{
-			TEXT("/UEAbilityKit/Demo/BP_DemoCharacter.BP_DemoCharacter_C"),
-			TEXT("/Script/UAKDemo.AKDemoCharacter"),
-		};
-		for (const TCHAR* Path : FallbackPaths)
-		{
-			if (UClass* Loaded = LoadClass<AActor>(nullptr, Path))
-			{
-				return Loaded;
-			}
-		}
-
+		// 不再拿插件随包的示例角色兜底：那会让人预览到一只根本不会出场、骨骼与 Montage
+		// 还对不上的角色，比空白更有误导性。拿不到就说清去哪儿配。
+		UE_LOG(LogTemp, Verbose,
+			TEXT("[UAK] 没有可用的预览角色：填资产上的 PreviewCharacterClass，或在 Config/DefaultUEAbilityKit.ini 里设 DefaultPreviewCharacterClass。"));
 		return nullptr;
 	}
 
@@ -129,6 +146,17 @@ void FAKPreviewViewportClient::Tick(float DeltaSeconds)
 
 	PreviewScene->GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
 
+	// 真跑一次施放时由执行器推进：跑到资产结束即停（bLooping 时自动重开一次）
+	if (Runner.IsValid() && Runner->IsRunning())
+	{
+		Runner->Tick(DeltaSeconds);
+		if (!Runner->IsRunning())
+		{
+			bPlaying = false;
+		}
+		return;
+	}
+
 	if (!bPlaying)
 	{
 		return;
@@ -173,6 +201,12 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 		return;
 	}
 
+	// 旧角色马上要被销毁：先结束这次施放，别让执行器握着一只已销毁的 Actor
+	if (Runner.IsValid())
+	{
+		Runner->Reset();
+	}
+
 	// 清理旧预览角色（UE 5.8 的 FPreviewScene 不再托管 Actor，直接销毁即可）
 	if (AActor* OldActor = PreviewActor.Get())
 	{
@@ -199,6 +233,33 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 	PreviewTime = 0.f;
 }
 
+bool FAKPreviewViewportClient::PlayPreviewAbility(UAKAbilityAsset* InAsset)
+{
+	if (!PreviewScene || !InAsset)
+	{
+		return false;
+	}
+
+	// 每次施放都从一只干净的角色开始：属性、GE、Cue 全部归零，省得写回滚逻辑。
+	RefreshPreviewActor(InAsset);
+
+	AActor* Actor = PreviewActor.Get();
+	if (!Actor)
+	{
+		return false;
+	}
+
+	if (!Runner.IsValid())
+	{
+		Runner = TStrongObjectPtr<UUAKPreviewRunner>(NewObject<UUAKPreviewRunner>());
+	}
+
+	const bool bStarted = Runner->Start(Actor, InAsset, bLooping);
+	bPlaying = bStarted;
+	PreviewTime = 0.f;
+	return bStarted;
+}
+
 void FAKPreviewViewportClient::PlayPreviewMontage(UAnimMontage* Montage)
 {
 	AActor* Actor = PreviewActor.Get();
@@ -221,6 +282,11 @@ void FAKPreviewViewportClient::PlayPreviewMontage(UAnimMontage* Montage)
 void FAKPreviewViewportClient::StopPreview()
 {
 	bPlaying = false;
+
+	if (Runner.IsValid())
+	{
+		Runner->Stop();
+	}
 
 	AActor* Actor = PreviewActor.Get();
 	if (!Actor)
@@ -273,10 +339,77 @@ TSharedRef<FEditorViewportClient> SUAKEditorViewport::MakeEditorViewportClient()
 
 void SUAKEditorViewport::OnAssetChanged(UAKAbilityAsset* InAsset)
 {
+	Asset = InAsset;
+
 	if (ViewportClient.IsValid())
 	{
 		ViewportClient->RefreshPreviewActor(InAsset);
 	}
+}
+
+FText SUAKEditorViewport::GetPreviewCharacterLabel() const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+
+	if (AssetPtr && !AssetPtr->PreviewCharacterClass.IsNull())
+	{
+		return FText::FromString(AssetPtr->PreviewCharacterClass.GetAssetName());
+	}
+
+	// 资产没指定时把实际会用的那只显示出来，省得猜"留空"会发生什么
+	if (UClass* Fallback = ResolvePreviewCharacterClass(AssetPtr))
+	{
+		return FText::Format(LOCTEXT("PreviewCharDefault", "默认（{0}）"), FText::FromName(Fallback->GetFName()));
+	}
+
+	return LOCTEXT("PreviewCharNone", "（未配置）");
+}
+
+TSharedRef<SWidget> SUAKEditorViewport::MakePreviewCharacterMenu()
+{
+	FMenuBuilder MenuBuilder(/*bInShouldCloseWindowAfterMenuSelection=*/true, nullptr);
+
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("PreviewCharFollowDefault", "跟随工程默认"),
+		LOCTEXT("PreviewCharFollowDefaultTip", "清空本资产的指定，用工程默认的那只角色"),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateSP(this, &SUAKEditorViewport::OnPreviewCharacterPicked, (UClass*)nullptr)));
+
+	MenuBuilder.AddSeparator();
+
+	// 挑一只角色：只看可放蓝图（含未加载的），选完直接写进资产
+	FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
+	FClassViewerInitializationOptions Options;
+	Options.Mode = EClassViewerMode::ClassPicker;
+	Options.DisplayMode = EClassViewerDisplayMode::ListView;
+	Options.bShowObjectRootClass = false;
+	Options.bShowUnloadedBlueprints = true;
+	Options.bIsBlueprintBaseOnly = true;
+
+	MenuBuilder.AddWidget(
+		ClassViewerModule.CreateClassViewer(Options, FOnClassPicked::CreateSP(this, &SUAKEditorViewport::OnPreviewCharacterPicked)),
+		FText::GetEmpty(),
+		/*bNoIndent=*/true);
+
+	return MenuBuilder.MakeWidget();
+}
+
+void SUAKEditorViewport::OnPreviewCharacterPicked(UClass* PickedClass)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	// 写进资产：每个技能自己记住用哪只角色预览，随资产一起保存，
+	// 别人打开这个技能看到的就是同一只。传 nullptr = 清掉指定，回到工程默认。
+	FScopedTransaction Transaction(LOCTEXT("SetPreviewCharacter", "设置预览角色"));
+	AssetPtr->Modify();
+	AssetPtr->PreviewCharacterClass = PickedClass;
+	AssetPtr->MarkPackageDirty();
+
+	OnAssetChanged(AssetPtr);
 }
 
 FReply SUAKEditorViewport::OnPlayClicked()
@@ -288,15 +421,18 @@ FReply SUAKEditorViewport::OnPlayClicked()
 			return FReply::Handled();
 		}
 
-		// 手填的是覆盖值；没填就取资产里第一个 PlayMontage 任务的 Montage
-		UAnimMontage* Montage = ResolvePreviewMontage(AssetPtr);
-		if (Montage)
+		// 优先真跑一次施放：Montage / Cue / 位移都出来，生命周期就是技能本身。
+		// 跑不起来（没角色或没资产）才退回只播一个 Montage。
+		if (!ViewportClient->PlayPreviewAbility(AssetPtr))
 		{
-			ViewportClient->PlayPreviewMontage(Montage);
-		}
-		else
-		{
-			ViewportClient->SetPlaying(true);
+			if (UAnimMontage* Montage = ResolvePreviewMontage(AssetPtr))
+			{
+				ViewportClient->PlayPreviewMontage(Montage);
+			}
+			else
+			{
+				ViewportClient->SetPlaying(true);
+			}
 		}
 	}
 	return FReply::Handled();

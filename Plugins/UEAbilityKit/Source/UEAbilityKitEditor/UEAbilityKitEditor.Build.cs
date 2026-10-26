@@ -32,6 +32,13 @@ public class UEAbilityKitEditor : ModuleRules
 			// 预览默认值：读 /Script/EngineSettings.GameMapsSettings 的 GlobalDefaultGameMode，
 			// 好让预览角色不必在每个资产上手填。
 			"EngineSettings",
+			// UUAKSettings（Config/DefaultUEAbilityKit.ini）：宿主工程配一次预览角色。
+			"DeveloperSettings",
+			// 预览执行器直接用 ASC / GameplayCue 的 API（装 ASC、收 Cue）
+			"GameplayAbilities",
+			"GameplayTags",
+			// 预览角色下拉用类选择器挑角色
+			"ClassViewer",
 			// 教程自动化：FWidgetRenderer 把面板渲成 PNG（UMG / RenderCore / ImageWrapper）
 			"UMG",
 			"RenderCore",

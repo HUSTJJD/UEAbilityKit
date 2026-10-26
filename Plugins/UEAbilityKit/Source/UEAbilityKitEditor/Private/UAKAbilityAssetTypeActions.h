@@ -11,8 +11,9 @@ public:
 	virtual UClass* GetSupportedClass() const override;
 	virtual FColor GetTypeColor() const override;
 
-	// UE 5.8 的 FAssetTypeActions_Base 不再提供默认实现，子类必须自己给分类
-	virtual uint32 GetCategories() override { return EAssetTypeCategories::Misc; }
+	// UE 5.8 的 FAssetTypeActions_Base 不再提供默认实现，子类必须自己给分类。
+	// 归到 Gameplay：技能是 GAS 领域的资产，不该躺在 Miscellaneous 里让人翻不到。
+	virtual uint32 GetCategories() override { return EAssetTypeCategories::Gameplay; }
 
 	virtual void OpenAssetEditor(const TArray<UObject*>& InObjects,
 		TSharedPtr<IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;

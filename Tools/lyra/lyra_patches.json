@@ -55,7 +55,8 @@
 			"DefaultGame.ini": "Tools/lyra/patches/config/DefaultGame.ini.append",
 			"DefaultInput.ini": "Tools/lyra/patches/config/DefaultInput.ini.append",
 			"DefaultGameplayTags.ini": "Tools/lyra/patches/config/DefaultGameplayTags.ini.append",
-			"DefaultUnLuaNova.ini": "Tools/lyra/patches/config/DefaultUnLuaNova.ini.append"
+			"DefaultUnLuaNova.ini": "Tools/lyra/patches/config/DefaultUnLuaNova.ini.append",
+			"DefaultUEAbilityKit.ini": "Tools/lyra/patches/config/DefaultUEAbilityKit.ini.append"
 		}
 	}
 }

@@ -4,7 +4,7 @@
 #include "Factories/Factory.h"
 #include "UAKAbilityAssetFactory.generated.h"
 
-/** 内容浏览器里创建 UAKAbilityAsset 的工厂（右键 → Miscellaneous → Ability Asset） */
+/** 内容浏览器里创建 UAKAbilityAsset 的工厂（右键 → Gameplay → Ability Asset） */
 UCLASS()
 class UEABILITYKITEDITOR_API UAKAbilityAssetFactory : public UFactory
 {
