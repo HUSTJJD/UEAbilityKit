@@ -6,18 +6,22 @@
 #include "UAKSettings.h"
 
 #include "Animation/AnimMontage.h"
+#include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
 #include "GameFramework/Actor.h"
+#include "Materials/MaterialInterface.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameMapsSettings.h"
 #include "UObject/UObjectGlobals.h"
 
 #include "ClassViewerModule.h"
 #include "Framework/Commands/UIAction.h"
-#include "Framework/MultiBox/MenuBuilder.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "ScopedTransaction.h"
-#include "Styling/SlateIcon.h"
+#include "Textures/SlateIcon.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Editor.h"           // GLevelEditorModeTools
@@ -194,6 +198,51 @@ FLinearColor FAKPreviewViewportClient::GetBackgroundColor() const
 	return FLinearColor(0.06f, 0.06f, 0.07f);
 }
 
+void FAKPreviewViewportClient::ResetCamera()
+{
+	// 侧视平视：角色站着不动时，这个角度最容易看清动作、位移和特效的位置
+	const FVector Target(0.f, 0.f, 90.f);
+	SetViewLocation(Target + FVector(0.f, -320.f, 0.f));
+	SetViewRotation(FRotator(0.f, 90.f, 0.f));
+	Invalidate();
+}
+
+void FAKPreviewViewportClient::EnsureFloor()
+{
+	if (!PreviewScene || FloorActor.IsValid())
+	{
+		return;
+	}
+
+	UWorld* World = PreviewScene->GetWorld();
+	UStaticMesh* PlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane"));
+	if (!World || !PlaneMesh)
+	{
+		return;
+	}
+
+	// 没有地面就没有投影，也看不出位移和跳多高 —— 预览场景默认是不给地面的。
+	AStaticMeshActor* Floor = World->SpawnActor<AStaticMeshActor>();
+	if (!Floor)
+	{
+		return;
+	}
+
+	Floor->SetFlags(RF_Transient);
+	Floor->SetActorScale3D(FVector(40.f, 40.f, 1.f));
+	Floor->SetActorLocation(FVector(0.f, 0.f, -0.5f));	// 略低于原点，避免和角色底面 z-fighting
+
+	UStaticMeshComponent* MeshComp = Floor->GetStaticMeshComponent();
+	MeshComp->SetStaticMesh(PlaneMesh);
+	if (UMaterialInterface* FloorMaterial = LoadObject<UMaterialInterface>(
+		nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
+	{
+		MeshComp->SetMaterial(0, FloorMaterial);
+	}
+
+	FloorActor = Floor;
+}
+
 void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 {
 	if (!PreviewScene || !InAsset)
@@ -227,6 +276,14 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 	if (!NewActor)
 	{
 		return;
+	}
+
+	// 角色蓝图多半自带相机组件（Lyra 角色就有），预览里那个相机图标纯属干扰
+	TArray<UCameraComponent*> Cameras;
+	NewActor->GetComponents<UCameraComponent>(Cameras);
+	for (UCameraComponent* Camera : Cameras)
+	{
+		Camera->SetVisibility(false);
 	}
 
 	PreviewActor = NewActor;
@@ -323,10 +380,15 @@ void SUAKEditorViewport::Construct(const FArguments& InArgs)
 
 	SEditorViewport::Construct(SEditorViewport::FArguments());
 
+	ViewportClient->EnsureFloor();
+
 	if (UAKAbilityAsset* AssetPtr = Asset.Get())
 	{
 		ViewportClient->RefreshPreviewActor(AssetPtr);
 	}
+
+	// 默认侧视，别让相机停在原点
+	ViewportClient->ResetCamera();
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -343,7 +405,16 @@ void SUAKEditorViewport::OnAssetChanged(UAKAbilityAsset* InAsset)
 
 	if (ViewportClient.IsValid())
 	{
+		ViewportClient->EnsureFloor();
 		ViewportClient->RefreshPreviewActor(InAsset);
+	}
+}
+
+void SUAKEditorViewport::ResetCamera()
+{
+	if (ViewportClient.IsValid())
+	{
+		ViewportClient->ResetCamera();
 	}
 }
 
@@ -381,10 +452,11 @@ TSharedRef<SWidget> SUAKEditorViewport::MakePreviewCharacterMenu()
 	FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
 	FClassViewerInitializationOptions Options;
 	Options.Mode = EClassViewerMode::ClassPicker;
-	Options.DisplayMode = EClassViewerDisplayMode::ListView;
+	Options.DisplayMode = EClassViewerDisplayMode::DefaultView;	// Picker 模式下默认就是列表
 	Options.bShowObjectRootClass = false;
 	Options.bShowUnloadedBlueprints = true;
 	Options.bIsBlueprintBaseOnly = true;
+	Options.bIsActorsOnly = true;		// 只看 Actor，别把 GameMode / HUD 之类混进来
 
 	MenuBuilder.AddWidget(
 		ClassViewerModule.CreateClassViewer(Options, FOnClassPicked::CreateSP(this, &SUAKEditorViewport::OnPreviewCharacterPicked)),

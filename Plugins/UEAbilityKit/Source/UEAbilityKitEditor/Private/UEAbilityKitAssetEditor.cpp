@@ -11,10 +11,10 @@
 #include "UAKAbilityJsonSerializer.h"
 
 #include "Framework/Commands/UIAction.h"
-#include "Framework/MultiBox/Extender/MultiBoxExtender.h"
-#include "Framework/MultiBox/ToolBarBuilder.h"
+#include "Framework/MultiBox/MultiBoxExtender.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "IDetailsView.h"
-#include "Styling/SlateIcon.h"
+#include "Textures/SlateIcon.h"
 #include "UObject/UnrealType.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
@@ -69,7 +69,8 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 
 	// 属性面板改完：预览角色 / 预览 Montage 变了要立刻重建预览。
 	// 不挂这个回调的话，改完得重开编辑器才看得到新角色。
-	DetailsView->SetOnFinishedChangingProperties(FOnFinishedChangingProperties::CreateLambda(
+	// 这个版本没有 Set...()，是暴露委托成员后 AddLambda
+	DetailsView->OnFinishedChangingProperties().AddLambda(
 		[this](const FPropertyChangedEvent& InEvent)
 		{
 			static const FName PreviewCharacterClass(TEXT("PreviewCharacterClass"));
@@ -80,7 +81,7 @@ void FUEAbilityKitAssetEditor::InitEditor(const EToolkitMode::Type Mode,
 			{
 				PreviewWidget->OnAssetChanged(Asset.Get());
 			}
-		}));
+		});
 
 	// 布局对齐 Sequencer 的心智：
 	//   中间 —— 上预览、下时间轴（预览要跟着时间轴看，所以同列上下叠）
@@ -435,7 +436,7 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Details(const FSpawnTabA
 				]
 				+ SHorizontalBox::Slot()
 				.FillWidth(1.f)
-				.Padding(6.f, 0.f, 0.f)
+				.Padding(FMargin(6.f, 0.f, 0.f, 0.f))
 				.VAlign(VAlign_Center)
 				[
 					SNew(STextBlock)
@@ -992,24 +993,38 @@ void FUEAbilityKitAssetEditor::FillToolbar(FToolBarBuilder& Builder)
 	Builder.BeginSection(TEXT("UAKPreview"));
 	{
 		Builder.AddToolBarButton(
-			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewPlayClicked)),
+			// OnPreviewPlayClicked 返回 FReply，FExecuteAction 是 void()，用 lambda 包一层
+			FUIAction(FExecuteAction::CreateLambda([this]() { OnPreviewPlayClicked(); })),
 			NAME_None,
 			LOCTEXT("ToolbarPlay", "播放"),
 			LOCTEXT("ToolbarPlayTip", "从 0 跑一次这个技能：Montage / GameplayCue / 位移都真的发生，跑到结束自动停"),
 			FSlateIcon());
 
 		Builder.AddToolBarButton(
-			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewStopClicked)),
+			FUIAction(FExecuteAction::CreateLambda([this]() { OnPreviewStopClicked(); })),
 			NAME_None,
 			LOCTEXT("ToolbarStop", "停止"),
 			LOCTEXT("ToolbarStopTip", "中断这次施放，并收掉残留的 Montage 与 Cue"),
 			FSlateIcon());
 
 		Builder.AddToolBarButton(
-			FUIAction(FExecuteAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnPreviewLoopClicked)),
+			FUIAction(FExecuteAction::CreateLambda([this]() { OnPreviewLoopClicked(); })),
 			NAME_None,
 			LOCTEXT("ToolbarLoop", "循环"),
 			LOCTEXT("ToolbarLoopTip", "跑完自动重开一次（属性不清零，连放会累积）"),
+			FSlateIcon());
+
+		Builder.AddToolBarButton(
+			FUIAction(FExecuteAction::CreateLambda([this]()
+			{
+				if (PreviewWidget.IsValid())
+				{
+					PreviewWidget->ResetCamera();
+				}
+			})),
+			NAME_None,
+			LOCTEXT("ToolbarResetCamera", "复位视角"),
+			LOCTEXT("ToolbarResetCameraTip", "相机回到侧视：从角色侧面平视"),
 			FSlateIcon());
 
 		Builder.AddComboButton(

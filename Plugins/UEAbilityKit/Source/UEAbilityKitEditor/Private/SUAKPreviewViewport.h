@@ -29,6 +29,12 @@ public:
 	/** 重建预览角色（切换资产或预览类时） */
 	void RefreshPreviewActor(class UAKAbilityAsset* Asset);
 
+	/** 相机回到侧视：站着不动的角色从这个角度最容易看清动作 */
+	void ResetCamera();
+
+	/** 地面：建一次，之后重建预览角色不动它 */
+	void EnsureFloor();
+
 	/**
 	 * 真跑一次施放：重建角色 → 装 ASC → 从 0 跑到资产结束（Montage / Cue / 位移都算）。
 	 *
@@ -47,6 +53,9 @@ public:
 private:
 	FPreviewScene* PreviewScene = nullptr;
 	TWeakObjectPtr<AActor> PreviewActor;
+
+	/** 地面：没有它就没有投影与透视参照，看不出位移和跳跃 */
+	TWeakObjectPtr<AActor> FloorActor;
 
 	/** 一次施放的执行器（预览专用；用强引用持有，避免被 GC 收走） */
 	TStrongObjectPtr<UUAKPreviewRunner> Runner;
@@ -87,6 +96,7 @@ public:
 	FReply OnPlayClicked();
 	FReply OnStopClicked();
 	void ToggleLooping();
+	void ResetCamera();
 	const FSlateBrush* GetLoopBrush() const;
 	bool IsLooping() const { return bLooping; }
 
