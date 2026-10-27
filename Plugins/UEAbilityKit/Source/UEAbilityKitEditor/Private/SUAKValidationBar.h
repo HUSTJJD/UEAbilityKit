@@ -8,6 +8,9 @@
 class UAKAbilityAsset;
 class UAKAbilityTaskBase;
 
+/** 双击一条校验结果：把出问题的任务交回上层去定位（资产级问题传 nullptr） */
+DECLARE_DELEGATE_OneParam(FOnAKIssueDoubleClicked, UAKAbilityTaskBase* /*Task*/);
+
 /**
  * 常驻校验条（UAK 与 Able 的一处刻意差异：Able 是校验完弹窗，这里边改边报）。
  *
@@ -18,7 +21,7 @@ class SUAKValidationBar : public SCompoundWidget
 public:
 	SLATE_BEGIN_ARGS(SUAKValidationBar) {}
 		SLATE_ARGUMENT(TWeakObjectPtr<UAKAbilityAsset>, Asset)
-		SLATE_EVENT(FSimpleDelegate, OnIssueDoubleClicked)
+		SLATE_EVENT(FOnAKIssueDoubleClicked, OnIssueDoubleClicked)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -36,7 +39,7 @@ private:
 	TSharedPtr<STextBlock> HeaderText;
 
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
-	FSimpleDelegate OnIssueDoubleClicked;
+	FOnAKIssueDoubleClicked OnIssueDoubleClicked;
 
 	// UE 5.8 起 SListView 的 ItemType 只能是 UObject 指针 / TSharedPtr / TSharedRef / FName
 	TArray<TSharedPtr<FAKValidationIssue>> Issues;

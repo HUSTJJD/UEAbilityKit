@@ -369,10 +369,14 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Validation(const FSpawnT
 	// 以前塞在时间轴 Tab 里，一旦切到别的标签就看不到了。
 	TSharedRef<SUAKGASImpactBar> ImpactBar = SNew(SUAKGASImpactBar)
 		.Asset(Asset)
-		.CursorTime(this, &FUEAbilityKitAssetEditor::GetCursorTime);
+		.CursorTime(this, &FUEAbilityKitAssetEditor::GetCursorTime)
+		.OnEntryClicked(this, &FUEAbilityKitAssetEditor::RevealTaskInBloodline);
 	ImpactBarWidget = ImpactBar;
 
-	ValidationBarWidget = SNew(SUAKValidationBar).Asset(Asset);
+	// 双击一条校验结果 → 选中并滚到出问题的那个片段
+	ValidationBarWidget = SNew(SUAKValidationBar)
+		.Asset(Asset)
+		.OnIssueDoubleClicked(this, &FUEAbilityKitAssetEditor::RevealTaskInTimeline);
 
 	ApplyTutorialTags(ImpactBarWidget, EUAKTutorialRegion::Validation);
 	ApplyTutorialTags(ValidationBarWidget, EUAKTutorialRegion::Validation);
@@ -475,7 +479,10 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Bloodline(const FSpawnTa
 {
 	check(Args.GetTabId() == BloodlineTabId);
 
-	BloodlineWidget = SNew(SUAKBloodlineView).Asset(Asset);
+	// 双击血缘里的任意一行（含 Tag / GE / Cue 子行）→ 回跳时间轴上产生它的任务
+	BloodlineWidget = SNew(SUAKBloodlineView)
+		.Asset(Asset)
+		.OnTaskFocusRequested(this, &FUEAbilityKitAssetEditor::RevealTaskInTimeline);
 	ApplyTutorialTags(BloodlineWidget, EUAKTutorialRegion::Bloodline);
 
 	return SNew(SDockTab)
@@ -615,7 +622,7 @@ UAKAbilityTaskBase* FUEAbilityKitAssetEditor::PasteTaskFromJson(const FString& T
 	return Pasted;
 }
 
-UAKAbilityTaskBase* FUEAbilityKitAssetEditor::DuplicateSelectedTask()
+UAKAbilityTaskBase* FUEAbilityKitAssetEditor::DuplicateSelectedTask(bool bMergeIntoActiveTransaction)
 {
 	UAKAbilityAsset* AssetPtr = Asset.Get();
 	UAKAbilityTaskBase* Task = SelectedTask.Get();
@@ -630,7 +637,12 @@ UAKAbilityTaskBase* FUEAbilityKitAssetEditor::DuplicateSelectedTask()
 		return nullptr;
 	}
 
-	const FScopedTransaction Transaction(LOCTEXT("DuplicateTask", "复制任务"));
+	// Alt+拖拽时时间轴已经开好事务，这里不再开一个，否则一次操作要撤销两下
+	TUniquePtr<FScopedTransaction> Transaction;
+	if (!bMergeIntoActiveTransaction)
+	{
+		Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("DuplicateTask", "复制任务"));
+	}
 	Track->Modify();
 
 	UAKAbilityTaskBase* Copy = DuplicateObject<UAKAbilityTaskBase>(Task, Track);
@@ -659,6 +671,9 @@ void FUEAbilityKitAssetEditor::OnToolbarAction(EAKToolbarAction Action)
 	case EAKToolbarAction::DuplicateTask:		DuplicateSelectedTask(); break;
 	case EAKToolbarAction::DeleteTask:			DeleteSelectedTask(); break;
 	case EAKToolbarAction::AddMarker:			AddMarkerAtCursor(); break;
+	case EAKToolbarAction::RemoveMarker:
+		RemoveMarkerAt(TimelineWidget.IsValid() ? TimelineWidget->GetContextMarkerIndex() : INDEX_NONE);
+		break;
 	case EAKToolbarAction::SelectAsset:			SelectAssetInInspector(); break;
 	case EAKToolbarAction::GenerateFromMontage:	GenerateFromMontage(); break;
 	default: break;
@@ -756,6 +771,26 @@ void FUEAbilityKitAssetEditor::AddMarkerAtCursor()
 	AssetPtr->Markers.Add(Marker);
 
 	AssetPtr->MarkPackageDirty();
+}
+
+void FUEAbilityKitAssetEditor::RemoveMarkerAt(int32 MarkerIndex)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !AssetPtr->Markers.IsValidIndex(MarkerIndex))
+	{
+		return;
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("RemoveMarker", "删除标记"));
+	AssetPtr->Modify();
+	AssetPtr->Markers.RemoveAt(MarkerIndex);
+	AssetPtr->MarkPackageDirty();
+
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->ClearContextMarkerIndex();
+		TimelineWidget->ForceRefresh();
+	}
 }
 
 void FUEAbilityKitAssetEditor::SelectAssetInInspector()
@@ -875,6 +910,31 @@ void FUEAbilityKitAssetEditor::GenerateFromMontage()
 void FUEAbilityKitAssetEditor::OnCursorTimeChanged(float Time)
 {
 	CursorTime = Time;
+}
+
+void FUEAbilityKitAssetEditor::RevealTaskInTimeline(UAKAbilityTaskBase* Task)
+{
+	if (!Task)
+	{
+		// 资产级问题没有可跳的片段：把 Inspector 收回资产，别停在某个无关任务上
+		SelectAssetInInspector();
+		return;
+	}
+
+	OnTaskSelected(Task);
+
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->FocusTask(Task);
+	}
+
+	AutomationFocusTab(TimelineTabId);
+}
+
+void FUEAbilityKitAssetEditor::RevealTaskInBloodline(UAKAbilityTaskBase* Task)
+{
+	RevealTaskInTimeline(Task);
+	AutomationFocusTab(BloodlineTabId);
 }
 
 void FUEAbilityKitAssetEditor::OnAddTask(TSubclassOf<UAKAbilityTaskBase> TaskClass, int32 TrackIndex)

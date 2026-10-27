@@ -116,9 +116,23 @@ private:
 	void OnCursorTimeChanged(float Time);
 	float GetCursorTime() const { return CursorTime; }
 
+	/**
+	 * 把某个任务带到眼前：选中它 → 光标落到它的起点 → 把它滚进视野 → 把时间轴 Tab 翻出来。
+	 * 校验双击、血缘双击、GAS 影响条下钻都走这一条路，行为才一致。
+	 * @param Task 为空表示资产级问题（没有可跳的片段），只把 Inspector 收回资产。
+	 */
+	void RevealTaskInTimeline(UAKAbilityTaskBase* Task);
+
+	/** 影响条下钻：除了定位到时间轴，还把血缘视图翻出来 */
+	void RevealTaskInBloodline(UAKAbilityTaskBase* Task);
+
 	/** 键盘 / 工具条：删除与复制当前选中的任务（复制返回新任务，供 Alt+拖拽接管） */
 	void DeleteSelectedTask();
-	UAKAbilityTaskBase* DuplicateSelectedTask();
+	/**
+	 * @param bMergeIntoActiveTransaction 时间轴拖动已经开好事务时传 true，
+	 *        让"复制 + 移动"留在同一个撤销步里。
+	 */
+	UAKAbilityTaskBase* DuplicateSelectedTask(bool bMergeIntoActiveTransaction = false);
 
 	/** 粘贴：把时间轴剪贴板里的 Json 还原成任务，落在当前轨道的光标处 */
 	UAKAbilityTaskBase* PasteTaskFromJson(const FString& TaskJson);
@@ -139,6 +153,8 @@ private:
 	void RemoveSelectedTrack();
 	void MoveSelectedTrack(int32 Delta);
 	void AddMarkerAtCursor();
+	/** 删掉时间轴右键点中的那个标记（INDEX_NONE / 越界则不动） */
+	void RemoveMarkerAt(int32 MarkerIndex);
 	void SelectAssetInInspector();
 	void GenerateFromMontage();
 

@@ -70,6 +70,10 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 	SetCanTick(true);
 	SetClipping(EWidgetClipping::ClipToBounds);
 
+	// tooltip 跟着悬停走：片段显示"几点到几点、多长"，空白处显示"光标在哪一帧"
+	SetToolTipText(TAttribute<FText>::Create(
+		TAttribute<FText>::FGetter::CreateSP(this, &SUAKTimeline::GetHoverTooltipText)));
+
 	RebuildPlanIfNeeded();
 }
 
@@ -121,10 +125,11 @@ void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurren
 		RebuildPlanIfNeeded();
 	}
 
-	// 播放：按真实时间推进光标（与运行时一样受 PlayRate 影响）
+	// 播放：按真实时间推进光标（与运行时一样受资产的 PlayRate 影响）
 	if (bPlaying)
 	{
 		const float Length = GetAssetLength();
+		PlaybackRate = (Asset.Get() != nullptr) ? FMath::Max(0.01f, Asset.Get()->PlayRate) : 1.f;
 		float Next = CursorTime + InDeltaTime * PlaybackRate;
 
 		if (Next >= Length)
@@ -177,8 +182,100 @@ void SUAKTimeline::Stop()
 
 void SUAKTimeline::SetCursorTime(float InTime)
 {
-	CursorTime = FMath::Max(0.f, InTime);
+	// 两端都钳：光标不能跑到 0 之前，也不能越过技能末尾（否则"此刻生效"的统计会说谎）
+	CursorTime = FMath::Clamp(InTime, 0.f, GetAssetLength());
 	OnCursorTimeChanged.ExecuteIfBound(CursorTime);
+}
+
+float SUAKTimeline::GetViewEndTime() const
+{
+	return ViewOffsetTime + (PixelsPerSecond > 0.f ? ViewWidth / PixelsPerSecond : 1.f);
+}
+
+void SUAKTimeline::ClampViewOffset()
+{
+	const float VisibleTime = (PixelsPerSecond > 0.f) ? ViewWidth / PixelsPerSecond : 1.f;
+
+	// 内容末端 = 技能长度与最后一个任务结束时间取大，再留一点余量
+	float ContentEnd = GetAssetLength();
+	for (const FAKScheduledTask& Scheduled : CachedPlan)
+	{
+		ContentEnd = FMath::Max(ContentEnd, Scheduled.EndTime);
+	}
+	if (const UAKAbilityAsset* AssetPtr = Asset.Get())
+	{
+		for (const FAKTimeMarker& Marker : AssetPtr->Markers)
+		{
+			ContentEnd = FMath::Max(ContentEnd, Marker.Time);
+		}
+	}
+	ContentEnd += VisibleTime * 0.05f;
+
+	const float MaxOffset = FMath::Max(0.f, ContentEnd - VisibleTime * 0.9f);
+	ViewOffsetTime = FMath::Clamp(ViewOffsetTime, 0.f, MaxOffset);
+}
+
+void SUAKTimeline::ScrollTimeIntoView(float Time)
+{
+	const float VisibleTime = (PixelsPerSecond > 0.f) ? ViewWidth / PixelsPerSecond : 1.f;
+	if (Time < ViewOffsetTime + VisibleTime * 0.05f || Time > ViewOffsetTime + VisibleTime * 0.95f)
+	{
+		// 落在视野外就把它放到左侧 1/4 处，前后都留得下上下文
+		ViewOffsetTime = Time - VisibleTime * 0.25f;
+		ClampViewOffset();
+	}
+}
+
+void SUAKTimeline::FocusTask(UAKAbilityTaskBase* Task)
+{
+	if (!Task)
+	{
+		return;
+	}
+
+	SelectedTask = Task;
+	OnTaskSelected.ExecuteIfBound(Task);
+
+	const float StartTime = Task->StartTime;
+	SetCursorTime(StartTime);
+	ScrollTimeIntoView(StartTime);
+}
+
+bool SUAKTimeline::CanEditTaskTimes(const UAKAbilityTaskBase* Task) const
+{
+	// 复合轨道（Sequence / Parallel / Repeat）的任务时间由轨道算出来，
+	// 手动改 StartTime / Duration 没有意义，一律不允许拖（与 OnMouseMove 的旧判断一致）。
+	const UAKAbilityTrack* OwnerTrack = Cast<UAKAbilityTrack>(Task->GetOuter());
+	return OwnerTrack && OwnerTrack->CompositeMode == EAKTrackCompositeMode::Timeline;
+}
+
+void SUAKTimeline::MoveTaskToTrack(UAKAbilityTaskBase* Task, int32 FromTrackIndex, int32 ToTrackIndex)
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !Task || FromTrackIndex == ToTrackIndex)
+	{
+		return;
+	}
+
+	UAKAbilityTrack* FromTrack = AssetPtr->Tracks.IsValidIndex(FromTrackIndex) ? AssetPtr->Tracks[FromTrackIndex] : nullptr;
+	UAKAbilityTrack* ToTrack = AssetPtr->Tracks.IsValidIndex(ToTrackIndex) ? AssetPtr->Tracks[ToTrackIndex] : nullptr;
+	if (!FromTrack || !ToTrack)
+	{
+		return;
+	}
+
+	FromTrack->Modify();
+	ToTrack->Modify();
+	Task->Modify();
+
+	FromTrack->Tasks.Remove(Task);
+	ToTrack->Tasks.Add(Task);
+
+	// 任务是内联子对象：改父级要连 Outer 一起改，否则保存与 GC 会认错父亲
+	Task->Rename(nullptr, ToTrack, REN_DontCreateRedirectors | REN_ForceNoResetLoaders);
+
+	AssetPtr->MarkPackageDirty();
+	ForceRefresh();
 }
 
 void SUAKTimeline::StepFrame(int32 Frames)
@@ -221,12 +318,12 @@ float SUAKTimeline::SnapTime(float Time) const
 
 float SUAKTimeline::TimeToX(float Time) const
 {
-	return TrackHeaderWidth + Time * PixelsPerSecond;
+	return TrackHeaderWidth + (Time - ViewOffsetTime) * PixelsPerSecond;
 }
 
 float SUAKTimeline::XToTime(float X) const
 {
-	return (X - TrackHeaderWidth) / PixelsPerSecond;
+	return ViewOffsetTime + (X - TrackHeaderWidth) / PixelsPerSecond;
 }
 
 int32 SUAKTimeline::HitTestRow(float Y) const
@@ -236,6 +333,68 @@ int32 SUAKTimeline::HitTestRow(float Y) const
 		return INDEX_NONE;
 	}
 	return static_cast<int32>((Y - RulerHeight) / RowHeight);
+}
+
+int32 SUAKTimeline::HitTestMarker(float X) const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return INDEX_NONE;
+	}
+
+	// 标记线只有 1px 宽，给 ±5px 的手感范围
+	for (int32 Index = 0; Index < AssetPtr->Markers.Num(); ++Index)
+	{
+		if (FMath::Abs(TimeToX(AssetPtr->Markers[Index].Time) - X) <= 5.f)
+		{
+			return Index;
+		}
+	}
+	return INDEX_NONE;
+}
+
+EAKTimelineDragMode SUAKTimeline::HitTestSegmentEdge(float X, int32 Row, UAKAbilityTaskBase*& OutTask, const FAKScheduledTask*& OutScheduled) const
+{
+	OutTask = nullptr;
+	OutScheduled = nullptr;
+
+	UAKAbilityTaskBase* Task = HitTestTask(X, Row);
+	if (!Task)
+	{
+		return EAKTimelineDragMode::None;
+	}
+
+	const FAKScheduledTask* Scheduled = CachedPlan.FindByPredicate(
+		[Task, Row](const FAKScheduledTask& Item) { return Item.Task == Task && Item.TrackIndex == Row; });
+	if (!Scheduled)
+	{
+		return EAKTimelineDragMode::None;
+	}
+
+	OutTask = Task;
+	OutScheduled = Scheduled;
+
+	if (!CanEditTaskTimes(Task))
+	{
+		return EAKTimelineDragMode::Move;
+	}
+
+	const float X0 = TimeToX(Scheduled->StartTime);
+	const float X1 = TimeToX(Scheduled->EndTime);
+	const float Width = X1 - X0;
+	// 短片段按比例收窄把手，避免整块都变成"拉伸区"而无法整体移动
+	const float Edge = FMath::Max(2.f, FMath::Min(6.f, Width * 0.3f));
+
+	if (FMath::Abs(X - X0) <= Edge && X <= (X0 + X1) * 0.5f)
+	{
+		return EAKTimelineDragMode::TrimLeft;
+	}
+	if (FMath::Abs(X - X1) <= Edge)
+	{
+		return EAKTimelineDragMode::TrimRight;
+	}
+	return EAKTimelineDragMode::Move;
 }
 
 UAKAbilityTaskBase* SUAKTimeline::HitTestTask(float X, int32 Row) const
@@ -259,10 +418,48 @@ UAKAbilityTaskBase* SUAKTimeline::HitTestTask(float X, int32 Row) const
 FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+	const FKey Button = MouseEvent.GetEffectingButton();
+	const bool bLeft = (Button == EKeys::LeftMouseButton);
+	const bool bRight = (Button == EKeys::RightMouseButton);
+	const bool bMiddle = (Button == EKeys::MiddleMouseButton);
 
-	if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	if (!bLeft && !bRight && !bMiddle)
 	{
 		return FReply::Unhandled();
+	}
+
+	// 右键：整块画布都能弹菜单。
+	// 注意别在这之前 return——就是"只认左键"的早退把上下文菜单变成了死代码。
+	if (bRight)
+	{
+		const int32 MenuRow = HitTestRow(Local.Y);
+		UAKAbilityTaskBase* RightHit = (MenuRow == INDEX_NONE) ? nullptr : HitTestTask(Local.X, MenuRow);
+
+		// 菜单里"在此处…"要的是点击位置的时间，所以先把光标挪过去
+		SetCursorTime(SnapTime(XToTime(Local.X)));
+		ContextMarkerIndex = HitTestMarker(Local.X);
+
+		if (RightHit)
+		{
+			SelectedTask = RightHit;
+			OnTaskSelected.ExecuteIfBound(RightHit);
+		}
+		if (MenuRow != INDEX_NONE)
+		{
+			SelectedTrackIndex = MenuRow;
+		}
+
+		ShowContextMenu(MouseEvent, MyGeometry, RightHit, MenuRow);
+		return FReply::Handled();
+	}
+
+	// 中键：拖着平移视图
+	if (bMiddle)
+	{
+		DragMode = EAKTimelineDragMode::Pan;
+		DragStartLocalX = Local.X;
+		DragStartViewOffset = ViewOffsetTime;
+		return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
 	}
 
 	// 点轨道头：色条区 = 切换整轨开关（UAK 独有的整轨静音）；名称区 = 选中轨道改复合设置
@@ -275,9 +472,12 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 			UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
 			if (Local.X <= 12.f)
 			{
+				// 静音也是一次编辑：不包事务的话 Ctrl+Z 撤不回来
+				const FScopedTransaction Transaction(LOCTEXT("ToggleTrack", "轨道开关"));
 				Track->Modify();
 				Track->bEnabled = !Track->bEnabled;
 				AssetPtr->MarkPackageDirty();
+				ForceRefresh();
 			}
 			else
 			{
@@ -285,57 +485,58 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 				OnTrackSelected.ExecuteIfBound(Track, Row);
 			}
 		}
-		return FReply::Handled().CaptureMouse(SharedThis(this));
+		return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
 	}
 
-	// 标尺区：移动光标
 	const int32 Row = HitTestRow(Local.Y);
+
+	// 标尺区：定位光标；按住不放是连续 scrub，按在标记线上则是拖标记
 	if (Row == INDEX_NONE)
 	{
 		SetCursorTime(SnapTime(XToTime(Local.X)));
-		return FReply::Handled().CaptureMouse(SharedThis(this));
-	}
 
-	// 右键：弹出上下文菜单
-	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
-	{
-		UAKAbilityTaskBase* RightHit = (Row == INDEX_NONE) ? nullptr : HitTestTask(Local.X, Row);
-		if (RightHit)
+		const int32 MarkerIndex = HitTestMarker(Local.X);
+		DraggingMarkerIndex = MarkerIndex;
+		DragMode = (MarkerIndex != INDEX_NONE) ? EAKTimelineDragMode::Marker : EAKTimelineDragMode::Scrub;
+		DragStartLocalX = Local.X;
+
+		if (MarkerIndex != INDEX_NONE)
 		{
-			SelectedTask = RightHit;
-			OnTaskSelected.ExecuteIfBound(RightHit);
-		}
-		if (Row != INDEX_NONE)
-		{
-			SelectedTrackIndex = Row;
+			DragTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveMarker", "移动标记"));
+			if (UAKAbilityAsset* AssetPtr = Asset.Get())
+			{
+				AssetPtr->Modify();
+			}
 		}
 
-		ShowContextMenu(MouseEvent, MyGeometry, RightHit, Row);
-		return FReply::Handled();
+		return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
 	}
 
-	UAKAbilityTaskBase* Hit = HitTestTask(Local.X, Row);
+	UAKAbilityTaskBase* Hit = nullptr;
+	const FAKScheduledTask* HitScheduled = nullptr;
+	const EAKTimelineDragMode Mode = HitTestSegmentEdge(Local.X, Row, Hit, HitScheduled);
 
-	// Alt + 拖拽：复制一份再拖（复制动作由编辑器完成，这里只接管拖动）
-	if (Hit && MouseEvent.IsAltDown())
-	{
-		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
-		{
-			Hit = Copy;
-		}
-	}
-
-	if (Hit)
+	if (Hit && HitScheduled)
 	{
 		SelectedTask = Hit;
 		OnTaskSelected.ExecuteIfBound(Hit);
+		SelectedTrackIndex = Row;
 
 		DraggingTask = Hit;
+		DragMode = Mode;
 		DragGrabOffset = XToTime(Local.X) - Hit->StartTime;
-		bDragging = true;
+		DragStartLocalX = Local.X;
+		DragOriginTrackIndex = Row;
+		DragCurrentTrackIndex = Row;
+		bAltPendingDuplicate = MouseEvent.IsAltDown();
 
-		// 一次拖动 = 一次可撤销的事务（撤销粒度而不是每帧一个）
-		DragTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveTask", "移动任务"));
+		// 一次拖动 = 一次可撤销的事务。Alt+拖拽把"复制"也并进同一个事务，
+		// 所以事务先开好，复制时告诉编辑器别再开一个。
+		const FText TransactionLabel = bAltPendingDuplicate
+			? LOCTEXT("DuplicateAndMoveTask", "复制并移动任务")
+			: (Mode == EAKTimelineDragMode::Move ? LOCTEXT("MoveTask", "移动任务") : LOCTEXT("TrimTask", "调整任务时长"));
+
+		DragTransaction = MakeUnique<FScopedTransaction>(TransactionLabel);
 		if (UAKAbilityAsset* AssetPtr = Asset.Get())
 		{
 			AssetPtr->Modify();
@@ -346,44 +547,120 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		SelectedTask = nullptr;
 		OnTaskSelected.ExecuteIfBound(nullptr);
 		SetCursorTime(SnapTime(XToTime(Local.X)));
+		DragMode = EAKTimelineDragMode::Scrub;
+		DragStartLocalX = Local.X;
 	}
 
-	return FReply::Handled().CaptureMouse(SharedThis(this));
+	return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
 }
 
 FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	if (!bDragging)
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+
+	// 悬停状态每次都更新：高亮、拉伸把手、tooltip 都读它
+	HoverLocalPos = Local;
+	HoverRow = HitTestRow(Local.Y);
+	HoverMarkerIndex = HitTestMarker(Local.X);
+	HoverTask = (HoverRow == INDEX_NONE) ? nullptr : HitTestTask(Local.X, HoverRow);
+
+	if (DragMode == EAKTimelineDragMode::None)
 	{
 		return FReply::Unhandled();
+	}
+
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+
+	switch (DragMode)
+	{
+	case EAKTimelineDragMode::Pan:
+		ViewOffsetTime = DragStartViewOffset - (Local.X - DragStartLocalX) / PixelsPerSecond;
+		ClampViewOffset();
+		return FReply::Handled();
+
+	case EAKTimelineDragMode::Scrub:
+		// 按住拖动 = 连续 scrub，而不是"点一下跳一下"
+		SetCursorTime(SnapTime(XToTime(Local.X)));
+		return FReply::Handled();
+
+	case EAKTimelineDragMode::Marker:
+		if (AssetPtr && AssetPtr->Markers.IsValidIndex(DraggingMarkerIndex))
+		{
+			const float NewTime = FMath::Max(0.f, SnapTime(XToTime(Local.X)));
+			if (!FMath::IsNearlyEqual(NewTime, AssetPtr->Markers[DraggingMarkerIndex].Time))
+			{
+				AssetPtr->Markers[DraggingMarkerIndex].Time = NewTime;
+				AssetPtr->MarkPackageDirty();
+			}
+		}
+		return FReply::Handled();
+
+	default:
+		break;
 	}
 
 	UAKAbilityTaskBase* Task = DraggingTask.Get();
-	if (!Task)
+	if (!Task || !CanEditTaskTimes(Task))
 	{
-		return FReply::Unhandled();
+		// 复合轨道：时间由轨道算出来，拖动无效（事务白开也不改数据，抬手即撤）
+		return FReply::Handled();
 	}
 
-	// 复合轨道（Sequence / Parallel）的任务时间由轨道计算，不允许手动改绝对时间
-	if (const UAKAbilityTrack* OwnerTrack = Cast<UAKAbilityTrack>(Task->GetOuter()))
+	// Alt+拖拽：真的挪动了才复制——否则 Alt 点一下也会凭空多一份副本
+	if (bAltPendingDuplicate && FMath::Abs(Local.X - DragStartLocalX) > 3.f)
 	{
-		if (OwnerTrack->CompositeMode != EAKTrackCompositeMode::Timeline)
+		bAltPendingDuplicate = false;
+		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute(/*bMergeIntoActiveTransaction=*/true))
 		{
-			return FReply::Handled();
+			DraggingTask = Copy;
+			Task = Copy;
+			SelectedTask = Copy;
+			OnTaskSelected.ExecuteIfBound(Copy);
+			ForceRefresh();
 		}
 	}
 
-	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-	const float NewStart = FMath::Max(0.f, SnapTime(XToTime(Local.X) - DragGrabOffset));
+	Task->Modify();
 
-	if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
+	if (DragMode == EAKTimelineDragMode::Move)
 	{
-		Task->Modify();
+		const float NewStart = FMath::Max(0.f, SnapTime(XToTime(Local.X) - DragGrabOffset));
+		if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
+		{
+			Task->StartTime = NewStart;
+		}
+
+		// 跨轨道拖拽：鼠标换到别的行就把任务挪过去
+		const int32 TargetRow = HitTestRow(Local.Y);
+		if (TargetRow != INDEX_NONE && TargetRow != DragCurrentTrackIndex && AssetPtr && AssetPtr->Tracks.IsValidIndex(TargetRow))
+		{
+			UAKAbilityTrack* TargetTrack = AssetPtr->Tracks[TargetRow];
+			if (TargetTrack && TargetTrack->CompositeMode == EAKTrackCompositeMode::Timeline)
+			{
+				MoveTaskToTrack(Task, DragCurrentTrackIndex, TargetRow);
+				DragCurrentTrackIndex = TargetRow;
+				SelectedTrackIndex = TargetRow;
+			}
+		}
+	}
+	else if (DragMode == EAKTimelineDragMode::TrimRight)
+	{
+		// 起点钉住，只改时长
+		const float NewEnd = FMath::Max(Task->StartTime, SnapTime(XToTime(Local.X)));
+		Task->Duration = NewEnd - Task->StartTime;
+	}
+	else
+	{
+		// TrimLeft：终点钉住，改起点与时长
+		const float EndTime = Task->GetEndTime();
+		const float NewStart = FMath::Clamp(SnapTime(XToTime(Local.X)), 0.f, EndTime);
 		Task->StartTime = NewStart;
-		if (UAKAbilityAsset* AssetPtr = Asset.Get())
-		{
-			AssetPtr->MarkPackageDirty();
-		}
+		Task->Duration = EndTime - NewStart;
+	}
+
+	if (AssetPtr)
+	{
+		AssetPtr->MarkPackageDirty();
 	}
 
 	return FReply::Handled();
@@ -391,13 +668,101 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 
 FReply SUAKTimeline::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	bDragging = false;
+	// 只有真正拖动的那个键抬起才收尾：右键菜单弹着时不会被误伤
+	if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton
+		&& MouseEvent.GetEffectingButton() != EKeys::MiddleMouseButton)
+	{
+		return FReply::Unhandled();
+	}
+
+	if (DragMode == EAKTimelineDragMode::Move
+		|| DragMode == EAKTimelineDragMode::TrimLeft
+		|| DragMode == EAKTimelineDragMode::TrimRight
+		|| DragMode == EAKTimelineDragMode::Marker)
+	{
+		ForceRefresh();
+	}
+
+	DragMode = EAKTimelineDragMode::None;
 	DraggingTask = nullptr;
+	DraggingMarkerIndex = INDEX_NONE;
+	bAltPendingDuplicate = false;
 
 	// 结束拖动事务（析构即提交）
 	DragTransaction.Reset();
 
 	return FReply::Handled().ReleaseMouseCapture();
+}
+
+FReply SUAKTimeline::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	{
+		return FReply::Unhandled();
+	}
+
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+	const int32 Row = HitTestRow(Local.Y);
+
+	// 双击标尺：在该处放一个命名标记（对齐 Notify 的关键帧最常用的动作）
+	if (Row == INDEX_NONE)
+	{
+		SetCursorTime(SnapTime(XToTime(Local.X)));
+		OnAction.ExecuteIfBound(EAKToolbarAction::AddMarker);
+		return FReply::Handled();
+	}
+
+	UAKAbilityTaskBase* Hit = HitTestTask(Local.X, Row);
+	if (Hit)
+	{
+		// 双击片段：光标落到起点并进入视野，Inspector 已经在看它了
+		FocusTask(Hit);
+		return FReply::Handled();
+	}
+
+	SetCursorTime(SnapTime(XToTime(Local.X)));
+	return FReply::Handled();
+}
+
+void SUAKTimeline::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	HoverLocalPos = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+}
+
+void SUAKTimeline::OnMouseLeave(const FPointerEvent& MouseEvent)
+{
+	HoverTask = nullptr;
+	HoverRow = INDEX_NONE;
+	HoverMarkerIndex = INDEX_NONE;
+}
+
+FCursorReply SUAKTimeline::OnCursorQuery(const FGeometry& MyGeometry, const FPointerEvent& CursorEvent) const
+{
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(CursorEvent.GetScreenSpacePosition());
+
+	if (Local.X < TrackHeaderWidth || Local.Y < RulerHeight)
+	{
+		return FCursorReply::Unhandled();
+	}
+
+	// 悬停在标记线上 → 左右箭头（可拖）；在片段两端 → 拉伸；否则默认
+	if (HoverMarkerIndex != INDEX_NONE)
+	{
+		return FCursorReply::Cursor(EMouseCursor::ResizeLeftRight);
+	}
+
+	UAKAbilityTaskBase* Hit = nullptr;
+	const FAKScheduledTask* HitScheduled = nullptr;
+	switch (HitTestSegmentEdge(Local.X, HitTestRow(Local.Y), Hit, HitScheduled))
+	{
+	case EAKTimelineDragMode::TrimLeft:
+	case EAKTimelineDragMode::TrimRight:
+		return FCursorReply::Cursor(EMouseCursor::ResizeLeftRight);
+	case EAKTimelineDragMode::Move:
+		return FCursorReply::Cursor(EMouseCursor::CardinalCross);
+	default:
+		return FCursorReply::Unhandled();
+	}
 }
 
 void SUAKTimeline::ForceRefresh()
@@ -414,14 +779,14 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 
 	MenuBuilder.BeginSection(TEXT("Task"), LOCTEXT("MenuSection_Task", "任务"));
 	MenuBuilder.AddMenuEntry(
-		LOCTEXT("Menu_DuplicateTask", "复制任务"),
+		LOCTEXT("Menu_DuplicateTask", "原地复制任务"),
 		LOCTEXT("Menu_DuplicateTaskTip", "复制当前选中的任务（Ctrl+D）"),
 		FSlateIcon(),
 		FUIAction(
 			FExecuteAction::CreateLambda([this]()
 			{
 				// 复制型委托带返回值：拿到副本后直接选中，省一次点击
-				if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
+				if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute(/*bMergeIntoActiveTransaction=*/false))
 				{
 					OnTaskSelected.ExecuteIfBound(Copy);
 				}
@@ -468,7 +833,22 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 	MenuBuilder.BeginSection(TEXT("Asset"), LOCTEXT("MenuSection_Asset", "资产"));
 	MenuBuilder.AddMenuEntry(
 		LOCTEXT("Menu_AddMarker", "在此处添加标记"), FText::GetEmpty(), FSlateIcon(),
-		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::AddMarker); })));
+		FUIAction(FExecuteAction::CreateLambda([this]()
+		{
+			// 光标在右键时就已移到点击处，"此处"就是它
+			OnAction.ExecuteIfBound(EAKToolbarAction::AddMarker);
+		})));
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("Menu_RemoveMarker", "删除此标记"),
+		LOCTEXT("Menu_RemoveMarkerTip", "删掉右键点中的这个标记"),
+		FSlateIcon(),
+		FUIAction(
+			FExecuteAction::CreateLambda([this]()
+			{
+				OnAction.ExecuteIfBound(EAKToolbarAction::RemoveMarker);
+				ContextMarkerIndex = INDEX_NONE;
+			}),
+			FCanExecuteAction::CreateLambda([this]() { return ContextMarkerIndex != INDEX_NONE; })));
 	MenuBuilder.AddMenuEntry(
 		LOCTEXT("Menu_SelectAsset", "资产属性"), FText::GetEmpty(), FSlateIcon(),
 		FUIAction(FExecuteAction::CreateLambda([this]() { OnAction.ExecuteIfBound(EAKToolbarAction::SelectAsset); })));
@@ -494,8 +874,28 @@ void SUAKTimeline::ShowContextMenu(const FPointerEvent& MouseEvent, const FGeome
 
 FReply SUAKTimeline::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
 	const float Delta = MouseEvent.GetWheelDelta();
-	PixelsPerSecond = FMath::Clamp(PixelsPerSecond * (1.f + Delta * 0.1f), 20.f, 4000.f);
+
+	// Shift+滚轮：横向平移（缩放大了以后靠它找内容）
+	if (MouseEvent.IsShiftDown())
+	{
+		const float VisibleTime = (PixelsPerSecond > 0.f) ? ViewWidth / PixelsPerSecond : 1.f;
+		ViewOffsetTime -= Delta * VisibleTime * 0.15f;
+		ClampViewOffset();
+		return FReply::Handled();
+	}
+
+	// 缩放：以光标下的时间为锚点，放大时目标不会跑出视野
+	const float AnchorTime = XToTime(FMath::Max(Local.X, TrackHeaderWidth));
+	const float NewPixelsPerSecond = FMath::Clamp(PixelsPerSecond * (1.f + Delta * 0.1f), 20.f, 4000.f);
+	if (!FMath::IsNearlyEqual(NewPixelsPerSecond, PixelsPerSecond))
+	{
+		PixelsPerSecond = NewPixelsPerSecond;
+		ViewOffsetTime = AnchorTime - (FMath::Max(Local.X, TrackHeaderWidth) - TrackHeaderWidth) / PixelsPerSecond;
+		ClampViewOffset();
+	}
+
 	return FReply::Handled();
 }
 
@@ -510,22 +910,36 @@ FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InK
 		return FReply::Handled();
 	}
 
-	// 单帧步进
-	if (Key == EKeys::Right)
+	// 单帧步进：方向键与 , . 都认（ Sequencer 用户习惯方向键，剪辑软件习惯逗号句号 ）
+	if (Key == EKeys::Right || Key == EKeys::Period)
 	{
 		StepFrame(InKeyEvent.IsControlDown() ? 10 : 1);
 		return FReply::Handled();
 	}
-	if (Key == EKeys::Left)
+	if (Key == EKeys::Left || Key == EKeys::Comma)
 	{
 		StepFrame(InKeyEvent.IsControlDown() ? -10 : -1);
+		return FReply::Handled();
+	}
+
+	// 首尾：Home / End
+	if (Key == EKeys::Home)
+	{
+		SetCursorTime(0.f);
+		ScrollTimeIntoView(0.f);
+		return FReply::Handled();
+	}
+	if (Key == EKeys::End)
+	{
+		SetCursorTime(GetAssetLength());
+		ScrollTimeIntoView(GetAssetLength());
 		return FReply::Handled();
 	}
 
 	// 复制（Ctrl+D）
 	if (Key == EKeys::D && InKeyEvent.IsControlDown())
 	{
-		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute())
+		if (UAKAbilityTaskBase* Copy = OnRequestDuplicateTask.Execute(/*bMergeIntoActiveTransaction=*/false))
 		{
 			OnTaskSelected.ExecuteIfBound(Copy);
 		}
@@ -589,6 +1003,46 @@ void SUAKTimeline::PasteTask()
 		OnTaskSelected.ExecuteIfBound(Pasted);
 		ForceRefresh();
 	}
+}
+
+FText SUAKTimeline::GetHoverTooltipText() const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	const int32 FrameRate = AssetPtr ? FMath::Max(1, AssetPtr->FrameRate) : 60;
+
+	if (UAKAbilityTaskBase* Task = HoverTask.Get())
+	{
+		// 复合轨道下"看到的时间"是执行计划算出来的，tooltip 必须说同一套时间
+		float StartTime = Task->StartTime;
+		float EndTime = Task->GetEndTime();
+		if (const FAKScheduledTask* Scheduled = CachedPlan.FindByPredicate(
+				[Task](const FAKScheduledTask& Item) { return Item.Task == Task; }))
+		{
+			StartTime = Scheduled->StartTime;
+			EndTime = Scheduled->EndTime;
+		}
+
+		return FText::Format(
+			LOCTEXT("HoverTaskTip", "{0}\n{1}s → {2}s（时长 {3}s / {4} 帧）\n拖两端改时长 · Alt+拖动复制 · 拖到别的行换轨道"),
+			Task->GetTaskDisplayName(),
+			FText::AsNumber(FMath::RoundToFloat(StartTime * 1000.f) / 1000.f),
+			FText::AsNumber(FMath::RoundToFloat(EndTime * 1000.f) / 1000.f),
+			FText::AsNumber(FMath::RoundToFloat((EndTime - StartTime) * 1000.f) / 1000.f),
+			FText::AsNumber(FMath::Max(0, FMath::RoundToInt((EndTime - StartTime) * FrameRate))));
+	}
+
+	if (HoverMarkerIndex != INDEX_NONE && AssetPtr && AssetPtr->Markers.IsValidIndex(HoverMarkerIndex))
+	{
+		const FAKTimeMarker& Marker = AssetPtr->Markers[HoverMarkerIndex];
+		return FText::Format(LOCTEXT("HoverMarkerTip", "标记 {0} @ {1}s\n拖动改时间 · 右键可删除"),
+			FText::FromName(Marker.Name),
+			FText::AsNumber(FMath::RoundToFloat(Marker.Time * 1000.f) / 1000.f));
+	}
+
+	const float HoverTime = FMath::Max(0.f, XToTime(HoverLocalPos.X));
+	return FText::Format(LOCTEXT("HoverTimeTip", "{0}s（第 {1} 帧）"),
+		FText::AsNumber(FMath::RoundToFloat(HoverTime * 1000.f) / 1000.f),
+		FText::AsNumber(FMath::RoundToInt(HoverTime * FrameRate)));
 }
 
 int32 SUAKTimeline::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
@@ -768,12 +1222,37 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 			}
 
 			const bool bSelected = (SelectedTask.Get() == Task);
+			const bool bHovered = (HoverTask.Get() == Task);
 			FLinearColor Fill = Track->bEnabled ? TrackColor : FLinearColor(0.3f, 0.3f, 0.3f);
-			Fill.A = bSelected ? 0.95f : 0.7f;
+			Fill.A = bSelected ? 0.95f : (bHovered ? 0.85f : 0.7f);
 
 			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
 				PaintGeom(Geometry, FVector2D(X0, Y + 4.f), FVector2D(W, RowHeight - 9.f)),
 				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Fill);
+
+			if (bHovered && !bSelected)
+			{
+				// 悬停描边：没选中时也让人看清"鼠标正压在这一块上"
+				const FLinearColor HoverOutline(1.f, 1.f, 1.f, 0.45f);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					PaintGeom(Geometry, FVector2D(X0, Y + 4.f), FVector2D(W, 1.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HoverOutline);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					PaintGeom(Geometry, FVector2D(X0, Y + RowHeight - 5.f), FVector2D(W, 1.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HoverOutline);
+			}
+
+			// 拉伸把手：悬停或正在拖的时候才画，两端各一条——看见它就知道能改时长
+			if ((bHovered || DraggingTask.Get() == Task) && CanEditTaskTimes(Task) && W > 12.f)
+			{
+				const FLinearColor HandleColor(1.f, 1.f, 1.f, 0.75f);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 2,
+					PaintGeom(Geometry, FVector2D(X0, Y + 4.f), FVector2D(2.f, RowHeight - 9.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HandleColor);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 2,
+					PaintGeom(Geometry, FVector2D(X1 - 2.f, Y + 4.f), FVector2D(2.f, RowHeight - 9.f)),
+					FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HandleColor);
+			}
 
 			if (bSelected)
 			{
@@ -820,6 +1299,14 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 
 void SUAKTimeline::DrawCursor(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
 {
+	// 鼠标位置细线：按下之前就知道会落在哪一格（拖动时不画，避免和光标打架）
+	if (DragMode == EAKTimelineDragMode::None && HoverLocalPos.X > TrackHeaderWidth)
+	{
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+			PaintGeom(Geometry, FVector2D(HoverLocalPos.X, RulerHeight), FVector2D(1.f, ViewHeight - RulerHeight)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, 0.10f));
+	}
+
 	const float X = TimeToX(CursorTime);
 	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
 		PaintGeom(Geometry, FVector2D(X, 0.f), FVector2D(1.5f, ViewHeight)),

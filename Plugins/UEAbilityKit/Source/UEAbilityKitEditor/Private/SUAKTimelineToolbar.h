@@ -16,6 +16,7 @@ enum class EAKToolbarAction : uint8
 	DuplicateTask,
 	DeleteTask,
 	AddMarker,
+	RemoveMarker,
 	SelectAsset,
 	GenerateFromMontage
 };

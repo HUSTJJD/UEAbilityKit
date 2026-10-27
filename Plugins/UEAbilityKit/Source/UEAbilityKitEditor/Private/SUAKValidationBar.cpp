@@ -139,10 +139,10 @@ TSharedRef<ITableRow> SUAKValidationBar::GenerateRow(TSharedPtr<FAKValidationIss
 
 void SUAKValidationBar::OnRowDoubleClicked(TSharedPtr<FAKValidationIssue> Item)
 {
-	// 选中对应任务，交回上层定位
-	if (Item.IsValid() && Item->Task)
+	// 把出问题的任务交回上层定位（带参数才能跳到"哪一条"，资产级问题传 nullptr）
+	if (Item.IsValid())
 	{
-		OnIssueDoubleClicked.ExecuteIfBound();
+		OnIssueDoubleClicked.ExecuteIfBound(Item->Task);
 	}
 }
 
