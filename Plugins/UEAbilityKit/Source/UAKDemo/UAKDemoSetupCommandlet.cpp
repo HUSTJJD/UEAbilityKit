@@ -35,7 +35,7 @@ namespace
 	 *
 	 * 插件名 UEAbilityKit 的 Content 挂载点是 /UEAbilityKit/，
 	 * 所以资产路径也跟着换：/Game/Demo/... → /UEAbilityKit/Demo/...
-	 * 这样插件被拷到任何工程（Lyra 也好、空工程也好）都能一键生成示例，
+	 * 这样插件被拷到任何工程都能一键生成示例，
 	 * 不会往宿主工程的 Content 里写东西。
 	 */
 	const TCHAR* PluginName = TEXT("UEAbilityKit");
@@ -163,7 +163,7 @@ int32 UUAKDemoSetupCommandlet::Main(const FString& Params)
 	TMap<FString, FString> ParamMap;
 	ParseCommandLine(*Params, Tokens, Switches, ParamMap);
 
-	// 默认**不**改宿主的 GameDefaultMap：宿主可能是 Lyra，
+	// 默认**不**改宿主的 GameDefaultMap：
 	// 把默认地图换成示例关卡会顶掉它自己的流程。需要时显式加 -SetDefaultMap。
 	const bool bSetDefaultMap = Switches.Contains(TEXT("SetDefaultMap"));
 

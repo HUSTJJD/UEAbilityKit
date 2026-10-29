@@ -1,6 +1,6 @@
 """UnLuaNova 相关功能的唯一入口：setup / doctor。
 
-和 Tools/lyra/cli.py 同一套约定：**shell 只是薄入口，逻辑全在 Python**。
+和 Tools 下其他入口同一套约定：**shell 只是薄入口，逻辑全在 Python**。
 
     python Tools/unluanova/cli.py setup [--backend Luau|Lua] [--disable-extensions]
     python Tools/unluanova/cli.py doctor [--json] [--strict]

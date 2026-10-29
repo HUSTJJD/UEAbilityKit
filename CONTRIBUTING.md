@@ -43,7 +43,7 @@
 需要先设置引擎路径环境变量 `$env:UE_ENGINE_ROOT`（或在脚本参数中显式传 `--engine-root`）。
 
 ```powershell
-./Tools/build.ps1                        # LyraEditor / Win64 / Development
+./Tools/build.ps1                        # <工程名>Editor / Win64 / Development
 ./Tools/build.ps1 -Target UAKDemo -Configuration Shipping
 ./Tools/run_tests.ps1                    # 全量：Editor + Game + DS/多客户端，默认带截图/录屏
 ./Tools/run_tests.ps1 --stage editor --filter UAK.Unit --skip-build

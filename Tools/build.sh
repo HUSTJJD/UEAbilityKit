@@ -2,7 +2,7 @@
 # Thin entry point: forwards everything to Tools/build/build.py.
 #
 #   ./build.sh                                    # <Project>Editor / Win64 / Development
-#   ./build.sh --target LyraGame --configuration Shipping
+#   ./build.sh --target UAKSample --configuration Shipping
 #   ./build.sh --clean
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -24,7 +24,7 @@
    （见 [01-design-principles.md](01-design-principles.md) §3「不做字符串脚本」）。
 2. **可独立分发**：把 `Plugins/UEAbilityKit` 拷进任何项目就能用，是文档里承诺的接入方式。
    核心一旦依赖脚本插件，这条承诺立刻变成"先去装一个 Lua 方案"。
-3. **宿主不可预测**：本工程的宿主是 Lyra，而 Lyra 不需要 Lua。脚本只服务"要它的人"。
+3. **宿主不可预测**：UAK 会被装进各种各样的工程，多数并不需要 Lua。脚本只服务"要它的人"。
 
 反过来说：**不该进框架的，要留出口子**。所以 UAK 只提供类型安全的扩展点，
 不提供"Lua 任务"这种把脚本语义钉进时间轴的东西 —— 项目要自定义任务，走 C++ 子类；
@@ -36,7 +36,7 @@
 |---|---|---|
 | 执行器 / Task 基类 / 编辑器 / 序列化 / Trace | `UEAbilityKit` 模块 | 只认识 GAS |
 | 示例角色 + Lua 绑定（`AAKDemoCharacter`） | `UAKDemo` 模块（随插件分发） | 是示例，不是框架 |
-| Lyra 的输入条件（`ULyraAdaptInputCondition`） | `Source/LyraAdapt/` | 提到了 Lyra |
+| 宿主自己的输入条件等适配代码 | 宿主工程自己的模块 | 提到了具体宿主 |
 | `Content/Script/**` | 工程 | 项目脚本 |
 | 插件运行时 Lua 模块（`UnLuaNova.StringEx` 等） | UnLuaNova 插件 | 上游发布 |
 
@@ -87,12 +87,12 @@ Lua: OnAbilityInput → SetChannelingInputHeld(Slot, bPressed)   ← 写状态�
 C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHeld(Slot)  ← 每帧判定
 ```
 
-同一个扩展点在两种宿主下的实现：
+同一个扩展点在不同工程里的两种实现：
 
-| 宿主 | 状态来源 | 条件对象 |
+| 工程 | 状态来源 | 条件对象 |
 |---|---|---|
 | UAKDemo（示例模块） | Lua `SetChannelingInputHeld` | `UAKDemoChanneling_InputHeld`（C++） |
-| Lyra（`Source/LyraAdapt/`） | Enhanced Input 的 Pressed/Released | `ULyraAdaptInputCondition`（C++ 子类） |
+| 宿主工程自己接 | Enhanced Input 的 Pressed/Released | 宿主自己的 `UAKChannelingCondition` 子类 |
 
 两条都没有把脚本绑进判定路径：去掉脚本时条件默认成立（示例不会因此永远打断），
 换成 C++ 宿主实现也不用碰 Lua。**脚本与 C++ 在这里是平等的两种状态来源。**
@@ -142,7 +142,7 @@ C++: UAKDemoChanneling_InputHeld::IsSatisfied → Character->IsChannelingInputHe
 - [ ] Lua 里新增的覆写函数名与 UFUNCTION 同名（含 `K2_` 前缀）
 - [ ] 新增的 Lua 脚本在打包路径覆盖范围内（工程脚本 / 插件模块）
 - [ ] 切过后端的话，`Config` 的 ini 与编译产物是同一个后端
-- [ ] 新增宿主适配代码放在适配层（`Source/LyraAdapt/`），没进插件
+- [ ] 新增宿主适配代码放在宿主自己的模块里，没进插件
 
 ## 8. 已知限制
 

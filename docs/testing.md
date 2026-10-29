@@ -31,7 +31,7 @@ UAK 的目标之一：**让"技能编排"这种容易出玄学 bug 的东西，�
 
 脚本做的事：
 
-1. **编译**：`UnrealBuildTool` 编 `LyraEditor`（`--skip-build` 可跳过）
+1. **编译**：`UnrealBuildTool` 编 `<工程名>Editor`（`--skip-build` 可跳过）
 2. **跑三个 stage**（见下）
 3. **出结论**：`Tools/test/report/generate_report.py` 生成 `docs/reports/latest.{md,html,json}`
 4. **出素材**：截图、帧序列（有 ffmpeg 时自动合成 mp4）、血缘树文本

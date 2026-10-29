@@ -55,8 +55,8 @@ namespace
 		}
 
 		// 宿主工程显式配置（Config/DefaultUEAbilityKit.ini）：配一次，全工程的技能资产通用。
-		// 它排在"按 GameMode 推断"之前 —— 推断出来的常常是 C++ 基类（Lyra 下是
-		// ALyraCharacter，没配网格），看得见胶囊看不见人。
+		// 它排在"按 GameMode 推断"之前 —— 推断出来的常常是没配网格的 C++ 基类，
+		// 看得见胶囊看不见人。
 		if (const UUAKSettings* Settings = GetDefault<UUAKSettings>())
 		{
 			if (UClass* Configured = Settings->DefaultPreviewCharacterClass.TryLoadClass<AActor>())
@@ -278,7 +278,7 @@ void FAKPreviewViewportClient::RefreshPreviewActor(UAKAbilityAsset* InAsset)
 		return;
 	}
 
-	// 角色蓝图多半自带相机组件（Lyra 角色就有），预览里那个相机图标纯属干扰
+	// 角色蓝图多半自带相机组件，预览里那个相机图标纯属干扰
 	TArray<UCameraComponent*> Cameras;
 	NewActor->GetComponents<UCameraComponent>(Cameras);
 	for (UCameraComponent* Camera : Cameras)

@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"asset": "AK_Dash",
-	"displayName": "冲刺（Lyra 版）",
+	"displayName": "冲刺",
 	"description": "演示 Channeling：位移期间必须站着不动，移动超过阈值就打断。条件不满足时的动作可改 channelFailureAction。",
 	"assetVersion": 1,
 

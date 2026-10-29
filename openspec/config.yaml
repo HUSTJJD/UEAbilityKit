@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  项目：UEAbilityKit（UAK）—— 基于 GAS 的 UE5 技能时间轴编排插件，宿主工程是 Lyra 5.8。
+  项目：UEAbilityKit（UAK）—— 基于 GAS 的 UE5 技能时间轴编排插件，示例随插件分发（UAKDemo 模块）。
   引擎：UE 5.8 源码构建（路径由 UE_ENGINE_ROOT 或注册表解析，不写进仓库）。
 
   模块划分（Plugins/UEAbilityKit/Source/）：
@@ -20,7 +20,7 @@ context: |
   三条硬约束（写 spec / design 时必须遵守）：
     1. UAK 不自建网络同步：所有副作用必须落在 GAS 原语（GE / Tag / Cue）上，
        网络正确性由 ASC 的复制与 FPredictionKey 回滚保证。
-    2. 零宿主改动：能力必须在插件内完成，Lyra 等宿主不必修改其 UGameplayAbility / ASC 基类。
+    2. 零宿主改动：能力必须在插件内完成，宿主不必修改其 UGameplayAbility / ASC 基类。
     3. 向后兼容：存量技能资产与任务行为不变，新能力默认 opt-in。
 
   既有工程实践：

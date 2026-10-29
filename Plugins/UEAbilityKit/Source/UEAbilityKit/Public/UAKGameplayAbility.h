@@ -24,8 +24,8 @@ class UAKTrace;
  *
  *   class UMyGameGameplayAbility : public UAKGameplayAbility { ... }
  *
- * 这样插件保持完整、零依赖，能服务任何游戏；具体游戏（例如被改造进来的 Lyra）
- * 只是其中一个宿主。宿主侧只需要在自己的基类里加一句继承即可，
+ * 这样插件保持完整、零依赖，能服务任何游戏；任何具体游戏都只是其中一个宿主。
+ * 宿主侧只需要在自己的基类里加一句继承即可，
  * 已有的 ActivationPolicy / Cost / Camera 等机制原样保留。
  *
  * AbilityAsset 为空时本类什么都不做——纯 GAS 技能（跳跃、被动）照常工作，
@@ -38,7 +38,7 @@ class UEABILITYKIT_API UAKGameplayAbility : public UGameplayAbility
 
 public:
 	UAKGameplayAbility();
-	// 宿主（Lyra）的能力类是带 FObjectInitializer 的构造：Super(ObjectInitializer)，
+	// 宿主的能力类多是带 FObjectInitializer 的构造：Super(ObjectInitializer)，
 	// 基类没有这个重载就编不过
 	UAKGameplayAbility(const FObjectInitializer& ObjectInitializer);
 

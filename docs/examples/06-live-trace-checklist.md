@@ -7,7 +7,7 @@
 
 | 项 | 检查方式 |
 |---|---|
-| 示例工程能进 PIE | 打开 `LyraStarterGame.uproject`（宿主是 Lyra，`UAKDemo.uproject` 已删除），关卡里有 `BP_DemoCharacter` 并设为 `GameDefaultMap` |
+| 示例工程能进 PIE | 工程能打开（`UAKDemo.uproject` 已删除，示例是插件里的模块），关卡里有 `BP_DemoCharacter` 并设为 `GameDefaultMap` |
 | 角色被授予了技能 | `BP_DemoCharacter` 的 `Default Abilities` 里填了 `UAKDemoAbility` 的蓝图子类 |
 | 技能指向了资产 | 该技能的 `AbilityAsset` 字段指向一个 `Ability Asset`（可用 `Plugins/UEAbilityKit/Content/Demo/Abilities/*.json` 导入） |
 | Lua 后端可用（脚本路径通） | PIE 启动后日志里能看到 `[UAKDemo] Character BeginPlay`（示例角色由 `Content/Script/UAKDemoCharacter.lua` 绑定，见 [04](04-scripting-with-unlua.md)）；卡住时用 `lua.gc` / `lua.do` 确认 VM 活着 |

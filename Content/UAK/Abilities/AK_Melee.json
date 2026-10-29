@@ -1,8 +1,8 @@
 {
 	"version": 1,
 	"asset": "AK_Melee",
-	"displayName": "近战（Lyra 版）",
-	"description": "Lyra 接入的示例：表现层走 Lyra 自带的 GameplayCue，伤害层留给你填 Lyra 的 GE。",
+	"displayName": "近战",
+	"description": "接入示例：表现层走工程的 GameplayCue，伤害层留给你填自己的 GE。",
 	"assetVersion": 1,
 
 	"length": 0.8,
@@ -50,7 +50,7 @@
 					"setByCaller": {
 						"Damage": 30.0
 					},
-					"note": "填 Lyra 的伤害 GE 路径（在编辑器里右键资产 → Copy Reference）。留空时这一步是空操作，不影响其余轨道。"
+					"note": "填你自己的伤害 GE 路径（在编辑器里右键资产 → Copy Reference）。留空时这一步是空操作，不影响其余轨道。"
 				}
 			]
 		},

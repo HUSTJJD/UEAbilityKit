@@ -72,7 +72,7 @@ UAK 现在的位置适合承载这套框架——技能是纯数据资产、能�
 - Editor：GAS 影响条与血缘视图展示仲裁结果；`SUAKDebuggerPanel` 增加状态账本与复制视图页；`UAKValidateCommandlet` 增加 `-scan-conflicts`（支持增量）与 `-simulate`。
 - Tests：新增 `UAK.Status.*`、`UAK.Invariant.*`、`UAK.Scheduling.*`、`UAK.Replication.*` 等用例组。
 
-**宿主工程**：零改动。全部能力在插件内完成，Lyra 等宿主不必修改其 `UGameplayAbility` / ASC / 角色基类。
+**宿主工程**：零改动。全部能力在插件内完成，宿主不必修改其 `UGameplayAbility` / ASC / 角色基类。
 
 **依赖**：无新增第三方依赖。
 

@@ -36,7 +36,7 @@ void UAKGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	if (!AbilityAsset)
 	{
 		// 没有资产是**合法**的：本类是给别人当基类的。
-		// 宿主工程（例如被改造进来的 Lyra）让自己的能力基类继承本类后，
+		// 宿主工程让自己的能力基类继承本类后，
 		// 那些纯 GAS 技能（跳跃、被动）没有时间轴可跑，UAK 就该什么都不做，
 		// 而不是把技能取消掉。
 		UE_LOG(LogUAK, Verbose, TEXT("UAKGameplayAbility '%s' 未指定 AbilityAsset，按纯 GAS 技能运行。"), *GetName());

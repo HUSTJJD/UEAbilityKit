@@ -19,7 +19,7 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 |---|---|
 | 引入方式 | git submodule，挂在项目 `Plugins/UnLuaNova/` |
 | 版本 | 跟随 **master**（`v1.0.0` 之后的开发线；v1.0.0 = 2026-10-23 的首个正式版）。后端 pin 见插件 `Source/ThirdParty/VERSIONS.md`：**Lua 5.5.1** / **Luau 0.743+1** |
-| 宿主工程 | `LyraStarterGame.uproject`（Lyra 打底，见 [lyra-integration.md](lyra-integration.md)） |
+| 宿主工程 | 仓库根即工程根，示例随插件分发（见 [03-sample-project.md](03-sample-project.md)） |
 | 插件发现 | UE 递归扫描项目 `Plugins/`，**不需要** `AdditionalPluginDirectories`；日志可见 `Mounting Project plugin UnLuaNova` |
 | 谁依赖它 | **没有模块依赖它**：示例的 Lua 绑定走 ini 映射（数据驱动），`UAKDemo.Build.cs` 里一个 `UnLuaNova` 字都没有（见 §3） |
 | UAK 插件本体 | 不依赖任何脚本系统；`.uplugin` 里的 UnLuaNova 引用标了 `"Optional": true` |
@@ -218,7 +218,7 @@ UAK 留出的**脚本扩展点**目前有两个：
 
 注意第 2 点的方向：**不是"脚本回答条件"，而是"脚本给 C++ 条件对象喂状态"**。
 判定逻辑仍在 C++（可被校验、可进 Json、缺脚本时默认成立不会把示例卡死）；
-Lyra 宿主里同一个扩展点换成了纯 C++ 的 `ULyraAdaptInputCondition`（读 Enhanced Input），
+宿主侧同一个扩展点也可以换成纯 C++ 的条件对象（读 Enhanced Input），
 Lua 一行都不用 —— 这正是它被设计成"条件对象"而不是"Lua 钩子"的原因。
 
 ```lua
@@ -249,12 +249,12 @@ UAK 只给出一个类型安全的扩展点 —— 框架不会被任何一种�
 切换方式（改完必须重新编译，不能只重启编辑器）：
 
 ```ini
-; Config/DefaultUnLuaNova.ini（由 Tools/lyra/patches/config 下的片段生成）
+; Config/DefaultUnLuaNova.ini（示例工程自带）
 [/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings]
 LuaBackend=Luau      ; 或 Lua
 ```
 
-> 这个文件 Lyra 没有，是补丁片段生成的；`UAKDemo.Build.cs` 读的是**同一个键**，
+> `UAKDemo.Build.cs` 读的是**同一个键**，
 > 所以"编辑器设置"和"编译出来的后端"不会分叉。键不存在时 UnLuaNova 自己默认 Luau —— 我们不依赖这个隐式默认。
 
 脚本里不要猜后端，用能力查询：
@@ -267,7 +267,7 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
 ## 6. 打包：脚本要跟着进包
 
 `DirectoriesToAlwaysStageAsUFS` 的路径**相对工程 Content 目录**（引擎 AutomationTool 就是这么解析的），
-所以回到工程根要写 `..`。补丁片段 `Tools/lyra/patches/config/DefaultGame.ini.append` 里有两条：
+所以回到工程根要写 `..`。`Config/DefaultGame.ini` 里有两条：
 
 ```ini
 [/Script/UnrealEd.ProjectPackagingSettings]
@@ -290,9 +290,7 @@ local backend = UnLuaNova.GetBackend()   -- "Luau" / "Lua"
     且带 `Content/Script` 的插件都补上），工程套插件 / 插件套插件都不会漏。
     仍建议跑一次 `./Tools/unluanova.ps1 doctor` 确认，别靠肉眼。
 
-`Config/` 不进 git：这些行由 `Tools/lyra/patches/config/*.append` 打进 Lyra 的 ini
-（`python Tools/lyra/cli.py patch`）。已经打过的 ini 不会重复追加（有 `UAK-PATCH` 标记），
-所以**改了片段要先 `--revert` 再重打**，或直接手改 `Config/DefaultGame.ini` 那两行。
+这两行直接写在示例工程的 `Config/DefaultGame.ini` 里，改完重启编辑器生效。
 
 ## 7. 智能提示与静态检查
 
@@ -470,4 +468,4 @@ bool bEnabled = UnLuaNova::CallLuaFunction<bool>(MyActor, TEXT("IsTestEnable"), 
 | 网络（实验） | `Docs/CN/LuaNetworking.md` |
 | 后端 pin 版本 | `Plugins/UnLuaNova/Source/ThirdParty/VERSIONS.md` |
 | 从 UnLua 迁移 | 全局名 `UnLua` → `UnLuaNova`，UCLASS 改名需 resave 资产并迁移 ini section |
-| 宿主工程是怎么拼起来的 | [lyra-integration.md](lyra-integration.md) |
+| 工程是怎么组织的 | [03-sample-project.md](03-sample-project.md) |

@@ -7,8 +7,7 @@
 - 引擎根目录定位（环境变量 → .uproject 的 EngineAssociation → 注册表）
 - 起子进程（可超时强杀）、跑 git
 
-本机信息（绝对路径 / 引擎 GUID）永远不写进仓库，只从命令行、环境变量或
-`Tools/lyra/lyra_patches.local.json`（已 gitignore）来。
+本机信息（绝对路径 / 引擎 GUID）永远不写进仓库，只从命令行、环境变量或注册表来。
 """
 
 from __future__ import annotations
@@ -55,20 +54,16 @@ def fail(msg: str, code: int = 1) -> "NoReturn":  # type: ignore[valid-type]
 
 # ── 工程文件 ──────────────────────────────────────────────────────────────
 def find_uproject(project_root: Path) -> Path:
-    """定位 .uproject：本工程默认是 LyraStarterGame.uproject（宿主就是 Lyra）。"""
-    preferred = project_root / "LyraStarterGame.uproject"
-    if preferred.is_file():
-        return preferred
+    """定位 .uproject：工程根下应当只有一份，直接取它。"""
     found = sorted(project_root.glob("*.uproject"))
     if not found:
-        fail(f"{project_root} 下没有 .uproject，请先跑 Tools/lyra.ps1 import 导入 Lyra")
+        fail(f"{project_root} 下没有 .uproject，请先创建示例工程")
     return found[0]
 
 
 def editor_target(uproject: Path) -> str:
-    """编译目标跟着工程走：LyraStarterGame → LyraEditor。"""
-    base = uproject.stem
-    return "LyraEditor" if base == "LyraStarterGame" else base + "Editor"
+    """编译目标跟着工程走：<工程名> → <工程名>Editor。"""
+    return uproject.stem + "Editor"
 
 
 # ── 引擎定位 ──────────────────────────────────────────────────────────────

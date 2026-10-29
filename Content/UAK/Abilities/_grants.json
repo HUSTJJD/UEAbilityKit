@@ -1,5 +1,5 @@
 {
-	"comment": "技能 → Lyra 输入 Tag 的映射。InputTag 必须是 Lyra 里已存在的 Tag（见 Lyra 工程 Config/DefaultGameplayTags.ini）",
+	"comment": "技能 → 输入 Tag 的映射。InputTag 必须是工程里已存在的 Tag（见 Config/DefaultGameplayTags.ini）",
 	"abilities": [
 		{
 			"asset": "AK_Melee",

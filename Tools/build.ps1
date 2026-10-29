@@ -1,7 +1,7 @@
 ﻿# Thin entry point: forwards everything to Tools/build/build.py.
 #
 #   ./build.ps1                                   # <Project>Editor / Win64 / Development
-#   ./build.ps1 --target LyraGame --configuration Shipping
+#   ./build.ps1 --target UAKSample --configuration Shipping
 #   ./build.ps1 --clean
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path

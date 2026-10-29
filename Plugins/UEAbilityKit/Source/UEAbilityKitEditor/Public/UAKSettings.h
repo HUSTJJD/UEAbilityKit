@@ -21,10 +21,9 @@ public:
 	/**
 	 * 技能编辑器预览用的角色类。
 	 *
-	 * 留空时回退到项目设置的默认 GameMode 的 DefaultPawnClass —— Lyra 宿主下那是
-	 * ALyraCharacter（C++ 基类，一般没配网格，看得见胶囊看不见人）。
-	 * 想预览真正会出场的那只角色，把它的蓝图填在这里：Lyra 下就是 PawnData
-	 * （例如 HeroData_ShooterGame）里的 PawnClass。
+	 * 留空时回退到项目设置的默认 GameMode 的 DefaultPawnClass —— 那常常是 C++ 基类
+	 * （一般没配网格，看得见胶囊看不见人）。
+	 * 想预览真正会出场的那只角色，把它的蓝图填在这里。
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Preview", meta = (MetaClass = "/Script/Engine.Actor"))
 	FSoftClassPath DefaultPreviewCharacterClass;

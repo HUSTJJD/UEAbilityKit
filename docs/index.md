@@ -128,9 +128,9 @@ flowchart LR
     git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
     ```
 
-    工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`），UAK 是 `Plugins/UEAbilityKit`，
-    示例模块随插件分发；布局参照 [UnLua](https://github.com/Tencent/UnLua)：库放 `Plugins`。
-    宿主怎么拼起来的见 [把 Lyra 改造进本工程](examples/lyra-integration.md)。
+    UAK 是 `Plugins/UEAbilityKit`，示例就是插件里的 `UAKDemo` 模块（随插件分发）；
+    布局参照 [UnLua](https://github.com/Tencent/UnLua)：库放 `Plugins`。
+    目录与接入方式见 [示例工程](examples/03-sample-project.md)。
 
     !!! warning "别忘了 --recursive"
         脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 是 git submodule，

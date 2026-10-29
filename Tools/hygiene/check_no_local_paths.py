@@ -5,9 +5,8 @@
 
 原因：这些东西一进仓库，别人 clone 下来就是坏的（打不开、编不过）。
 本机相关的东西一律走"运行时生成 + 不进仓库"：
-    - Lyra / 引擎目录：命令行参数（--lyra-path / --engine-root）或环境变量 UE_ENGINE_ROOT
-    - 引擎 GUID：lyra import 自动写进 Tools/lyra/lyra_patches.local.json（已 gitignore）
-    - 导入清单与快照：Tools/lyra/.lyra_paths.txt / .lyra_state.json（已 gitignore）
+    - 引擎目录：命令行参数（--engine-root）或环境变量 UE_ENGINE_ROOT
+    - 引擎 GUID：只从注册表 / 环境变量解析，不写进仓库
 
 用法：
     python Tools/hygiene/check_no_local_paths.py            # 有问题就退出码 1
@@ -80,7 +79,7 @@ def main() -> int:
 
     for rel, lineno, why, line in hits:
         print(f"[hygiene] {rel}:{lineno}  {why}\n    {line}")
-    print(f"[hygiene] 共 {len(hits)} 处。本机相关的东西请用参数/环境变量/lyra_patches.local.json，别写进仓库", file=sys.stderr)
+    print(f"[hygiene] 共 {len(hits)} 处。本机相关的东西请用参数/环境变量，别写进仓库", file=sys.stderr)
     return 1
 
 

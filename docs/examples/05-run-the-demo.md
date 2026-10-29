@@ -1,6 +1,6 @@
 # 跑通示例
 
-> 目标：从导入到"按一下鼠标左键放出技能"全程不需要在编辑器里手工点资产——
+> 目标：从零到"按一下鼠标左键放出技能"全程不需要在编辑器里手工点资产——
 > 所有内容由一条命令生成，**且生成在插件自己的 Content 里**。
 
 ## 1. 现在的形态
@@ -13,28 +13,23 @@ Plugins/UEAbilityKit/
    └─ Plugins/UEAbilityKit/Content/Demo/            ← 示例资产（Json + 动画，插件自己管）
 ```
 
-宿主工程是改造过后的 Lyra（见 [lyra-integration.md](lyra-integration.md)）。
+工程目录与接入方式见 [03-sample-project.md](03-sample-project.md)。
 
-## 2. 三步走
+## 2. 两步走
 
 ```powershell
-# ① 导入 Lyra（拷源码 + 外围文件 + 资产，然后打补丁）
-cd Tools
-./lyra.ps1 import --lyra-path <你的 Lyra 目录>
-
-# ② 编译
-cd ..
+# ① 编译
 ./Tools/build.ps1
 ```
 
 ```powershell
-# ③ 一键生成示例：技能资产 + 蓝图 + 关卡（全部落在 /UEAbilityKit/ 下）
+# ② 一键生成示例：技能资产 + 蓝图 + 关卡（全部落在 /UEAbilityKit/ 下）
 & "$env:UE_ENGINE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" `
-    .\LyraStarterGame.uproject -run=UAKDemoSetup -unattended -nosplash
+    .\<你的工程>.uproject -run=UAKDemoSetup -unattended -nosplash
 ```
 
 想让示例关卡成为默认地图，显式加 `-SetDefaultMap`——
-**默认不改宿主的 `GameDefaultMap`**，否则会把 Lyra 自己的流程顶掉。
+**默认不改宿主的 `GameDefaultMap`**，否则会把宿主自己的流程顶掉。
 
 ## 3. 一条命令做了什么
 

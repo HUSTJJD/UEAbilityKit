@@ -58,7 +58,7 @@ AnimationAssets/
 **不用了。** 一条命令就能全部生成（技能资产 / 蓝图 / 关卡 / 默认地图）：
 
 ```powershell
-UnrealEditor-Cmd.exe LyraStarterGame.uproject -run=UAKDemoSetup -unattended -nosplash
+UnrealEditor-Cmd.exe <你的工程>.uproject -run=UAKDemoSetup -unattended -nosplash
 ```
 
 详见 [../docs/examples/05-run-the-demo.md](../docs/examples/05-run-the-demo.md)。

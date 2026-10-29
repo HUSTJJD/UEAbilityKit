@@ -49,48 +49,22 @@ desktop.ini
 # 插件本地临时文件
 *.autosave
 
-# ── 从下载的 Lyra 拷进来的外围文件 ─────────────────────────────────────
-# Config/ 不进仓库：Lyra 有自己的 Config，按 copy → patch 的原则由
-# Tools/lyra.ps1 import 拷贝、Tools/lyra/patch.py 追加我们的段落。
-# 我们真正拥有的配置只有补丁片段，在 Tools/lyra/patches/config/。
-Config/
+# ── 备份与合并残留 ─────────────────────────────────────────────────────────
+*.uak.bak
+*.orig
 
-# ── Plugins/ 下只有我们自己的插件进仓库，其余全是 Lyra 拷来的 ────────────
+# ── Plugins/ 下只有我们自己的插件进仓库 ────────────────────────────────────
 Plugins/*
 !Plugins/UEAbilityKit/
 !Plugins/UnLuaNova/
 
-# ── 从下载的 Lyra 拷进来的资产 ─────────────────────────────────────────
-# 这些由 Tools/lyra.ps1 import 从你本地的 Lyra 拷贝，约 3 GB，不进仓库。
-Plugins/GameFeatures/
-Plugins/LyraExampleContent/
-Plugins/LyraExtTool/
-*.uak.bak
-*.orig
-
-# ── /Game 根内容（Content/）同样是 Lyra 拷来的 ─────────────────────────
-# DefaultGameData / PawnData / 关卡 / 音频宏 … 全在这一层，缺了工程起不来。
-# 整层忽略，再用否定规则把我们真正拥有的目录放行。
+# ── Content/：只跟踪我们自己的 UAK / Script ───────────────────────────────
+# 示例工程的美术 / 音频 / 关卡体积大、不便 diff，整层忽略，
+# 再用否定规则把我们真正拥有的目录放行。
 Content/*
 !Content/UAK/
 !Content/Script/
 !Content/README.md
-
-# ── 导入脚本的运行期状态（lyra clean 会删，重新 import 会再生成）────────
-Tools/lyra/.patched_files.txt
-Tools/lyra/.lyra_paths.txt
-Tools/lyra/.lyra_state.json
-Tools/lyra/lyra_manifest.txt
-# 本机专属覆盖（引擎 GUID 之类），不进仓库
-Tools/lyra/lyra_patches.local.json
-
-# ── 从 Lyra 拷来的东西：一律不进仓库，每次 import 重新生成 ───────────────
-# （源码也是拷来的，同样不进——这样 git status 在导入后仍然是干净的）
-/*.uproject
-Source/Lyra*.Target.cs
-Platforms/
-Source/LyraGame/
-Source/LyraEditor/
 
 # MkDocs build output
 /_site/

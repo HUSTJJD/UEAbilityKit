@@ -123,7 +123,7 @@
 
 - [x] **依赖可分发**：`UEAbilityKit.uplugin` 里的 UnLuaNova 引用标 `"Optional": true`
       —— 没有它，把插件单独拷进无脚本项目会被"引用了不存在的插件"拦住
-- [x] **后端显式化**：新增 `Tools/lyra/patches/config/DefaultUnLuaNova.ini.append`，钉住
+- [x] **后端显式化**：`Config/DefaultUnLuaNova.ini` 钉住
       `LuaBackend=Luau`；`UAKDemo.Build.cs` 读的是同一个键，ini 与二进制不会分叉
 - [x] **打包路径修正**：`DirectoriesToAlwaysStageAsUFS` 第二条改为
       `../Plugins/UnLuaNova/Plugins/UnLuaNova/Content/Script`（插件运行时 Lua 模块）。
