@@ -45,6 +45,16 @@ void SUAKTimelineToolbar::Construct(const FArguments& InArgs)
 			.Text(LOCTEXT("StepForward", "下一帧"))
 			.OnClicked(this, &SUAKTimelineToolbar::OnStepForwardClicked)
 		]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(1.f)
+		[
+			SNew(SCheckBox)
+			.IsChecked(this, &SUAKTimelineToolbar::IsLoopChecked)
+			.OnCheckStateChanged(this, &SUAKTimelineToolbar::OnLoopChanged)
+			.ToolTipText(LOCTEXT("LoopTip", "播放到末尾自动回到起点"))
+			[
+				SNew(STextBlock).Text(LOCTEXT("Loop", "循环"))
+			]
+		]
 
 		// ── 显示 ──────────────────────────────────────────────────────────
 		+ SHorizontalBox::Slot().AutoWidth().Padding(4.f, 1.f)
@@ -55,6 +65,23 @@ void SUAKTimelineToolbar::Construct(const FArguments& InArgs)
 			[
 				SNew(STextBlock).Text(LOCTEXT("FrameMode", "按帧显示"))
 			]
+		]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(4.f, 1.f)
+		[
+			SNew(SCheckBox)
+			.IsChecked(this, &SUAKTimelineToolbar::IsSnapChecked)
+			.OnCheckStateChanged(this, &SUAKTimelineToolbar::OnSnapChanged)
+			.ToolTipText(LOCTEXT("SnapTip", "吸附：按帧对齐，并优先对齐到命名标记。关掉可自由拖动"))
+			[
+				SNew(STextBlock).Text(LOCTEXT("Snap", "吸附"))
+			]
+		]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(1.f)
+		[
+			SNew(SButton)
+			.Text(LOCTEXT("Fit", "适应"))
+			.ToolTipText(LOCTEXT("FitTip", "缩放铺满整条技能（中键拖动可平移，滚轮缩放）"))
+			.OnClicked(this, &SUAKTimelineToolbar::OnFitClicked)
 		]
 
 		// ── 资产 ──────────────────────────────────────────────────────────
@@ -166,6 +193,45 @@ FReply SUAKTimelineToolbar::OnStepForwardClicked()
 		Timeline->StepFrame(1);
 	}
 	return FReply::Handled();
+}
+
+void SUAKTimelineToolbar::OnSnapChanged(ECheckBoxState NewState)
+{
+	if (Timeline.IsValid())
+	{
+		Timeline->SetSnapEnabled(NewState == ECheckBoxState::Checked);
+	}
+}
+
+ECheckBoxState SUAKTimelineToolbar::IsSnapChecked() const
+{
+	return Timeline.IsValid() && Timeline->IsSnapEnabled()
+		? ECheckBoxState::Checked
+		: ECheckBoxState::Unchecked;
+}
+
+FReply SUAKTimelineToolbar::OnFitClicked()
+{
+	if (Timeline.IsValid())
+	{
+		Timeline->ZoomToFit();
+	}
+	return FReply::Handled();
+}
+
+void SUAKTimelineToolbar::OnLoopChanged(ECheckBoxState NewState)
+{
+	if (Timeline.IsValid())
+	{
+		Timeline->SetLoopPlayback(NewState == ECheckBoxState::Checked);
+	}
+}
+
+ECheckBoxState SUAKTimelineToolbar::IsLoopChecked() const
+{
+	return Timeline.IsValid() && Timeline->IsLoopPlayback()
+		? ECheckBoxState::Checked
+		: ECheckBoxState::Unchecked;
 }
 
 void SUAKTimelineToolbar::OnFrameModeChanged(ECheckBoxState NewState)

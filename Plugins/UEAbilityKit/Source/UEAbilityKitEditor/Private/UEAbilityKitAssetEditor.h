@@ -13,6 +13,7 @@ class UAKAbilityAsset;
 class UAKAbilityTaskBase;
 class UAKTrace;
 class SUAKTimeline;
+class SUAKTrackOutliner;
 class SUAKGASImpactBar;
 class SUAKValidationBar;
 class SUAKBloodlineView;
@@ -137,6 +138,9 @@ private:
 	/** 粘贴：把时间轴剪贴板里的 Json 还原成任务，落在当前轨道的光标处 */
 	UAKAbilityTaskBase* PasteTaskFromJson(const FString& TaskJson);
 
+	/** 多选删除：一个事务删掉整组任务，撤销一次就能全回来 */
+	void DeleteTasks(const TArray<UAKAbilityTaskBase*>& Tasks);
+
 	// FEditorUndoClient
 	virtual void PostUndo(bool bSuccess) override;
 	virtual void PostRedo(bool bSuccess) override;
@@ -152,6 +156,19 @@ private:
 	void AddTrack();
 	void RemoveSelectedTrack();
 	void MoveSelectedTrack(int32 Delta);
+
+	/** 左栏宽（SSplitter 拖动后写回 UUAKSettings，下次打开还是这个宽度）
+	 *  返回 FOptionalSize 是为了直接喂给 SBox::WidthOverride（与 SSequencer 同款） */
+	FOptionalSize GetOutlinerWidth() const { return OutlinerWidth; }
+
+	/** 时间轴裸滚轮 → 左栏滚动轨道列表 */
+	void ScrollTrackListBy(float DeltaPixels);
+
+	/** 把第 Row 条轨道滚进视野 */
+	void RevealTrackRow(int32 Row);
+
+	/** 左栏改了轨道（增删/排序/静音/折叠）后：时间轴、任务选择器、血缘都跟着刷新 */
+	void RefreshAfterTrackChange();
 	void AddMarkerAtCursor();
 	/** 删掉时间轴右键点中的那个标记（INDEX_NONE / 越界则不动） */
 	void RemoveMarkerAt(int32 MarkerIndex);
@@ -177,6 +194,9 @@ private:
 
 	TWeakObjectPtr<UAKAbilityAsset> Asset;
 	TSharedPtr<SUAKTimeline> TimelineWidget;
+	/** 左栏：轨道列表（轨道操作都在这里发生，时间轴只管右侧画布） */
+	TSharedPtr<SUAKTrackOutliner> TrackOutlinerWidget;
+	float OutlinerWidth = 220.f;
 	TSharedPtr<SUAKGASImpactBar> ImpactBarWidget;
 	TSharedPtr<SUAKValidationBar> ValidationBarWidget;
 	TSharedPtr<SUAKBloodlineView> BloodlineWidget;

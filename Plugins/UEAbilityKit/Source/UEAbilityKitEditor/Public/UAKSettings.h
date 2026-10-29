@@ -28,4 +28,26 @@ public:
 	 */
 	UPROPERTY(config, EditAnywhere, Category = "Preview", meta = (MetaClass = "/Script/Engine.Actor"))
 	FSoftClassPath DefaultPreviewCharacterClass;
+
+	/**
+	 * 技能编辑器左栏（轨道列表）的宽度（像素）。
+	 *
+	 * 抄 Sequencer：左栏宽度是"编辑器状态"而不是资产内容，拖完要记住，
+	 * 下次打开还是你习惯的那个宽度（`SSequencer.cpp:782-792` 就是这么存的）。
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor", meta = (ClampMin = "120.0", UIMin = "120.0", ClampMax = "520.0", UIMax = "520.0"))
+	float TimelineOutlinerWidth = 220.f;
+
+	/**
+	 * 时间轴吸附总开关。
+	 *
+	 * 抄 Sequencer：吸附是"编辑器状态"而不是资产属性，关掉后可以自由拖动
+	 * （Sequencer 工具栏上有 Snap 总开关 + 下拉，我们只做最有用的两档）。
+	 */
+	UPROPERTY(config, EditAnywhere, Category = "Editor")
+	bool bTimelineSnapEnabled = true;
+
+	/** 除按帧对齐外，是否再吸附到命名标记（Marker 是语义锚点，通常想吸） */
+	UPROPERTY(config, EditAnywhere, Category = "Editor")
+	bool bTimelineSnapToMarkers = true;
 };

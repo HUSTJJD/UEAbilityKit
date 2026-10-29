@@ -86,8 +86,8 @@ flowchart LR
 git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 ```
 
-工程以 **Lyra 为宿主**（`LyraStarterGame.uproject`，先跑 `Tools/lyra.ps1 import` 导入），
 布局参照 [UnLua](https://github.com/Tencent/UnLua)：**库放 Plugins，示例随库走**。
+示例不是独立游戏，而是插件里的 `UAKDemo` 模块，装到任何工程都能一键生成。
 
 > 必须加 `--recursive`：脚本方案 [UnLuaNova](https://github.com/HUSTJJD/UnLuaNova) 自身还嵌套了 Lua / Luau 等子模块。忘了就补 `git submodule update --init --recursive`。
 
@@ -109,25 +109,23 @@ git clone --recursive https://github.com/HUSTJJD/UEAbilityKit.git
 
 ---
 
-## 🎮 示例宿主：改造后的 Lyra
+## 🎮 示例：随插件分发的 UAKDemo
 
-UAK 是**技能模块**，Lyra 是被改造进来当示例的游戏：
+UAK 是**技能模块**，示例不是被改造进来的某个游戏，而是插件里的一个模块
+（`Plugins/UEAbilityKit/Source/UAKDemo`）：
 
 ```powershell
-cd Tools
-./lyra.ps1 import --lyra-path <你的 Lyra 目录>   # 下载好 Lyra 5.8 后跑这一条
-./lyra.ps1 verify                            # 确认工程 = Lyra 原版 + 声明过的补丁
+# 一键生成示例：技能资产 + 蓝图 + 关卡（全部落在 /UEAbilityKit/ 下）
+UnrealEditor-Cmd.exe <你的工程>.uproject -run=UAKDemoSetup -unattended -nosplash
 ```
 
-- **继承方向是 Lyra 继承 UAK**：`UGameplayAbility → UAKGameplayAbility → ULyraGameplayAbility`
-  插件零依赖、可服务任何游戏；Lyra 只是其中一个宿主
-- 拷进来的 Lyra 源码保持 Lyra 命名（保留 Epic 版权头），**只放 `Source/`，不进插件目录**
-- `.uproject` 整个从 Lyra 拷来（本工程就是 Lyra）；`UAKDemo` 不再是独立工程，
-  它降级为**插件的一个模块**（`Plugins/UEAbilityKit/Source/UAKDemo`），随插件分发
-- 我们替换的是 Lyra 的技能实现，不是重新做一个游戏
-- 资产（约 1.4 GB）由脚本从你本地的 Lyra 拷贝，不进 git；进 git 的只有源码 + 配置 + 技能 Json
+- **继承方向是宿主继承 UAK**：`UGameplayAbility → UAKGameplayAbility → UMyGameGameplayAbility`
+  插件零依赖、可服务任何游戏；宿主侧只加一句继承，UAK 不去适配宿主
+- **`UAKDemo` 随插件分发**，不是独立工程：拷进任何项目都能用，不用就不引用
+- 示例资产（技能 Json）放在插件自己的 Content 里，插件自己管，不往宿主 Content 里写东西
+- 进 git 的只有源码 + 技能 Json，没有体积庞大的外部资产
 
-详见 [docs/examples/lyra-integration.md](docs/examples/lyra-integration.md)。
+详见 [docs/examples/03-sample-project.md](docs/examples/03-sample-project.md)。
 
 ---
 
@@ -171,21 +169,17 @@ cd Tools
 
 ```
 UEAbilityKit/                       ← 仓库根 = UE 工程根
-├─ LyraStarterGame.uproject         ← 宿主工程（Lyra 的，由 lyra import 复现）
-├─ Source/LyraAdapt/                ← 适配层（唯一同时认识 Lyra 与 UAK 的地方）
-├─ Plugins/UEAbilityKit/Source/UAKDemo/                  ← 示例模块（属性集 / 角色 / 技能，随插件分发）
 ├─ Plugins/
 │  ├─ UEAbilityKit/                 ← UAK 插件（本仓库的主角）
-│  │  └─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}
+│  │  ├─ Source/{UEAbilityKit, UEAbilityKitEditor, UEAbilityKitTests}
+│  │  └─ Source/UAKDemo/            ← 示例模块（属性集 / 角色 / 技能，随插件分发）
 │  └─ UnLuaNova/                    ← 脚本方案（git submodule）
 ├─ Tools/                           ← 唯一的脚本目录：shell 只是薄入口，逻辑全在 Python
-│  ├─ lyra.ps1 / .sh                ← Lyra 唯一入口：import / clean / patch / verify
 │  ├─ build.ps1 / .sh               ← 命令行编译（绕过 Build.bat 锁）
 │  ├─ run_tests.ps1 / .sh           ← 一键测试（三 stage）
 │  ├─ generate_tutorials.ps1 / .sh  ← 教程录制 + 文档生成
 │  ├─ unluanova.ps1 / .sh           ← 脚本层：setup（一次写对）/ doctor（只读体检）
 │  ├─ common.py                     ← 共用：路径 / 引擎定位 / 子进程
-│  ├─ lyra/                         ← cli.py + import/clean/patch/verify + 补丁清单
 │  ├─ build/                        ← build.py
 │  ├─ test/                         ← run.py + report/
 │  ├─ tutorial/                     ← run.py + generate_tutorials.py
@@ -265,7 +259,7 @@ Hazelight 的 UE-AngelScript 体验更完整（静态类型、VSCode LSP、断�
 | **运行时调试器** | 控制台 `UAK.Debug.Enable`（角色头顶浮字）/ `UAK.Debug.Summary`（打到日志）/ `UAK.Debug.Help` |
 | **编辑器调试面板** | 窗口 → 开发者工具 → 调试 → **UAK Debugger**，每 0.1 秒刷新活跃技能与任务 |
 | **溯源命令** | `UAK.Trace.Enable / Dump [N] / Clear / Disable`，血缘树直接打到日志 |
-| **一键搭示例** | `UnrealEditor-Cmd.exe LyraStarterGame.uproject -run=UAKDemoSetup`：技能资产 + 蓝图 + 关卡 + 默认地图 |
+| **一键搭示例** | `UnrealEditor-Cmd.exe <你的工程>.uproject -run=UAKDemoSetup`：技能资产 + 蓝图 + 关卡 + 默认地图 |
 | **新内置任务** | `ApplyLooseTags`（限时 Tag：霸体 / 无敌）、`FaceTarget`（转向目标 / 方向） |
 | **编辑器打磨** | 任务复制 / 粘贴（Ctrl+C / V，剪贴板存 Json）、拖动吸附到 Marker |
 

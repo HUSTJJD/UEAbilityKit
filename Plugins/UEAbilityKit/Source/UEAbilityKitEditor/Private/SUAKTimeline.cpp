@@ -1,4 +1,5 @@
 #include "SUAKTimeline.h"
+#include "UAKSettings.h"
 
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityTaskBase.h"
@@ -26,21 +27,6 @@ namespace
 	const FLinearColor ColorRuler(0.055f, 0.055f, 0.055f);
 	const FLinearColor ColorCursor(1.f, 0.85f, 0.2f);
 
-	FLinearColor ColorForTrack(EAKTrackType Type)
-	{
-		switch (Type)
-		{
-		case EAKTrackType::Main:			return FLinearColor(0.85f, 0.85f, 0.90f);
-		case EAKTrackType::Effect:			return FLinearColor(0.95f, 0.35f, 0.35f);
-		case EAKTrackType::Presentation:	return FLinearColor(0.40f, 0.80f, 0.95f);
-		case EAKTrackType::Query:			return FLinearColor(0.55f, 0.85f, 0.45f);
-		case EAKTrackType::Motion:			return FLinearColor(0.95f, 0.75f, 0.30f);
-		case EAKTrackType::Rule:			return FLinearColor(0.75f, 0.50f, 0.95f);
-		case EAKTrackType::Custom:
-		default:							return FLinearColor(0.60f, 0.60f, 0.65f);
-		}
-	}
-
 	/**
 	 * 画一块矩形要的 PaintGeometry。
 	 *
@@ -64,11 +50,21 @@ void SUAKTimeline::Construct(const FArguments& InArgs)
 	OnTrackSelected = InArgs._OnTrackSelected;
 	OnCursorTimeChanged = InArgs._OnCursorTimeChanged;
 	OnRequestDeleteTask = InArgs._OnRequestDeleteTask;
+	OnRequestDeleteTasks = InArgs._OnRequestDeleteTasks;
+	OnRequestScrollBy = InArgs._OnRequestScrollBy;
+	OnRequestRevealRow = InArgs._OnRequestRevealRow;
 	OnRequestDuplicateTask = InArgs._OnRequestDuplicateTask;
 	OnAction = InArgs._OnAction;
 
 	SetCanTick(true);
 	SetClipping(EWidgetClipping::ClipToBounds);
+
+	// 吸附开关是编辑器状态（不是资产属性），从设置里读回来
+	if (const UUAKSettings* Settings = GetDefault<UUAKSettings>())
+	{
+		bSnapEnabled = Settings->bTimelineSnapEnabled;
+		bSnapToMarkers = Settings->bTimelineSnapToMarkers;
+	}
 
 	// tooltip 跟着悬停走：片段显示"几点到几点、多长"，空白处显示"光标在哪一帧"
 	SetToolTipText(TAttribute<FText>::Create(
@@ -114,6 +110,9 @@ void SUAKTimeline::RebuildPlanIfNeeded()
 void SUAKTimeline::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
 {
 	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+
+	// 教学提示的淡出要一个"现在"，Tick 里顺手记下来
+	LastTickTime = InCurrentTime;
 
 	ViewWidth = FMath::Max(0.f, AllottedGeometry.GetLocalSize().X - TrackHeaderWidth);
 	ViewHeight = AllottedGeometry.GetLocalSize().Y;
@@ -233,12 +232,253 @@ void SUAKTimeline::FocusTask(UAKAbilityTaskBase* Task)
 		return;
 	}
 
+	SelectedTasks.Reset();
+	SelectedTasks.Add(Task);
 	SelectedTask = Task;
 	OnTaskSelected.ExecuteIfBound(Task);
 
 	const float StartTime = Task->StartTime;
 	SetCursorTime(StartTime);
 	ScrollTimeIntoView(StartTime);
+
+	// 轨道多的时候还得把这一行滚进视野：垂直滚动归左栏管，这里只发请求
+	if (const UAKAbilityAsset* AssetPtr = Asset.Get())
+	{
+		for (int32 Index = 0; Index < AssetPtr->Tracks.Num(); ++Index)
+		{
+			if (AssetPtr->Tracks[Index].Get() == Task->GetOuter())
+			{
+				OnRequestRevealRow.ExecuteIfBound(Index);
+				break;
+			}
+		}
+	}
+}
+
+void SUAKTimeline::ClearSelection()
+{
+	SetSelection(nullptr, false);
+}
+
+void SUAKTimeline::DeleteSelection()
+{
+	if (SelectedTasks.Num() > 1)
+	{
+		TArray<UAKAbilityTaskBase*> Tasks;
+		Tasks.Reserve(SelectedTasks.Num());
+		for (const TWeakObjectPtr<UAKAbilityTaskBase>& Item : SelectedTasks)
+		{
+			if (UAKAbilityTaskBase* Task = Item.Get())
+			{
+				Tasks.Add(Task);
+			}
+		}
+		OnRequestDeleteTasks.ExecuteIfBound(Tasks);
+	}
+	else
+	{
+		OnRequestDeleteTask.ExecuteIfBound();
+	}
+}
+
+void SUAKTimeline::SelectAllTasks()
+{
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr)
+	{
+		return;
+	}
+
+	SelectedTasks.Reset();
+
+	// 有选中轨道就只选这一条轨道，否则整条技能全选
+	const bool bOnlyCurrentTrack = (SelectedTrackIndex != INDEX_NONE);
+	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
+	{
+		if (bOnlyCurrentTrack && Row != SelectedTrackIndex)
+		{
+			continue;
+		}
+
+		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+		if (!Track)
+		{
+			continue;
+		}
+
+		for (UAKAbilityTaskBase* Task : Track->Tasks)
+		{
+			if (Task)
+			{
+				SelectedTasks.Add(Task);
+			}
+		}
+	}
+
+	if (SelectedTasks.Num() > 0)
+	{
+		SelectedTask = SelectedTasks[0];
+		OnTaskSelected.ExecuteIfBound(SelectedTask.Get());
+	}
+}
+
+void SUAKTimeline::SetSelection(UAKAbilityTaskBase* Task, bool bAdditive)
+{
+	if (!Task)
+	{
+		SelectedTasks.Reset();
+		SelectedTask = nullptr;
+		OnTaskSelected.ExecuteIfBound(nullptr);
+		return;
+	}
+
+	if (bAdditive)
+	{
+		// 再点一次已选中的 = 取消选中
+		if (IsTaskSelected(Task))
+		{
+			SelectedTasks.RemoveAll([Task](const TWeakObjectPtr<UAKAbilityTaskBase>& Item) { return Item.Get() == Task; });
+		}
+		else
+		{
+			SelectedTasks.Add(Task);
+		}
+	}
+	else if (!IsTaskSelected(Task))
+	{
+		// 单选：点的是多选集合之外的新任务才重置集合；
+		// 点在集合内则保留整组，这样能直接拖动整组而不用重新框选
+		SelectedTasks.Reset();
+		SelectedTasks.Add(Task);
+	}
+
+	SelectedTask = Task;
+	OnTaskSelected.ExecuteIfBound(Task);
+}
+
+bool SUAKTimeline::IsTaskSelected(const UAKAbilityTaskBase* Task) const
+{
+	for (const TWeakObjectPtr<UAKAbilityTaskBase>& Item : SelectedTasks)
+	{
+		if (Item.Get() == Task)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void SUAKTimeline::CollectTasksInRect(const FVector2D& Start, const FVector2D& End, TArray<UAKAbilityTaskBase*>& OutTasks) const
+{
+	const float MinX = FMath::Max(TrackHeaderWidth, FMath::Min(Start.X, End.X));
+	const float MaxX = FMath::Min(Start.X > End.X ? Start.X : End.X, TrackHeaderWidth + ViewWidth);
+	const float MinY = FMath::Min(Start.Y, End.Y);
+	const float MaxY = FMath::Max(Start.Y, End.Y);
+
+	if (MaxX <= MinX)
+	{
+		return;
+	}
+
+	const float Time0 = XToTime(MinX);
+	const float Time1 = XToTime(MaxX);
+
+	// 标尺区拖动不算框选行，统一从第 0 行起算
+	const int32 Row0 = FMath::Max(0, HitTestRow(MinY));
+	const int32 Row1 = FMath::Max(0, HitTestRow(MaxY));
+
+	for (const FAKScheduledTask& Scheduled : CachedPlan)
+	{
+		if (!Scheduled.Task || Scheduled.TrackIndex < Row0 || Scheduled.TrackIndex > Row1)
+		{
+			continue;
+		}
+
+		const float SegMin = FMath::Min(Scheduled.StartTime, Scheduled.EndTime);
+		const float SegMax = FMath::Max(Scheduled.StartTime, Scheduled.EndTime);
+		if (SegMax >= Time0 && SegMin <= Time1)
+		{
+			OutTasks.AddUnique(Scheduled.Task);
+		}
+	}
+}
+
+void SUAKTimeline::MoveSelectionBy(float DeltaTime)
+{
+	if (FMath::IsNearlyZero(DeltaTime))
+	{
+		return;
+	}
+
+	UAKAbilityAsset* AssetPtr = Asset.Get();
+	bool bChanged = false;
+
+	for (const TPair<TWeakObjectPtr<UAKAbilityTaskBase>, float>& Pair : MoveSelectionStarts)
+	{
+		UAKAbilityTaskBase* Task = Pair.Key.Get();
+		if (!Task || !CanEditTaskTimes(Task))
+		{
+			continue;
+		}
+
+		const float NewStart = FMath::Max(0.f, SnapTime(Pair.Value + DeltaTime));
+		if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
+		{
+			Task->Modify();
+			Task->StartTime = NewStart;
+			bChanged = true;
+		}
+	}
+
+	if (bChanged && AssetPtr)
+	{
+		AssetPtr->MarkPackageDirty();
+	}
+}
+
+void SUAKTimeline::SetSnapEnabled(bool bInEnabled)
+{
+	bSnapEnabled = bInEnabled;
+	if (UUAKSettings* Settings = GetMutableDefault<UUAKSettings>())
+	{
+		Settings->bTimelineSnapEnabled = bInEnabled;
+		Settings->SaveConfig();
+	}
+}
+
+void SUAKTimeline::SetSnapToMarkers(bool bInEnabled)
+{
+	bSnapToMarkers = bInEnabled;
+	if (UUAKSettings* Settings = GetMutableDefault<UUAKSettings>())
+	{
+		Settings->bTimelineSnapToMarkers = bInEnabled;
+		Settings->SaveConfig();
+	}
+}
+
+void SUAKTimeline::ZoomToFit()
+{
+	// 内容末端：技能长度、最后一个任务、最后一个标记，取最大
+	float ContentEnd = GetAssetLength();
+	for (const FAKScheduledTask& Scheduled : CachedPlan)
+	{
+		ContentEnd = FMath::Max(ContentEnd, Scheduled.EndTime);
+	}
+	if (const UAKAbilityAsset* AssetPtr = Asset.Get())
+	{
+		for (const FAKTimeMarker& Marker : AssetPtr->Markers)
+		{
+			ContentEnd = FMath::Max(ContentEnd, Marker.Time);
+		}
+	}
+	ContentEnd = FMath::Max(ContentEnd, 0.1f);
+
+	if (ViewWidth > 1.f)
+	{
+		PixelsPerSecond = FMath::Clamp((ViewWidth - 8.f) / ContentEnd, 20.f, 4000.f);
+	}
+	ViewOffsetTime = 0.f;
+	ClampViewOffset();
 }
 
 bool SUAKTimeline::CanEditTaskTimes(const UAKAbilityTaskBase* Task) const
@@ -249,10 +489,41 @@ bool SUAKTimeline::CanEditTaskTimes(const UAKAbilityTaskBase* Task) const
 	return OwnerTrack && OwnerTrack->CompositeMode == EAKTrackCompositeMode::Timeline;
 }
 
+bool SUAKTimeline::IsTrackLocked(int32 TrackIndex) const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	return AssetPtr && AssetPtr->Tracks.IsValidIndex(TrackIndex) && AssetPtr->Tracks[TrackIndex]
+		&& AssetPtr->Tracks[TrackIndex]->bLocked;
+}
+
+int32 SUAKTimeline::FindTrackRow(const UAKAbilityTaskBase* Task) const
+{
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (!AssetPtr || !Task)
+	{
+		return INDEX_NONE;
+	}
+
+	for (int32 Index = 0; Index < AssetPtr->Tracks.Num(); ++Index)
+	{
+		if (AssetPtr->Tracks[Index].Get() == Task->GetOuter())
+		{
+			return Index;
+		}
+	}
+	return INDEX_NONE;
+}
+
 void SUAKTimeline::MoveTaskToTrack(UAKAbilityTaskBase* Task, int32 FromTrackIndex, int32 ToTrackIndex)
 {
 	UAKAbilityAsset* AssetPtr = Asset.Get();
 	if (!AssetPtr || !Task || FromTrackIndex == ToTrackIndex)
+	{
+		return;
+	}
+
+	// 锁住的轨道：既不能把任务挪走，也不能挪进来
+	if (IsTrackLocked(FromTrackIndex) || IsTrackLocked(ToTrackIndex))
 	{
 		return;
 	}
@@ -272,7 +543,8 @@ void SUAKTimeline::MoveTaskToTrack(UAKAbilityTaskBase* Task, int32 FromTrackInde
 	ToTrack->Tasks.Add(Task);
 
 	// 任务是内联子对象：改父级要连 Outer 一起改，否则保存与 GC 会认错父亲
-	Task->Rename(nullptr, ToTrack, REN_DontCreateRedirectors | REN_ForceNoResetLoaders);
+	// （不加 REN_ForceNoResetLoaders：5.x 起该标记已废弃，且会触发 C4996）
+	Task->Rename(nullptr, ToTrack, REN_DontCreateRedirectors);
 
 	AssetPtr->MarkPackageDirty();
 	ForceRefresh();
@@ -287,6 +559,12 @@ void SUAKTimeline::StepFrame(int32 Frames)
 
 float SUAKTimeline::SnapTime(float Time) const
 {
+	// 吸附总开关关掉后就是"自由拖动"（Sequencer 的 Snap 按钮同一语义）
+	if (!bSnapEnabled)
+	{
+		return Time;
+	}
+
 	UAKAbilityAsset* AssetPtr = Asset.Get();
 	if (!AssetPtr)
 	{
@@ -295,6 +573,12 @@ float SUAKTimeline::SnapTime(float Time) const
 
 	const float Frame = 1.f / static_cast<float>(FMath::Max(1, AssetPtr->FrameRate));
 	const float FrameSnapped = FMath::RoundToFloat(Time / Frame) * Frame;
+
+	// 只吸附到帧时到此为止（"对齐到标记"是单独一项，用户可以只要前者）
+	if (!bSnapToMarkers)
+	{
+		return FrameSnapped;
+	}
 
 	// Marker 吸附：在 6px 范围内优先吸附到 Marker。
 	// Marker 是语义锚点（起手 / 命中 / 收招），比等距网格更值得对齐——
@@ -332,7 +616,13 @@ int32 SUAKTimeline::HitTestRow(float Y) const
 	{
 		return INDEX_NONE;
 	}
-	return static_cast<int32>((Y - RulerHeight) / RowHeight);
+	// 屏幕 Y 要加上滚动偏移，才能换回"第几条轨道"
+	return static_cast<int32>((Y + ScrollOffset - RulerHeight) / RowHeight);
+}
+
+float SUAKTimeline::RowTopY(int32 Row) const
+{
+	return RulerHeight + Row * RowHeight - ScrollOffset;
 }
 
 int32 SUAKTimeline::HitTestMarker(float X) const
@@ -399,20 +689,46 @@ EAKTimelineDragMode SUAKTimeline::HitTestSegmentEdge(float X, int32 Row, UAKAbil
 
 UAKAbilityTaskBase* SUAKTimeline::HitTestTask(float X, int32 Row) const
 {
-	// 用执行计划做命中测试，保证 Sequence / Parallel / Repeat 下点到的位置与实际运行一致
+	// 折叠的轨道只画汇总条，任务不可点（点它也没意义——看不到具体哪一块）
+	const UAKAbilityAsset* AssetPtr = Asset.Get();
+	if (AssetPtr && AssetPtr->Tracks.IsValidIndex(Row)
+		&& AssetPtr->Tracks[Row] && AssetPtr->Tracks[Row]->bCollapsed)
+	{
+		return nullptr;
+	}
+
+	// 用执行计划做命中测试，保证 Sequence / Parallel 下点到的位置与实际运行一致
 	const float Time = XToTime(X);
+
+	// 重叠的片段要能点到压在上面那块（Sequencer 会遍历 UnderlappingSegments）：
+	// 先取最后命中的（画得最晚 = 视觉上在最上层），再让"已经选中的那条"优先，
+	// 这样选中一条后再点重叠区，拿到的还是它，不会被上面的盖掉。
+	UAKAbilityTaskBase* TopHit = nullptr;
+	bool bSelectedAlsoHit = false;
+
 	for (const FAKScheduledTask& Scheduled : CachedPlan)
 	{
 		if (Scheduled.TrackIndex != Row || !Scheduled.Task)
 		{
 			continue;
 		}
-		if (Time >= Scheduled.StartTime && Time <= Scheduled.EndTime)
+		if (Time < Scheduled.StartTime || Time > Scheduled.EndTime)
 		{
-			return Scheduled.Task;
+			continue;
+		}
+
+		TopHit = Scheduled.Task;
+		if (Scheduled.Task == SelectedTask.Get())
+		{
+			bSelectedAlsoHit = true;
 		}
 	}
-	return nullptr;
+
+	if (bSelectedAlsoHit)
+	{
+		return SelectedTask.Get();
+	}
+	return TopHit;
 }
 
 FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
@@ -462,32 +778,7 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 		return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
 	}
 
-	// 点轨道头：色条区 = 切换整轨开关（UAK 独有的整轨静音）；名称区 = 选中轨道改复合设置
-	if (Local.X < TrackHeaderWidth)
-	{
-		const int32 Row = HitTestRow(Local.Y);
-		UAKAbilityAsset* AssetPtr = Asset.Get();
-		if (AssetPtr && AssetPtr->Tracks.IsValidIndex(Row) && AssetPtr->Tracks[Row])
-		{
-			UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
-			if (Local.X <= 12.f)
-			{
-				// 静音也是一次编辑：不包事务的话 Ctrl+Z 撤不回来
-				const FScopedTransaction Transaction(LOCTEXT("ToggleTrack", "轨道开关"));
-				Track->Modify();
-				Track->bEnabled = !Track->bEnabled;
-				AssetPtr->MarkPackageDirty();
-				ForceRefresh();
-			}
-			else
-			{
-				SelectedTrackIndex = Row;
-				OnTrackSelected.ExecuteIfBound(Track, Row);
-			}
-		}
-		return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
-	}
-
+	// 轨道头已经搬到左栏（SUAKTrackOutliner）：这里只管右侧画布
 	const int32 Row = HitTestRow(Local.Y);
 
 	// 标尺区：定位光标；按住不放是连续 scrub，按在标记线上则是拖标记
@@ -518,17 +809,32 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 
 	if (Hit && HitScheduled)
 	{
-		SelectedTask = Hit;
-		OnTaskSelected.ExecuteIfBound(Hit);
+		// Ctrl / Shift + 点击 = 加选或减选；直接点则单选
+		SetSelection(Hit, MouseEvent.IsControlDown() || MouseEvent.IsShiftDown());
 		SelectedTrackIndex = Row;
 
 		DraggingTask = Hit;
 		DragMode = Mode;
 		DragGrabOffset = XToTime(Local.X) - Hit->StartTime;
 		DragStartLocalX = Local.X;
+		DragOriginTaskStart = Hit->StartTime;
 		DragOriginTrackIndex = Row;
 		DragCurrentTrackIndex = Row;
 		bAltPendingDuplicate = MouseEvent.IsAltDown();
+
+		// 多选且拖的正是组内任务 → 整组一起动（Alt 复制时只拖副本那一块）
+		MoveSelectionStarts.Reset();
+		if (!bAltPendingDuplicate && Mode == EAKTimelineDragMode::Move
+			&& IsTaskSelected(Hit) && SelectedTasks.Num() > 1)
+		{
+			for (const TWeakObjectPtr<UAKAbilityTaskBase>& Item : SelectedTasks)
+			{
+				if (UAKAbilityTaskBase* ItemTask = Item.Get())
+				{
+					MoveSelectionStarts.Emplace(Item, ItemTask->StartTime);
+				}
+			}
+		}
 
 		// 一次拖动 = 一次可撤销的事务。Alt+拖拽把"复制"也并进同一个事务，
 		// 所以事务先开好，复制时告诉编辑器别再开一个。
@@ -544,11 +850,14 @@ FReply SUAKTimeline::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 	}
 	else
 	{
-		SelectedTask = nullptr;
-		OnTaskSelected.ExecuteIfBound(nullptr);
+		// 空白：单击 = 定位光标并清空选中；按住拖开一段距离后转成框选（见 OnMouseMove）
+		SetSelection(nullptr, false);
 		SetCursorTime(SnapTime(XToTime(Local.X)));
 		DragMode = EAKTimelineDragMode::Scrub;
 		DragStartLocalX = Local.X;
+		MarqueeStart = Local;
+		MarqueeCurrent = Local;
+		bMarqueeAdditive = MouseEvent.IsControlDown() || MouseEvent.IsShiftDown();
 	}
 
 	return FReply::Handled().CaptureMouse(SharedThis(this)).SetUserFocus(SharedThis(this));
@@ -579,8 +888,20 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 		return FReply::Handled();
 
 	case EAKTimelineDragMode::Scrub:
+		// 拖开一段距离说明想框选，而不是定位光标——两者共用"空白处按下"
+		if (FMath::Abs(Local.X - MarqueeStart.X) > 6.f || FMath::Abs(Local.Y - MarqueeStart.Y) > 6.f)
+		{
+			DragMode = EAKTimelineDragMode::Marquee;
+			MarqueeCurrent = Local;
+			return FReply::Handled();
+		}
+
 		// 按住拖动 = 连续 scrub，而不是"点一下跳一下"
 		SetCursorTime(SnapTime(XToTime(Local.X)));
+		return FReply::Handled();
+
+	case EAKTimelineDragMode::Marquee:
+		MarqueeCurrent = Local;
 		return FReply::Handled();
 
 	case EAKTimelineDragMode::Marker:
@@ -600,9 +921,33 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 	}
 
 	UAKAbilityTaskBase* Task = DraggingTask.Get();
-	if (!Task || !CanEditTaskTimes(Task))
+	if (!Task)
 	{
-		// 复合轨道：时间由轨道算出来，拖动无效（事务白开也不改数据，抬手即撤）
+		return FReply::Handled();
+	}
+
+	// ── 换轨道：必须放在"能不能改时间"之前 ──────────────────────────────
+	// Sequence / Parallel 轨道上的任务不许改 StartTime（时间由轨道算出来），
+	// 但"把它挪到别的轨道"是另一回事，不该被那条规则连坐——
+	// 而技能的主轨道往往是 Sequence，连坐的话等于一个任务都挪不动。
+	if (DragMode == EAKTimelineDragMode::Move && MoveSelectionStarts.Num() == 0)
+	{
+		const int32 TargetRow = HitTestRow(Local.Y);
+		if (TargetRow != INDEX_NONE && TargetRow != DragCurrentTrackIndex && AssetPtr && AssetPtr->Tracks.IsValidIndex(TargetRow))
+		{
+			// 源和目的都不能是锁住的轨道；目标轨道的复合模式不限制（移过去由新轨道重新编排）
+			if (!IsTrackLocked(DragCurrentTrackIndex) && !IsTrackLocked(TargetRow))
+			{
+				MoveTaskToTrack(Task, DragCurrentTrackIndex, TargetRow);
+				DragCurrentTrackIndex = TargetRow;
+				SelectedTrackIndex = TargetRow;
+			}
+		}
+	}
+
+	// 复合轨道：时间由轨道算出来，改 StartTime / Duration 没有意义（换轨道仍然可以）
+	if (!CanEditTaskTimes(Task))
+	{
 		return FReply::Handled();
 	}
 
@@ -614,6 +959,8 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 		{
 			DraggingTask = Copy;
 			Task = Copy;
+			SelectedTasks.Reset();
+			SelectedTasks.Add(Copy);
 			SelectedTask = Copy;
 			OnTaskSelected.ExecuteIfBound(Copy);
 			ForceRefresh();
@@ -625,22 +972,16 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 	if (DragMode == EAKTimelineDragMode::Move)
 	{
 		const float NewStart = FMath::Max(0.f, SnapTime(XToTime(Local.X) - DragGrabOffset));
-		if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
-		{
-			Task->StartTime = NewStart;
-		}
 
-		// 跨轨道拖拽：鼠标换到别的行就把任务挪过去
-		const int32 TargetRow = HitTestRow(Local.Y);
-		if (TargetRow != INDEX_NONE && TargetRow != DragCurrentTrackIndex && AssetPtr && AssetPtr->Tracks.IsValidIndex(TargetRow))
+		if (MoveSelectionStarts.Num() > 0)
 		{
-			UAKAbilityTrack* TargetTrack = AssetPtr->Tracks[TargetRow];
-			if (TargetTrack && TargetTrack->CompositeMode == EAKTrackCompositeMode::Timeline)
-			{
-				MoveTaskToTrack(Task, DragCurrentTrackIndex, TargetRow);
-				DragCurrentTrackIndex = TargetRow;
-				SelectedTrackIndex = TargetRow;
-			}
+			// 整组一起动：用主任务的位移驱动其余任务，组内相对关系保持不变
+			MoveSelectionBy(NewStart - DragOriginTaskStart);
+		}
+		else if (!FMath::IsNearlyEqual(NewStart, Task->StartTime))
+		{
+			// 换轨道在上面统一处理了，这里只管时间
+			Task->StartTime = NewStart;
 		}
 	}
 	else if (DragMode == EAKTimelineDragMode::TrimRight)
@@ -663,6 +1004,21 @@ FReply SUAKTimeline::OnMouseMove(const FGeometry& MyGeometry, const FPointerEven
 		AssetPtr->MarkPackageDirty();
 	}
 
+	// Shift + 拖动 = 播放头跟着走（Persona 同款）。
+	// 没按 Shift 就提示一次——首次操作即教学，成本极低、收益很高。
+	const float DraggedTime = (DragMode == EAKTimelineDragMode::Move)
+		? FMath::Max(0.f, SnapTime(XToTime(Local.X) - DragGrabOffset))
+		: SnapTime(XToTime(Local.X));
+
+	if (MouseEvent.IsShiftDown())
+	{
+		SetCursorTime(DraggedTime);
+	}
+	else if (ScrubHintStartTime < 0.0)
+	{
+		ScrubHintStartTime = LastTickTime;
+	}
+
 	return FReply::Handled();
 }
 
@@ -673,6 +1029,27 @@ FReply SUAKTimeline::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointer
 		&& MouseEvent.GetEffectingButton() != EKeys::MiddleMouseButton)
 	{
 		return FReply::Unhandled();
+	}
+
+	if (DragMode == EAKTimelineDragMode::Marquee)
+	{
+		// 框选收尾：矩形里的任务进选中集合
+		TArray<UAKAbilityTaskBase*> Picked;
+		CollectTasksInRect(MarqueeStart, MarqueeCurrent, Picked);
+
+		if (!bMarqueeAdditive)
+		{
+			SelectedTasks.Reset();
+		}
+		for (UAKAbilityTaskBase* Task : Picked)
+		{
+			SelectedTasks.AddUnique(Task);
+		}
+		if (Picked.Num() > 0)
+		{
+			SelectedTask = Picked[0];
+			OnTaskSelected.ExecuteIfBound(Picked[0]);
+		}
 	}
 
 	if (DragMode == EAKTimelineDragMode::Move
@@ -687,6 +1064,7 @@ FReply SUAKTimeline::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointer
 	DraggingTask = nullptr;
 	DraggingMarkerIndex = INDEX_NONE;
 	bAltPendingDuplicate = false;
+	MoveSelectionStarts.Reset();
 
 	// 结束拖动事务（析构即提交）
 	DragTransaction.Reset();
@@ -720,7 +1098,8 @@ FReply SUAKTimeline::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const
 		return FReply::Handled();
 	}
 
-	SetCursorTime(SnapTime(XToTime(Local.X)));
+	// 双击空白：兜底缩放到整条技能（Sequencer 的双击 Section 兜底也是 Fit，双击永远不会"没反应"）
+	ZoomToFit();
 	return FReply::Handled();
 }
 
@@ -778,6 +1157,52 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 	FMenuBuilder MenuBuilder(/*bInShouldCloseWindowAfterMenuSelection=*/true, nullptr);
 
 	MenuBuilder.BeginSection(TEXT("Task"), LOCTEXT("MenuSection_Task", "任务"));
+
+	// 移到轨道：拖着改时间的时候没人会想到"再上下挪一下"，所以必须给条能看见的路
+	MenuBuilder.AddSubMenu(
+		LOCTEXT("Menu_MoveToTrack", "移到轨道"),
+		LOCTEXT("Menu_MoveToTrackTip", "把这个任务挪到另一条轨道（也可以直接把片段拖到别的行）"),
+		FNewMenuDelegate::CreateLambda([this, HitTask](FMenuBuilder& SubMenuBuilder)
+		{
+			UAKAbilityAsset* AssetPtr = Asset.Get();
+			if (!AssetPtr || !HitTask)
+			{
+				return;
+			}
+
+			const int32 CurrentRow = FindTrackRow(HitTask);
+			for (int32 Index = 0; Index < AssetPtr->Tracks.Num(); ++Index)
+			{
+				UAKAbilityTrack* Track = AssetPtr->Tracks[Index];
+				if (!Track || Index == CurrentRow)
+				{
+					continue;
+				}
+
+				const bool bTargetLocked = Track->bLocked;
+				const bool bSourceLocked = (CurrentRow != INDEX_NONE) && IsTrackLocked(CurrentRow);
+
+				SubMenuBuilder.AddMenuEntry(
+					FText::Format(LOCTEXT("Menu_TrackItem", "{0}{1}"),
+						Track->GetDisplayName(),
+						bTargetLocked ? LOCTEXT("TrackLockedSuffix", "（已锁定）") : FText::GetEmpty()),
+					FText::GetEmpty(),
+					FSlateIcon(),
+					FUIAction(
+						FExecuteAction::CreateLambda([this, HitTask, CurrentRow, Index]()
+						{
+							const FScopedTransaction Transaction(LOCTEXT("MoveTaskToTrack", "移动任务到轨道"));
+							MoveTaskToTrack(HitTask, CurrentRow, Index);
+						}),
+						FCanExecuteAction::CreateLambda([bTargetLocked, bSourceLocked]() { return !bTargetLocked && !bSourceLocked; })));
+			}
+		}),
+		// FUIAction 没有"只给 CanExecute"的重载：Execute 得显式给个空的。
+		// 这个版本的 AddSubMenu 后面两个参数（FName / ActionType）没有默认值，必须显式给。
+		FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })),
+		NAME_None,
+		EUserInterfaceActionType::Button);
+
 	MenuBuilder.AddMenuEntry(
 		LOCTEXT("Menu_DuplicateTask", "原地复制任务"),
 		LOCTEXT("Menu_DuplicateTaskTip", "复制当前选中的任务（Ctrl+D）"),
@@ -811,7 +1236,7 @@ TSharedRef<SWidget> SUAKTimeline::GenerateContextMenu(UAKAbilityTaskBase* HitTas
 		LOCTEXT("Menu_DeleteTaskTip", "删除当前选中的任务（Delete）"),
 		FSlateIcon(),
 		FUIAction(
-			FExecuteAction::CreateLambda([this]() { OnRequestDeleteTask.ExecuteIfBound(); }),
+			FExecuteAction::CreateLambda([this]() { DeleteSelection(); }),
 			FCanExecuteAction::CreateLambda([bHasTask]() { return bHasTask; })));
 	MenuBuilder.EndSection();
 
@@ -883,6 +1308,13 @@ FReply SUAKTimeline::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEve
 		const float VisibleTime = (PixelsPerSecond > 0.f) ? ViewWidth / PixelsPerSecond : 1.f;
 		ViewOffsetTime -= Delta * VisibleTime * 0.15f;
 		ClampViewOffset();
+		return FReply::Handled();
+	}
+
+	// 裸滚轮 = 滚动轨道列表，交给左栏（与 Sequencer 一致：Ctrl+滚轮才是缩放）
+	if (!MouseEvent.IsControlDown())
+	{
+		OnRequestScrollBy.ExecuteIfBound(-Delta * RowHeight * 2.f);
 		return FReply::Handled();
 	}
 
@@ -960,10 +1392,17 @@ FReply SUAKTimeline::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InK
 		return FReply::Handled();
 	}
 
-	// 删除（Delete / Backspace）
+	// 全选（Ctrl+A）：有选中轨道就选这一条轨道，否则全技能
+	if (Key == EKeys::A && InKeyEvent.IsControlDown())
+	{
+		SelectAllTasks();
+		return FReply::Handled();
+	}
+
+	// 删除（Delete / Backspace）：多选时一次事务删掉整组
 	if (Key == EKeys::Delete || Key == EKeys::BackSpace)
 	{
-		OnRequestDeleteTask.ExecuteIfBound();
+		DeleteSelection();
 		return FReply::Handled();
 	}
 
@@ -999,6 +1438,9 @@ void SUAKTimeline::PasteTask()
 
 	if (UAKAbilityTaskBase* Pasted = OnRequestPasteTask.Execute(TaskClipboard))
 	{
+		// 粘贴出来的就是新的唯一选中，别让旧的多选集合还挂着
+		SelectedTasks.Reset();
+		SelectedTasks.Add(Pasted);
 		SelectedTask = Pasted;
 		OnTaskSelected.ExecuteIfBound(Pasted);
 		ForceRefresh();
@@ -1023,7 +1465,7 @@ FText SUAKTimeline::GetHoverTooltipText() const
 		}
 
 		return FText::Format(
-			LOCTEXT("HoverTaskTip", "{0}\n{1}s → {2}s（时长 {3}s / {4} 帧）\n拖两端改时长 · Alt+拖动复制 · 拖到别的行换轨道"),
+			LOCTEXT("HoverTaskTip", "{0}\n{1}s → {2}s（时长 {3}s / {4} 帧）\n拖两端改时长 · 上下拖到别的行 = 换轨道 · Alt+拖动复制 · 右键「移到轨道」"),
 			Task->GetTaskDisplayName(),
 			FText::AsNumber(FMath::RoundToFloat(StartTime * 1000.f) / 1000.f),
 			FText::AsNumber(FMath::RoundToFloat(EndTime * 1000.f) / 1000.f),
@@ -1058,8 +1500,24 @@ int32 SUAKTimeline::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 	DrawTrackRows(AllottedGeometry, OutDrawElements, LayerId + 1);
 	DrawSegments(AllottedGeometry, OutDrawElements, LayerId + 2);
 	DrawCursor(AllottedGeometry, OutDrawElements, LayerId + 3);
+	DrawMarquee(AllottedGeometry, OutDrawElements, LayerId + 4);
 
-	return LayerId + 4;
+	// 一次性教学提示：右下角，3 秒淡出（抄 Persona 的"拖动时提示按 SHIFT"）
+	if (ScrubHintStartTime >= 0.0 && (LastTickTime - ScrubHintStartTime) < 3.0)
+	{
+		const FVector2D Size = AllottedGeometry.GetLocalSize();
+		const float Alpha = 1.f - static_cast<float>(LastTickTime - ScrubHintStartTime) / 3.f;
+		const FSlateFontInfo HintFont = FCoreStyle::GetDefaultFontStyle("Regular", 9);
+
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 6,
+			AllottedGeometry.ToPaintGeometry(
+				UE::Slate::CastToVector2f(FVector2D(260.f, 14.f)),
+				FSlateLayoutTransform(UE::Slate::CastToVector2f(FVector2D(Size.X - 268.f, Size.Y - 20.f)))),
+			LOCTEXT("ScrubHint", "提示：拖动时按住 Shift，播放头会跟着走"),
+			HintFont, ESlateDrawEffect::None, FLinearColor(1.f, 0.9f, 0.55f, FMath::Clamp(Alpha, 0.f, 1.f)));
+	}
+
+	return LayerId + 7;
 }
 
 void SUAKTimeline::DrawRuler(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
@@ -1123,38 +1581,49 @@ void SUAKTimeline::DrawTrackRows(const FGeometry& Geometry, FSlateWindowElementL
 	}
 
 	const float Width = Geometry.GetLocalSize().X;
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", 10);
+	const float Bottom = Geometry.GetLocalSize().Y;
 
 	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
 	{
 		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
-		const float Y = RulerHeight + Row * RowHeight;
+		const float Y = RowTopY(Row);
 
-		// 行底
+		// 滚出视口的行不画：轨道可以有很多条，靠左栏共享的滚动偏移来定位
+		if (Y + RowHeight < RulerHeight || Y > Bottom)
+		{
+			continue;
+		}
+
+		// 行底：静音 / 被 Solo 挤掉的轨道压暗，与左栏状态对上
+		FLinearColor RowColor = (Row % 2 == 0) ? ColorBackground : FLinearColor(0.05f, 0.05f, 0.05f);
+		if (Track && !Track->IsRunning())
+		{
+			RowColor *= 0.55f;
+		}
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
 			PaintGeom(Geometry, FVector2D(0, Y), FVector2D(Width, RowHeight - 1.f)),
-			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
-			(Row % 2 == 0) ? ColorBackground : FLinearColor(0.05f, 0.05f, 0.05f));
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, RowColor);
 
-		// 轨道头
-		const FLinearColor TrackColor = Track ? ColorForTrack(Track->TrackType) : FLinearColor::Gray;
-		const FLinearColor HeaderColor = Track && !Track->bEnabled ? FLinearColor(0.05f, 0.05f, 0.05f) : ColorHeader;
-		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
-			PaintGeom(Geometry, FVector2D(0, Y), FVector2D(TrackHeaderWidth - 1.f, RowHeight - 1.f)),
-			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, HeaderColor);
-
-		// 轨道色条 + 开关方块
-		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
-			PaintGeom(Geometry, FVector2D(4.f, Y + 6.f), FVector2D(6.f, RowHeight - 13.f)),
-			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None,
-			Track && Track->bEnabled ? TrackColor : FLinearColor(0.25f, 0.25f, 0.25f));
-
-		if (Track)
+		// 选中轨道：整行上下各描一条淡蓝边（左栏选中行高亮在右侧的延续）
+		if (Row == SelectedTrackIndex)
 		{
+			const FLinearColor Line(0.35f, 0.65f, 1.f, 0.55f);
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+				PaintGeom(Geometry, FVector2D(0, Y), FVector2D(Width, 1.f)),
+				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Line);
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+				PaintGeom(Geometry, FVector2D(0, Y + RowHeight - 2.f), FVector2D(Width, 1.f)),
+				FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Line);
+		}
+
+		// 空轨道：给一句提示，别让人以为编辑器坏了
+		if (Track && Track->Tasks.Num() == 0 && !Track->bCollapsed)
+		{
+			const FSlateFontInfo HintFont = FCoreStyle::GetDefaultFontStyle("Regular", 9);
 			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
-				PaintGeom(Geometry, FVector2D(18.f, Y + 7.f), FVector2D(TrackHeaderWidth - 24.f, 16.f)),
-				Track->GetDisplayName(), Font, ESlateDrawEffect::None,
-				Track->bEnabled ? FLinearColor(0.85f, 0.85f, 0.85f) : FLinearColor(0.4f, 0.4f, 0.4f));
+				PaintGeom(Geometry, FVector2D(8.f, Y + 8.f), FVector2D(220.f, 14.f)),
+				LOCTEXT("EmptyTrackHint", "空轨道 · 从右侧任务库添加任务"),
+				HintFont, ESlateDrawEffect::None, FLinearColor(0.45f, 0.45f, 0.45f));
 		}
 
 		// 时间轴网格
@@ -1209,8 +1678,20 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 			continue;
 		}
 
-		const float Y = RulerHeight + Row * RowHeight;
-		const FLinearColor TrackColor = ColorForTrack(Track->TrackType);
+		// 折叠的轨道不展开任务（左栏折叠后这里只画一根汇总条）
+		if (Track->bCollapsed)
+		{
+			continue;
+		}
+
+		const float Y = RowTopY(Row);
+		// 滚出视口的行不画（轨道可以有很多条）
+		if (Y + RowHeight < RulerHeight || Y > ViewHeight)
+		{
+			continue;
+		}
+
+		const FLinearColor TrackColor = UAKColorForTrackType(Track->TrackType);
 
 		{
 			const float X0 = TimeToX(Scheduled.StartTime);
@@ -1221,9 +1702,11 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 				continue;
 			}
 
-			const bool bSelected = (SelectedTask.Get() == Task);
+			// 多选集合里的都按"选中"画，否则拖整组时看不出到底选中了哪几块
+			const bool bSelected = IsTaskSelected(Task);
 			const bool bHovered = (HoverTask.Get() == Task);
-			FLinearColor Fill = Track->bEnabled ? TrackColor : FLinearColor(0.3f, 0.3f, 0.3f);
+			// 静音 / 被 Solo 挤掉的轨道画成灰的，与左栏状态对上
+			FLinearColor Fill = Track->IsRunning() ? TrackColor : FLinearColor(0.3f, 0.3f, 0.3f);
 			Fill.A = bSelected ? 0.95f : (bHovered ? 0.85f : 0.7f);
 
 			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
@@ -1281,6 +1764,65 @@ void SUAKTimeline::DrawSegments(const FGeometry& Geometry, FSlateWindowElementLi
 		}
 	}
 
+	// 折叠轨道：整条画成一根汇总条，写清里面有几个任务
+	for (int32 Row = 0; Row < AssetPtr->Tracks.Num(); ++Row)
+	{
+		UAKAbilityTrack* Track = AssetPtr->Tracks[Row];
+		if (!Track || !Track->bCollapsed)
+		{
+			continue;
+		}
+
+		float MinStart = TNumericLimits<float>::Max();
+		float MaxEnd = 0.f;
+		int32 Count = 0;
+		for (const FAKScheduledTask& Scheduled : CachedPlan)
+		{
+			if (Scheduled.TrackIndex != Row || !Scheduled.Task)
+			{
+				continue;
+			}
+			MinStart = FMath::Min(MinStart, Scheduled.StartTime);
+			MaxEnd = FMath::Max(MaxEnd, Scheduled.EndTime);
+			++Count;
+		}
+		if (Count == 0)
+		{
+			continue;
+		}
+
+		const float Y = RowTopY(Row);
+		if (Y + RowHeight < RulerHeight || Y > ViewHeight)
+		{
+			continue;
+		}
+
+		const float X0 = TimeToX(MinStart);
+		const float X1 = TimeToX(MaxEnd);
+		const float W = FMath::Max(6.f, X1 - X0);
+		if (X0 > Width || X1 < TrackHeaderWidth)
+		{
+			continue;
+		}
+
+		FLinearColor Fill = Track->IsRunning()
+			? UAKColorForTrackType(Track->TrackType)
+			: FLinearColor(0.35f, 0.35f, 0.35f);
+		Fill.A = 0.55f;
+
+		FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+			PaintGeom(Geometry, FVector2D(X0, Y + 8.f), FVector2D(W, RowHeight - 17.f)),
+			FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, Fill);
+
+		if (W > 44.f)
+		{
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
+				PaintGeom(Geometry, FVector2D(X0 + 4.f, Y + 8.f), FVector2D(W - 8.f, 14.f)),
+				FText::Format(LOCTEXT("CollapsedTrack", "{0} · {1} 个任务"), Track->GetDisplayName(), FText::AsNumber(Count)),
+				Font, ESlateDrawEffect::None, FLinearColor(0.9f, 0.9f, 0.9f, 0.85f));
+		}
+	}
+
 	// Markers（命名时间点）
 	for (const FAKTimeMarker& Marker : AssetPtr->Markers)
 	{
@@ -1311,6 +1853,43 @@ void SUAKTimeline::DrawCursor(const FGeometry& Geometry, FSlateWindowElementList
 	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
 		PaintGeom(Geometry, FVector2D(X, 0.f), FVector2D(1.5f, ViewHeight)),
 		FCoreStyle::Get().GetBrush("WhiteBrush"), ESlateDrawEffect::None, ColorCursor);
+}
+
+void SUAKTimeline::DrawMarquee(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const
+{
+	if (DragMode != EAKTimelineDragMode::Marquee)
+	{
+		return;
+	}
+
+	const FVector2D Min(
+		FMath::Min(MarqueeStart.X, MarqueeCurrent.X),
+		FMath::Min(MarqueeStart.Y, MarqueeCurrent.Y));
+	const FVector2D Max(
+		FMath::Max(MarqueeStart.X, MarqueeCurrent.X),
+		FMath::Max(MarqueeStart.Y, MarqueeCurrent.Y));
+	const FVector2D Size = Max - Min;
+	if (Size.X < 1.f || Size.Y < 1.f)
+	{
+		return;
+	}
+
+	const FLinearColor Fill(0.35f, 0.65f, 1.f, 0.15f);
+	const FLinearColor Border(0.35f, 0.65f, 1.f, 0.85f);
+	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush("WhiteBrush");
+
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+		PaintGeom(Geometry, Min, Size), WhiteBrush, ESlateDrawEffect::None, Fill);
+
+	// 四边：只描边不描心，避免盖住底下的片段
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+		PaintGeom(Geometry, Min, FVector2D(Size.X, 1.f)), WhiteBrush, ESlateDrawEffect::None, Border);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+		PaintGeom(Geometry, FVector2D(Min.X, Max.Y - 1.f), FVector2D(Size.X, 1.f)), WhiteBrush, ESlateDrawEffect::None, Border);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+		PaintGeom(Geometry, Min, FVector2D(1.f, Size.Y)), WhiteBrush, ESlateDrawEffect::None, Border);
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+		PaintGeom(Geometry, FVector2D(Max.X - 1.f, Min.Y), FVector2D(1.f, Size.Y)), WhiteBrush, ESlateDrawEffect::None, Border);
 }
 
 #undef LOCTEXT_NAMESPACE

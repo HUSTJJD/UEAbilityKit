@@ -44,6 +44,14 @@ private:
 	FReply OnStopClicked();
 	FReply OnStepBackClicked();
 	FReply OnStepForwardClicked();
+	/** 缩放铺满整条技能 */
+	FReply OnFitClicked();
+	/** 吸附总开关：关掉后可自由拖动（Sequencer 的 Snap 按钮同一语义） */
+	void OnSnapChanged(ECheckBoxState NewState);
+	ECheckBoxState IsSnapChecked() const;
+	/** 循环播放：以前只有一个没人调用的 SetLoopPlayback，工具条上没有入口 */
+	void OnLoopChanged(ECheckBoxState NewState);
+	ECheckBoxState IsLoopChecked() const;
 	FText GetPlayButtonText() const;
 	void OnFrameModeChanged(ECheckBoxState NewState);
 	ECheckBoxState IsFrameModeChecked() const;

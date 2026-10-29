@@ -6,9 +6,11 @@
 #include "SUAKTaskPicker.h"
 #include "SUAKTimeline.h"
 #include "SUAKTimelineToolbar.h"
+#include "SUAKTrackOutliner.h"
 #include "SUAKValidationBar.h"
 #include "UAKAbilityAsset.h"
 #include "UAKAbilityJsonSerializer.h"
+#include "UAKSettings.h"
 
 #include "Framework/Commands/UIAction.h"
 #include "Framework/MultiBox/MultiBoxExtender.h"
@@ -41,6 +43,8 @@
 #include "WorkspaceMenuStructure.h"
 #include "WorkspaceMenuStructureModule.h"
 #include "Widgets/Docking/SDockTab.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SSplitter.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
@@ -332,10 +336,23 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 		.OnTrackSelected(this, &FUEAbilityKitAssetEditor::OnTrackSelected)
 		.OnCursorTimeChanged(this, &FUEAbilityKitAssetEditor::OnCursorTimeChanged)
 		.OnRequestDeleteTask(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::DeleteSelectedTask))
+		.OnRequestDeleteTasks(FOnAKDeleteTasks::CreateRaw(this, &FUEAbilityKitAssetEditor::DeleteTasks))
 		.OnRequestDuplicateTask(FOnAKDuplicateTask::CreateRaw(this, &FUEAbilityKitAssetEditor::DuplicateSelectedTask))
 		.OnRequestPasteTask(FOnAKPasteTask::CreateRaw(this, &FUEAbilityKitAssetEditor::PasteTaskFromJson))
+		// 裸滚轮 / 跳行：垂直滚动归左栏管
+		.OnRequestScrollBy(FOnAKTimelineScrollBy::CreateRaw(this, &FUEAbilityKitAssetEditor::ScrollTrackListBy))
+		.OnRequestRevealRow(FOnAKTimelineRevealRow::CreateRaw(this, &FUEAbilityKitAssetEditor::RevealTrackRow))
 		.OnAction(FOnAKToolbarAction::CreateRaw(this, &FUEAbilityKitAssetEditor::OnToolbarAction));
 	TimelineWidget = Timeline;
+
+	TSharedRef<SUAKTrackOutliner> Outliner = SNew(SUAKTrackOutliner)
+		.Asset(Asset)
+		.OnTrackSelected(this, &FUEAbilityKitAssetEditor::OnTrackSelected)
+		.OnTracksChanged(FSimpleDelegate::CreateRaw(this, &FUEAbilityKitAssetEditor::RefreshAfterTrackChange))
+		// 左栏滚多少，右侧就减多少：两边永远一行对一行
+		.OnScrollOffsetChanged(FOnAKOutlinerScrollChanged::CreateLambda(
+			[Timeline](float Offset) { Timeline->SetScrollOffset(Offset); }));
+	TrackOutlinerWidget = Outliner;
 
 	TSharedRef<SUAKTimelineToolbar> TimelineToolbar = SNew(SUAKTimelineToolbar)
 		.Timeline(Timeline)
@@ -343,6 +360,9 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 
 	// 引导高亮锚点：官方教程按 SWidget::GetTag() 找控件
 	ApplyTutorialTags(TimelineWidget, EUAKTutorialRegion::Timeline);
+	ApplyTutorialTags(TrackOutlinerWidget, EUAKTutorialRegion::Timeline);
+
+	OutlinerWidth = GetDefault<UUAKSettings>()->TimelineOutlinerWidth;
 
 	return SNew(SDockTab)
 		.Label(LOCTEXT("TimelineTabLabel", "时间轴"))
@@ -356,7 +376,36 @@ TSharedRef<SDockTab> FUEAbilityKitAssetEditor::SpawnTab_Timeline(const FSpawnTab
 			]
 			+ SVerticalBox::Slot().FillHeight(1.f)
 			[
-				Timeline
+				// 左右分栏抄 SSequencer.cpp:781-821：宽度可拖，拖完写回设置
+				SNew(SSplitter)
+				.Orientation(Orient_Horizontal)
+				.OnSplitterFinishedResizing_Lambda([this]()
+				{
+					if (UUAKSettings* Settings = GetMutableDefault<UUAKSettings>())
+					{
+						Settings->TimelineOutlinerWidth = OutlinerWidth;
+						Settings->SaveConfig();
+					}
+				})
+				+ SSplitter::Slot()
+				.Resizable(true)
+				.SizeRule(SSplitter::SizeToContent)
+				.OnSlotResized_Lambda([this](const float InSlotSize)
+				{
+					OutlinerWidth = FMath::Max(SUAKTrackOutliner::MinWidth, InSlotSize);
+				})
+				[
+					SNew(SBox)
+					.MinDesiredWidth(SUAKTrackOutliner::MinWidth)
+					.WidthOverride(this, &FUEAbilityKitAssetEditor::GetOutlinerWidth)
+					[
+						Outliner
+					]
+				]
+				+ SSplitter::Slot()
+				[
+					Timeline
+				]
 			]
 		];
 }
@@ -510,6 +559,47 @@ void FUEAbilityKitAssetEditor::OnTrackSelected(UAKAbilityTrack* Track, int32 Tra
 	{
 		DetailsView->SetObject(Track ? static_cast<UObject*>(Track) : static_cast<UObject*>(Asset.Get()));
 	}
+	if (TimelineWidget.IsValid())
+	{
+		// 时间轴也得知道"当前哪条轨道"：粘贴任务要靠它决定落点
+		TimelineWidget->SetSelectedTrackIndex(TrackIndex);
+	}
+	if (TrackOutlinerWidget.IsValid())
+	{
+		TrackOutlinerWidget->SetSelectedTrackIndex(TrackIndex);
+	}
+}
+
+void FUEAbilityKitAssetEditor::ScrollTrackListBy(float DeltaPixels)
+{
+	if (TrackOutlinerWidget.IsValid())
+	{
+		TrackOutlinerWidget->ScrollBy(DeltaPixels);
+	}
+}
+
+void FUEAbilityKitAssetEditor::RevealTrackRow(int32 Row)
+{
+	if (TrackOutlinerWidget.IsValid())
+	{
+		TrackOutlinerWidget->ScrollToRow(Row);
+	}
+}
+
+void FUEAbilityKitAssetEditor::RefreshAfterTrackChange()
+{
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->ForceRefresh();
+	}
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
+	}
+	if (BloodlineWidget.IsValid())
+	{
+		BloodlineWidget->Invalidate(EInvalidateWidgetReason::Layout);
+	}
 }
 
 FText FUEAbilityKitAssetEditor::GetInspectedObjectLabel() const
@@ -550,6 +640,53 @@ void FUEAbilityKitAssetEditor::DeleteSelectedTask()
 	{
 		// 回到资产属性，别把面板留空
 		DetailsView->SetObject(Asset.Get());
+	}
+	if (TimelineWidget.IsValid())
+	{
+		TimelineWidget->ClearSelection();
+	}
+}
+
+void FUEAbilityKitAssetEditor::DeleteTasks(const TArray<UAKAbilityTaskBase*>& Tasks)
+{
+	if (Tasks.Num() == 0)
+	{
+		return;
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("DeleteTasks", "删除任务"));
+
+	for (UAKAbilityTaskBase* Task : Tasks)
+	{
+		UAKAbilityTrack* Track = Cast<UAKAbilityTrack>(Task->GetOuter());
+		if (!Track)
+		{
+			continue;
+		}
+
+		Track->Modify();
+		Track->Tasks.Remove(Task);
+	}
+
+	if (UAKAbilityAsset* AssetPtr = Asset.Get())
+	{
+		AssetPtr->MarkPackageDirty();
+	}
+
+	SelectedTask = nullptr;
+	if (DetailsView.IsValid())
+	{
+		DetailsView->SetObject(Asset.Get());
+	}
+	if (TimelineWidget.IsValid())
+	{
+		// 选中集合里别留着已经删掉的任务
+		TimelineWidget->ClearSelection();
+		TimelineWidget->ForceRefresh();
+	}
+	if (TaskPickerWidget.IsValid())
+	{
+		TaskPickerWidget->Refresh();
 	}
 }
 
@@ -664,10 +801,19 @@ void FUEAbilityKitAssetEditor::OnToolbarAction(EAKToolbarAction Action)
 {
 	switch (Action)
 	{
-	case EAKToolbarAction::AddTrack:				AddTrack(); break;
-	case EAKToolbarAction::RemoveTrack:			RemoveSelectedTrack(); break;
-	case EAKToolbarAction::MoveTrackUp:			MoveSelectedTrack(-1); break;
-	case EAKToolbarAction::MoveTrackDown:		MoveSelectedTrack(1); break;
+	// 轨道增删/排序统一走左栏：只有那里才知道"新轨道该插在哪、哪条被锁了"
+	case EAKToolbarAction::AddTrack:
+		if (TrackOutlinerWidget.IsValid()) { TrackOutlinerWidget->AddTrack(); } else { AddTrack(); }
+		break;
+	case EAKToolbarAction::RemoveTrack:
+		if (TrackOutlinerWidget.IsValid()) { TrackOutlinerWidget->RemoveTrack(SelectedTrackIndex); } else { RemoveSelectedTrack(); }
+		break;
+	case EAKToolbarAction::MoveTrackUp:
+		if (TrackOutlinerWidget.IsValid()) { TrackOutlinerWidget->MoveTrack(SelectedTrackIndex, -1); } else { MoveSelectedTrack(-1); }
+		break;
+	case EAKToolbarAction::MoveTrackDown:
+		if (TrackOutlinerWidget.IsValid()) { TrackOutlinerWidget->MoveTrack(SelectedTrackIndex, 1); } else { MoveSelectedTrack(1); }
+		break;
 	case EAKToolbarAction::DuplicateTask:		DuplicateSelectedTask(); break;
 	case EAKToolbarAction::DeleteTask:			DeleteSelectedTask(); break;
 	case EAKToolbarAction::AddMarker:			AddMarkerAtCursor(); break;

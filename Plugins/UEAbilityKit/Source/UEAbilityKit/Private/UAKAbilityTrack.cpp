@@ -27,4 +27,7 @@ FText UAKAbilityTrack::GetDisplayName() const
 	return LOCTEXT("Track_Unknown", "Track");
 }
 
+// 说明：这里刻意**没有** IsEffectivelyEnabled / Solo 之类的东西。
+// 技能不是多轨媒体，"只跑这条轨道"没有对应运行语义，与其做个空壳字段，不如不做。
+
 #undef LOCTEXT_NAMESPACE

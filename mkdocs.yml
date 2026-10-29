@@ -42,6 +42,7 @@ nav:
       - 设计原则: design/01-design-principles.md
       - 资产模型: design/02-asset-model.md
       - 编辑器设计: design/03-editor-design.md
+      - 轨道区设计: design/04-track-outliner.md
       - 执行器: design/10-executor.md
       - 目标选取: design/11-targeting.md
       - 追踪: design/12-trace.md
