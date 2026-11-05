@@ -11,7 +11,9 @@
 
     python Tools/unluanova/setup.py [--backend Luau|Lua] [--no-submodule]
                                     [--disable-extensions] [--dry-run]
-切了 --backend 之后**必须重编**，ini 与二进制不能分叉。
+切了 --backend 之后，普通 target **必须重编**（ini 与二进制不能分叉）；示例工程若走
+UnLuaNovaDemo<Backend>{Editor,Server,''} 隔离 target，则后端由 target 名钉死，切后端用
+Plugins/UnLuaNova/Tools/SwitchBackend.ps1 改清单即可，不需要重编。
 """
 
 from __future__ import annotations
@@ -106,7 +108,9 @@ def ensure_backend_ini(plan: Planner, backend: str | None) -> str:
         plan.skip(f"ini 已钉住 LuaBackend={want}")
     else:
         plan.write(state.EDITOR_INI, old, new, f"写入 LuaBackend={want}")
-        common.warn("改了后端就要重编：ini 与二进制分叉会出现『目录叫 lua、跑的是 Luau』")
+        common.warn("普通 target 改了后端就要重编：ini 与二进制分叉会出现『目录叫 lua、跑的是 Luau』。"
+                    "示例工程若用 -BackendTargets 隔离构建，切后端请跑 "
+                    "Plugins/UnLuaNova/Tools/SwitchBackend.ps1，无需重编")
     return want
 
 
@@ -222,7 +226,7 @@ def disable_extensions(plan: Planner) -> None:
 # ── 入口 ───────────────────────────────────────────────────────────────────
 USAGE = """用法：unluanova setup [选项]
 
-  --backend Luau|Lua   指定后端（默认沿用现有 ini，没有就 Luau）；切完必须重编
+  --backend Luau|Lua   指定后端（默认沿用现有 ini，没有就 Luau）；普通 target 切完必须重编
   --no-submodule       跳过子模块初始化
   --disable-extensions 把 LuaSocket / LuaRapidjson / LuaProtobuf 在 .uproject 里显式关掉
                        （上游默认就是关的；这条是"钉死"，防止别处把它们带起来）

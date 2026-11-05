@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # Tools/unluanova/
 USAGE = """用法：unluanova <子命令> [参数]
 
   setup    一次把集成写对：子模块 / 后端 ini / stage 路径 / Build.cs 后端
-  doctor   体检：子模块、后端一致性（ini ↔ 二进制 ↔ Build.cs）、打包路径、扩展插件
+  doctor   体检：子模块、后端一致性（ini ↔ 二进制/隔离清单 ↔ Build.cs）、打包路径、扩展插件
 
 例：
   ./Tools/unluanova.ps1 setup

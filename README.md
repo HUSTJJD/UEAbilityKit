@@ -210,6 +210,7 @@ UnLua 的官方发布线冻结在 v2.3.6（2023-11），`develop` 上只有零�
 | 🐛 | **IDE 里断点 / 单步** | `lua.dap start`：把 headless 的调试服务接成 DAP 服务，VSCode 直接 attach（断点 / 栈 / 局部变量） |
 | 🩺 | **一键自检** | `Tools/unluanova.ps1 setup` / `doctor`：子模块、后端三处一致性、打包路径、扩展插件，机器替你查 |
 | ♻️ | **热更新** | 编辑器内 HotReload、PIE 内非结构性改动热载；**运营期脚本下发**是 Lua 相对静态脚本方案的独占优势 |
+| 🌐 | **声明式网络（实验）** | Lua 自己声明 Server / Client / Multicast RPC 与复制字段，支持 `OwnerOnly` 等 8 种条件；UnLua 只能重写引擎已声明的 RPC。仍是实验特性，边界见 [文档](https://hustjjd.github.io/UnLuaNova/) |
 
 **为什么值得试**
 
@@ -292,7 +293,7 @@ Hazelight 的 UE-AngelScript 体验更完整（静态类型、VSCode LSP、断�
 
 - 架构思想参考开源项目 [AbilityKit](https://github.com/HOBOBO/AbilityKit)（MIT，Unity / 纯 C#）中关于技能管线、事件触发、溯源与配置治理的设计；**本项目为独立实现，未复用其任何代码**。
 - 编辑器交互设计参考商业插件 **Able** 的**公开可见的交互模式**（时间轴 UX、验证器、预览视口等通用做法）；**未复用其任何源码、资源与文档文案**，且与其无隶属关系。
-- 示例工程的脚本层由兄弟项目 **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)**（MIT）提供——Tencent/UnLua 的社区续作，支持静态绑定、Lua 5.5 / Luau 双后端与 Lua 可观测性；`Content/AnimationAssets/` 中的 UE4 Mannequin 源自 Epic 示例内容。
+- 示例工程的脚本层由兄弟项目 **[UnLuaNova](https://github.com/HUSTJJD/UnLuaNova)**（MIT）提供——Tencent/UnLua 的社区续作，支持静态绑定、Lua 5.5 / Luau 双后端、Lua 可观测性与声明式网络（实验）；`Content/AnimationAssets/` 中的 UE4 Mannequin 源自 Epic 示例内容。
 - `Unreal®` 是 Epic Games, Inc. 的商标。本项目为社区独立项目，**非 Epic 官方产品，未获 Epic 认可**。
 
 完整声明见 [NOTICE](NOTICE)。

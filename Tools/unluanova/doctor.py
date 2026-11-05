@@ -3,6 +3,10 @@
 判据全部来自 state.py 的只读快照，本文件不写任何文件，所以可以放心当 CI 门禁：
 有 error 就退出码 1，warn 只提示。
 
+后端判据分两种布局：普通单 target 看根目录 DLL 与 ini 是否分叉；隔离布局
+（Binaries/Win64/Backends/<Backend>/）则改看 live 的 *.modules 清单与示例工程 ini
+的运行时标签，两套 DLL 并存不再算错误。
+
     python Tools/unluanova/doctor.py [--json] [--strict]
     --strict：warn 也算失败（给"新接入的机器"用）
 """
@@ -65,9 +69,44 @@ def inspect() -> Report:
     else:
         r.add("backend-ini", OK, f"ini 钉住后端：{ini_backend}")
 
-    # 4) 二进制与 ini 是否分叉
+    # 4) 二进制、清单与 ini 是否分叉
+    # 普通单 target 布局：根目录只有一份后端 DLL，ini 必须与它一致。
+    # 隔离布局：两个后端的 DLL 并存正是设计目的，谁生效由 live 的 *.modules 决定；
+    # 这时示例工程 ini 的 LuaBackend 只是运行时标签（SwitchBackend.ps1 维护）。
     built = state.built_backends()
-    if len(built) > 1:
+    layout = state.backend_layout()
+    active = layout["active"]
+    isolated = layout["isolated"]
+    demo_backend = state.backend_from_demo_ini()
+
+    if isolated:
+        live_names = [n for b in isolated for n in layout["per_backend"][b]["live"]]
+        if active == "ambiguous":
+            r.add("backend-binary", ERROR, "两个后端的隔离清单同时 live：模块解析不确定",
+                  "跑 Plugins/UnLuaNova/Tools/SwitchBackend.ps1 -Backend Lua|Luau 只留一个")
+        elif active is None:
+            r.add("backend-binary", ERROR,
+                  "Backends/<Backend>/ 下有隔离产物，但没有任何 live 的 *.modules",
+                  "跑 Plugins/UnLuaNova/Tools/SwitchBackend.ps1 -Backend Lua|Luau 激活一个后端")
+        elif active == "Default":
+            r.add("backend-binary", WARN,
+                  "发现隔离产物，但当前 live 的是根目录清单（普通布局）",
+                  "要启用隔离产物就跑 SwitchBackend.ps1；要回到普通布局就重编普通 target")
+        elif demo_backend and demo_backend != active:
+            r.add("backend-binary", ERROR,
+                  f"示例工程 ini 写的是 {demo_backend}，live 清单却是 {active}（分叉）",
+                  "SwitchBackend.ps1 会同时改 ini 和清单；别只改其中一处")
+        else:
+            r.add("backend-binary", OK,
+                  f"隔离布局：{', '.join(isolated)} 的产物并存，当前激活 {active}（{len(live_names)} 份 live 清单）")
+        if len(isolated) < len(state.BACKENDS):
+            missing = [b for b in state.BACKENDS if b not in isolated]
+            r.add("backend-binary", WARN, f"还有后端没编出隔离产物：{', '.join(missing)}",
+                  "按 Docs/CN/Testing.md 把 UnLuaNovaDemo<Backend>{Editor,Server,''} 各编一次")
+        parts = [f"{b}: {len(layout['per_backend'][b]['live'])} live / "
+                 f"{len(layout['per_backend'][b]['disabled'])} disabled" for b in state.BACKENDS]
+        r.add("backend-manifest", OK, "Backends/ 清单状态：" + ", ".join(parts))
+    elif len(built) > 1:
         r.add("backend-binary", ERROR, f"两个后端 DLL 同时存在：{', '.join(built)}",
               "切后端必须重编；删掉旧 DLL 再编，避免 include 路径里出现两份 lua.h")
     elif not built:
@@ -79,7 +118,9 @@ def inspect() -> Report:
     else:
         r.add("backend-binary", OK, f"编译后端：{built[0]}")
 
-    want = ini_backend or (built[0] if built else state.DEFAULT_BACKEND)
+    want = (ini_backend
+            or (active if active in state.BACKENDS else None)
+            or (built[0] if built else state.DEFAULT_BACKEND))
 
     # 5) 使用方 Build.cs 必须再列一次后端模块
     consumers = state.find_consumer_build_cs()

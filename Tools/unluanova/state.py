@@ -8,6 +8,17 @@
 - 后端是**编译期**选择，ini（编辑器设置）与二进制（UnrealEditor-Luau.dll / -Lua.dll）
   必须一致；使用方 Build.cs 还得再列一次后端模块
 - 脚本不是资产，必须显式 stage，且路径相对**工程 Content 目录**
+
+后端隔离布局（Plugins/UnLuaNova/Tools/SwitchBackend.ps1）：
+- 普通 target 把 DLL 写在 Binaries/Win64/ 根目录；示例工程的
+  UnLuaNovaDemo<Backend>{Editor,Server,''} target 通过 ModuleRules.BinariesSubFolder
+  把同一批 DLL 写进 Binaries/Win64/Backends/<Backend>/，两套产物可以并存。
+- 谁生效由 *.modules 清单决定，不看 DLL 有多少份。非活动的清单被改名为
+  *.modules.disabled，FModuleManager 递归扫描时看不见它。
+- 因此「两个后端 DLL 同时存在」不再自动是错误；「两个后端清单同时 live」才是。
+- 这里有两层 ini：外层工程用 REPO_ROOT/Config/DefaultUnLuaNova.ini（Build.cs 的
+  编译期开关），示例工程用 SUBMODULE_ROOT/Config/DefaultUnLuaNova.ini（隔离 target
+  下退化为运行时标签，由 SwitchBackend.ps1 维护）。doctor 各自按用途读。
 """
 
 from __future__ import annotations
@@ -31,10 +42,15 @@ LUA_LIB_DIR = THIRD_PARTY_ROOT / "LuaLib" / "Lua"
 LUAU_LIB_DIR = THIRD_PARTY_ROOT / "LuauLib" / "Luau"
 
 BINARIES_DIR = PLUGIN_ROOT / "Binaries" / "Win64"
+ISOLATED_ROOT = BINARIES_DIR / "Backends"
+MANIFEST_SUFFIX = ".modules"
+DISABLED_SUFFIX = ".disabled"
 
-# 全插件只有一个配置文件
+# 外层工程自己的配置（Build.cs 的编译期开关）；示例工程另有一份，见 DEMO_INI。
 UNLUANOVA_INI = REPO_ROOT / "Config" / "DefaultUnLuaNova.ini"
 EDITOR_INI = UNLUANOVA_INI
+# 示例工程的 ini：隔离 target 下 LuaBackend 只是运行时标签，由 SwitchBackend.ps1 写。
+DEMO_INI = SUBMODULE_ROOT / "Config" / "DefaultUnLuaNova.ini"
 GAME_INI = REPO_ROOT / "Config" / "DefaultGame.ini"
 INI_SECTION = "/Script/UnLuaNovaEditor.UnLuaNovaEditorSettings"
 RUNTIME_INI_SECTION = "/Script/UnLuaNova.UnLuaNovaSettings"
@@ -83,6 +99,11 @@ def backend_from_ini() -> str | None:
     return read_ini_key(UNLUANOVA_INI, INI_SECTION, "LuaBackend")
 
 
+def backend_from_demo_ini() -> str | None:
+    """示例工程隔离布局下，ini 的 LuaBackend 是 SwitchBackend.ps1 维护的运行时标签。"""
+    return read_ini_key(DEMO_INI, INI_SECTION, "LuaBackend")
+
+
 # ── 数据驱动绑定 ───────────────────────────────────────────────────────────
 # 两个键必须成对出现才生效：定位器给出模块名之后，"要不要真的绑"由 bDataDrivenBinding 决定。
 # 少了开关，映射表配了也不会绑 —— 不报错、不警告，是最容易白忙一场的一处。
@@ -99,15 +120,83 @@ def data_driven_binding_enabled() -> bool:
     return value is not None and value.lower() in ("true", "1", "yes")
 
 
-# ── 二进制 ─────────────────────────────────────────────────────────────────
-def built_backends() -> list[str]:
-    """按 Binaries/Win64 里实际存在的后端 DLL 判断编译出来的后端。"""
-    found = []
+# ── 二进制 / 后端隔离布局 ──────────────────────────────────────────────────
+def isolated_root(backend: str) -> Path:
+    return ISOLATED_ROOT / backend
+
+
+def _dll_backends(root: Path) -> list[str]:
+    """某个目录里 *-<Backend>.dll 对应哪些后端。
+
+    DLL 名的前缀跟 AppName 走：Editor 是 UnrealEditor-Lua.dll，Game/Server 是
+    UnLuaNovaDemoLua-Lua.dll 之类，所以只能按后缀认，不能拼死一个名字。
+    """
+    if not root.is_dir():
+        return []
+    return [b for b in BACKENDS if any(root.glob(f"*-{b}.dll"))]
+
+
+def module_manifests(root: Path) -> dict[str, list[str]]:
+    """目录里的 live / disabled 模块清单（只看文件名，不解析内容）。"""
+    live: list[str] = []
+    disabled: list[str] = []
+    if not root.is_dir():
+        return {"live": live, "disabled": disabled}
+    for path in sorted(root.iterdir()):
+        if not path.is_file():
+            continue
+        name = path.name
+        if name.endswith(MANIFEST_SUFFIX + DISABLED_SUFFIX):
+            disabled.append(name[: -len(DISABLED_SUFFIX)])
+        elif name.endswith(MANIFEST_SUFFIX):
+            live.append(name)
+    return {"live": live, "disabled": disabled}
+
+
+def backend_layout() -> dict:
+    """只读快照：普通/隔离产物、清单状态，以及当前真正生效的后端。
+
+    active 的取值：
+      'Lua' / 'Luau'  该后端的隔离清单 live（可能还有 root 清单 live，那是
+                      SwitchBackend.ps1 为没有隔离产物的模块 root 特意保留的）
+      'Default'       只有 root 清单 live，走普通单 target 布局
+      'ambiguous'     两个后端的隔离清单同时 live，模块解析不确定
+      None            一个 live 清单都没有
+    """
+    root_manifests = module_manifests(BINARIES_DIR)
+    per_backend: dict[str, dict] = {}
     for backend in BACKENDS:
-        dll = BINARIES_DIR / f"UnrealEditor-{backend}.dll"
-        if dll.is_file():
-            found.append(backend)
-    return found
+        sub = isolated_root(backend)
+        per_backend[backend] = {
+            "dlls": _dll_backends(sub),
+            **module_manifests(sub),
+        }
+    live_isolated = [b for b in BACKENDS if per_backend[b]["live"]]
+    if len(live_isolated) > 1:
+        active = "ambiguous"
+    elif len(live_isolated) == 1:
+        active = live_isolated[0]
+    elif root_manifests["live"]:
+        active = "Default"
+    else:
+        active = None
+    return {
+        "ordinary": _dll_backends(BINARIES_DIR),
+        "isolated": [b for b in BACKENDS if per_backend[b]["dlls"]],
+        "root": root_manifests,
+        "per_backend": per_backend,
+        "active": active,
+    }
+
+
+def built_backends() -> list[str]:
+    """所有能找到后端 DLL 的地方：根目录 + Backends/<Backend>/，都要认。"""
+    layout = backend_layout()
+    found = set(layout["ordinary"])
+    for backend in BACKENDS:
+        if layout["per_backend"][backend]["dlls"]:
+            found.add(backend)
+    return [b for b in BACKENDS if b in found]
 
 
 # ── 打包 stage ─────────────────────────────────────────────────────────────
@@ -175,6 +264,14 @@ def intellisense_generated() -> bool:
 
 # ── .uproject ──────────────────────────────────────────────────────────────
 def uproject_path() -> Path:
+    """优先宿主工程的 .uproject；这个仓库也可以只作为插件仓库存在，此时回退到
+    submodule 自带的示例工程，让只读体检仍能跑完而不是中途退出。"""
+    found = sorted(REPO_ROOT.glob("*.uproject"))
+    if found:
+        return found[0]
+    demo = sorted(SUBMODULE_ROOT.glob("*.uproject"))
+    if demo:
+        return demo[0]
     return common.find_uproject(REPO_ROOT)
 
 

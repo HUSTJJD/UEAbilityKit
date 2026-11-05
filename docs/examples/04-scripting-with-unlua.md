@@ -51,6 +51,13 @@ UnLuaNova 本身的用法请看[它的文档](https://hustjjd.github.io/UnLuaNov
 | `extensions` | `LuaSocket` / `LuaRapidjson` / `LuaProtobuf` 的启用状态（上游 `EnabledByDefault=false`，没写就是没开） |
 | `intellisense` | 有没有产物（没产物 = 没补全 = "这方案不好用"的错觉） |
 
+`doctor` 也认识示例工程的**后端隔离布局**：`Binaries/Win64/Backends/<Lua|Luau>/` 下两套
+DLL 并存不是错误，谁生效由 live 的 `*.modules` 清单决定。它额外给出 `backend-manifest`
+状态，并在「两个后端清单同时 live」「一个 live 清单都没有」「live 后端与示例工程
+`Config/DefaultUnLuaNova.ini` 的 `LuaBackend` 标签分叉」时报 error。隔离布局由
+`Plugins/UnLuaNova/Tools/SwitchBackend.ps1` 维护，切后端无需重编；普通单 target 布局仍按
+上表判据（两个后端 DLL 同时存在 = 分叉）。
+
 `setup` 逐条修，且是**幂等**的：已经对了就只报告。
 
 ```powershell
@@ -239,7 +246,9 @@ UAK 只给出一个类型安全的扩展点 —— 框架不会被任何一种�
 
 ## 5. Lua 后端：默认是 Luau
 
-后端是**编译期**选择（两个后端的头文件不是同一份），切一次要重编。
+后端是**编译期**选择（两个后端的头文件不是同一份），宿主工程切一次要重编。示例工程
+可以用 `Plugins/UnLuaNova/Tools/SwitchBackend.ps1` 在预编译的两套隔离产物之间零编译切换
+（后端由 `UnLuaNovaDemo<后端>{Editor,Server,''}` target 名钉死，ini 退化为运行时标签）。
 
 | | Lua 5.5 | Luau（默认） |
 |---|---|---|
