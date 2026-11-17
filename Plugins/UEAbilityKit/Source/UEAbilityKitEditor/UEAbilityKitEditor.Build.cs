@@ -19,6 +19,8 @@ public class UEAbilityKitEditor : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"UnrealEd",
+			"EditorFramework",
+			"EditorViewport",
 			"AssetTools",
 			"Slate",
 			"SlateCore",

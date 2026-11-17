@@ -40,7 +40,8 @@ public class UAKDemo : ModuleRules
 			PrivateDependencyModuleNames.AddRange(new string[]
 			{
 				"UnrealEd",       // FEditorFileUtils（关卡创建与保存）
-				"Kismet",         // FKismetEditorUtilities（建蓝图）
+				"Kismet",
+				"BlueprintGraph",         // FKismetEditorUtilities（建蓝图）
 				"AssetRegistry",  // FAssetRegistryModule::AssetCreated
 				"Json",
 				"JsonUtilities"
