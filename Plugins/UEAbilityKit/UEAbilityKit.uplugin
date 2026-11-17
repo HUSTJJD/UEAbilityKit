@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "0.1.0",
 	"FriendlyName": "UE Ability Kit (UAK)",
-	"Description": "基于 GAS 的 UE5 技能编辑器：数据驱动的技能时间轴编排工具集",
+	"Description": "基于 GAS 的 UE 技能编辑器：数据驱动的技能时间轴编排工具集",
 	"Category": "Gameplay",
 	"CreatedBy": "UEAbilityKit Contributors",
 	"DocsURL": "https://github.com/HUSTJJD/UEAbilityKit",
@@ -46,5 +46,8 @@
 			"Enabled": true,
 			"Optional": true
 		}
-		]
+		],
+	"SupportedTargetPlatforms": ["Win64", "Mac", "Linux", "Android", "IOS"],
+	"CreatedByURL": "https://github.com/HUSTJJD/UEAbilityKit",
+	"SupportURL": "https://github.com/HUSTJJD/UEAbilityKit/issues"
 }

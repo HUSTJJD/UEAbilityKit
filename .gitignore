@@ -54,9 +54,8 @@ desktop.ini
 *.orig
 
 # ── Plugins/ 下只有我们自己的插件进仓库 ────────────────────────────────────
-Plugins/*
-!Plugins/UEAbilityKit/
-!Plugins/UnLuaNova/
+/Plugins/*
+!/Plugins/UEAbilityKit/
 
 # ── Content/：只跟踪我们自己的 UAK / Script ───────────────────────────────
 # 示例工程的美术 / 音频 / 关卡体积大、不便 diff，整层忽略，
@@ -75,3 +74,7 @@ Content/*
 .vs/
 .idea/
 __pycache__/
+
+# Plugin release archives (Tools/package_plugin.py)
+dist/
+*.zip.sha256

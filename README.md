@@ -309,3 +309,27 @@ Hazelight 的 UE-AngelScript 体验更完整（静态类型、VSCode LSP、断�
 
 提交 PR 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 并签署 [CLA](CLA.md)（企业贡献需 CCLA）。
 第三方组件（`Plugins/UnLuaNova` 等）仍按其各自的 MIT / Lua / Epic 许可执行，详见该文档第 6 节与 [NOTICE](NOTICE)。
+
+## 📦 独立发布 / 安装
+
+插件本体在 `Plugins/UEAbilityKit/`，仓库根是示例工程。发布包会把插件目录抽成 zip 根的 `UEAbilityKit/`，不包含示例工程、构建产物、测试套件与缓存：
+
+```bash
+python Tools/package_plugin.py                       # dist/UEAbilityKit-0.1.0-src.zip + .sha256
+python Tools/package_plugin.py --verify-only dist/UEAbilityKit-0.1.0-src.zip
+```
+
+安装：解压到目标工程的 `Plugins/`，在 `.uproject` 启用 **UE Ability Kit**，并确保 `GameplayAbilities` 已启用，然后重新生成工程文件并编译。`UnLuaNova` 是 `Optional: true` 依赖——不装也能编译，装了才有脚本层能力。
+
+`Config/FilterPlugin.ini` 供 UAT `BuildPlugin` 使用。发布包是**源码包**：不写死 `EngineVersion`，可放进任意兼容引擎版本的工程重新编译，`UAKDemo` 模块随插件分发。
+
+**引擎兼容矩阵**
+
+| 引擎 | 状态 |
+|---|---|
+| UE 6.0（源码构建，宿主 Ann 工程） | 已编译验证（`AnnEditor Win64 Development`） |
+| UE 5.4 / 5.6 / 5.8 | 历史验证；源码包可直接编译尝试 |
+
+> 注意：脚本层文档中的「5.8.3 源码版」「UE 5.4 / 5.6 / 5.8」描述的是 UnLuaNova 上游与历史基线，不代表本插件在 UE6 下不可用；UE6 的模块依赖适配已合入。
+
+推送 `v*` tag 会触发 `.github/workflows/release.yml` 自动打包并发布到 GitHub Release（含 SHA256）。

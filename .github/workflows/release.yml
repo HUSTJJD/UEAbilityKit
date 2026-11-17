@@ -1,0 +1,64 @@
+# Build and publish a source-only plugin archive on every version tag.
+#
+# The archive is engine-agnostic on purpose: it contains no EngineVersion
+# pin and no compiled binaries, so it can be dropped into any compatible
+# project's Plugins/ directory and rebuilt there.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (defaults to the current ref)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive   # UnLuaNova: Lua / Luau are compile-time sources
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build source archive
+        id: build
+        shell: bash
+        run: |
+          python Tools/package_plugin.py --out-dir dist
+          echo "archive=$(ls dist/*.zip)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify archive contents
+        shell: bash
+        run: |
+          python Tools/package_plugin.py --verify-only "${{ steps.build.outputs.archive }}"
+          echo "--- top-level entries ---"
+          python - <<'PY'
+          import zipfile, glob
+          z = zipfile.ZipFile(glob.glob('dist/*.zip')[0])
+          roots = sorted({n.split('/')[0] for n in z.namelist()})
+          print('\n'.join(roots))
+          assert any(n.endswith('.uplugin') for n in z.namelist())
+          PY
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.zip.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true
